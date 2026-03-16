@@ -6,6 +6,7 @@ import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { GpsUpdate } from '@core/ports/services/IGpsService';
 import { GpsFilter } from '@infrastructure/services/GpsFilter';
+import { formatDistance, formatDuration } from '@shared/utils/formatters';
 
 /**
  * Hook principal para la grabación GPS.
@@ -98,6 +99,36 @@ export function useTracking() {
     });
     return () => subscription.remove();
   }, []);
+
+  // Actualizar notificación persistente con stats cada 5 segundos
+  const notifIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (status === 'recording' || status === 'paused') {
+      // Iniciar intervalo de actualización de notificación
+      notifIntervalRef.current = setInterval(() => {
+        const state = useTrackingStore.getState();
+        if (!state.startedAt) return;
+
+        const now = Date.now();
+        const elapsed = Math.floor((now - state.startedAt.getTime()) / 1000) - state.totalPausedSeconds;
+        const dist = formatDistance(state.liveStats.distanceMeters);
+        const dur = formatDuration(Math.max(0, elapsed));
+        const statusText = state.status === 'paused' ? ' (Pausado)' : '';
+
+        gpsService.updateTrackingNotification(
+          `${dist} · ${dur}${statusText}`,
+        ).catch(() => {});
+      }, 5000);
+    }
+
+    return () => {
+      if (notifIntervalRef.current) {
+        clearInterval(notifIntervalRef.current);
+        notifIntervalRef.current = null;
+      }
+    };
+  }, [status]);
 
   /** Solicita permisos GPS. Retorna true si fueron concedidos. */
   const requestPermissions = useCallback(async (): Promise<boolean> => {

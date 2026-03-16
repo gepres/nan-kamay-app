@@ -32,7 +32,10 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
+        "POST_NOTIFICATIONS",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
@@ -67,7 +70,14 @@
           "cameraPermission": "Ñan Kamay necesita acceso a la cámara para fotografiar tus waypoints."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#22C55E"
+        }
+      ]
     ],
     "scheme": "nan-kamay",
     "extra": {

@@ -1,18 +1,20 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import { AppState, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { IGpsService, GpsUpdate } from '@core/ports/services/IGpsService';
 import { Coordinates } from '@core/value-objects/Coordinates';
 import { GpsError } from '@core/errors/GpsError';
 
 export const BACKGROUND_LOCATION_TASK = 'background-location-task';
+const TRACKING_NOTIFICATION_ID = 'tracking-active';
 
 // Callback global para que el background task envíe updates al store
 let _backgroundCallback: ((update: GpsUpdate) => void) | null = null;
 
 /**
  * Define la tarea de ubicación en background.
- * DEBE estar al nivel de módulo (fora de funciones/clases).
+ * DEBE estar al nivel de módulo (fuera de funciones/clases).
  */
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskManager.TaskManagerTaskBody) => {
   if (error) {
@@ -37,10 +39,33 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskMan
   }
 });
 
+// Configurar canal de notificación para Android (silenciosa, persistente)
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('tracking', {
+    name: 'Grabación de ruta',
+    importance: Notifications.AndroidImportance.LOW, // Sin sonido, solo visual
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    enableVibrate: false,
+    enableLights: false,
+  });
+}
+
+// No mostrar notificaciones como alerta cuando la app está en primer plano
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: false,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: false,
+    shouldShowList: false,
+  }),
+});
+
 export class GpsServiceImpl implements IGpsService {
   private foregroundSubscription: Location.LocationSubscription | null = null;
   private _isTracking = false;
   private _backgroundStarted = false;
+  private notificationInterval: ReturnType<typeof setInterval> | null = null;
 
   async requestPermissions(): Promise<boolean> {
     const { status: fg } = await Location.requestForegroundPermissionsAsync();
@@ -48,6 +73,12 @@ export class GpsServiceImpl implements IGpsService {
 
     // Solicitar background solo si el foreground fue aprobado
     const { status: bg } = await Location.requestBackgroundPermissionsAsync();
+
+    // Solicitar permiso de notificaciones (Android 13+)
+    if (Platform.OS === 'android') {
+      await Notifications.requestPermissionsAsync();
+    }
+
     return bg === 'granted' || fg === 'granted';
   }
 
@@ -76,8 +107,8 @@ export class GpsServiceImpl implements IGpsService {
     this.foregroundSubscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.BestForNavigation,
-        distanceInterval: 10,      // 10m mínimo (5m estaba dentro del radio de ruido GPS)
-        timeInterval: 5000,        // 5 segundos (a 5 km/h caminando ≈ 7m por intervalo)
+        distanceInterval: 10,
+        timeInterval: 5000,
       },
       (loc) => {
         onUpdate({
@@ -94,27 +125,21 @@ export class GpsServiceImpl implements IGpsService {
       }
     );
 
-    // Background: se activa cuando la app pasa a segundo plano o la pantalla se apaga.
-    // Usa los mismos parámetros que foreground pero a través del TaskManager.
+    // Mostrar notificación persistente con stats
+    await this.showTrackingNotification('Iniciando grabación...', '0 km · 00:00');
+
+    // Background location via TaskManager (sin foregroundService propio, usamos expo-notifications)
     await this.startBackgroundTracking();
   }
 
   private async startBackgroundTracking(): Promise<void> {
     try {
-      // Android 12+: foreground service SOLO puede iniciarse con la app en primer plano
-      if (Platform.OS === 'android' && AppState.currentState !== 'active') {
-        console.log('[GPS] App no está en primer plano, background tracking se iniciará cuando vuelva');
-        this.listenForForegroundToStartBackground();
-        return;
-      }
-
       const { status } = await Location.getBackgroundPermissionsAsync();
       if (status !== 'granted') {
         console.log('[GPS] Permiso background no otorgado, solo foreground activo');
         return;
       }
 
-      // Verificar si ya está corriendo para evitar duplicados
       const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
       if (isRunning) {
         this._backgroundStarted = true;
@@ -125,37 +150,19 @@ export class GpsServiceImpl implements IGpsService {
         accuracy: Location.Accuracy.BestForNavigation,
         distanceInterval: 10,
         timeInterval: 5000,
-        // Android: mostrar notificación persistente (requerido para background en Android 10+)
-        foregroundService: {
-          notificationTitle: 'Ñan Kamay — Grabando ruta',
-          notificationBody: 'Tu ruta se está grabando en segundo plano',
-          notificationColor: '#22C55E',
-        },
-        // iOS: indicador de ubicación en la barra de estado
         showsBackgroundLocationIndicator: true,
-        // Seguir recibiendo updates aunque la app esté suspendida
         pausesUpdatesAutomatically: false,
-        // Filtrar actualizaciones de baja calidad en background
         deferredUpdatesInterval: 5000,
         deferredUpdatesDistance: 10,
+        // Android: NO usamos foregroundService de expo-location (causa crash en Android 12+).
+        // En su lugar, la notificación persistente de expo-notifications mantiene la app viva.
       });
 
       this._backgroundStarted = true;
       console.log('[GPS] Background tracking iniciado');
     } catch (err) {
       console.warn('[GPS] No se pudo iniciar background tracking:', err);
-      // No lanzar error — foreground sigue funcionando
     }
-  }
-
-  /** Espera a que la app vuelva a primer plano para iniciar el background service */
-  private listenForForegroundToStartBackground(): void {
-    const subscription = AppState.addEventListener('change', async (state) => {
-      if (state === 'active' && this._isTracking && !this._backgroundStarted) {
-        subscription.remove();
-        await this.startBackgroundTracking();
-      }
-    });
   }
 
   private async stopBackgroundTracking(): Promise<void> {
@@ -171,6 +178,47 @@ export class GpsServiceImpl implements IGpsService {
     this._backgroundStarted = false;
   }
 
+  /**
+   * Muestra/actualiza la notificación persistente de grabación.
+   * En Android aparece en la barra de notificaciones con stats en vivo.
+   */
+  async showTrackingNotification(title: string, body: string): Promise<void> {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        identifier: TRACKING_NOTIFICATION_ID,
+        content: {
+          title,
+          body,
+          sticky: true, // No se puede deslizar para quitar (Android)
+          ...(Platform.OS === 'android' ? {
+            categoryIdentifier: 'tracking',
+            color: '#22C55E',
+          } : {}),
+        },
+        trigger: null, // Inmediato
+      });
+    } catch (err) {
+      console.warn('[GPS] Error mostrando notificación:', err);
+    }
+  }
+
+  /** Actualiza el contenido de la notificación con stats actuales */
+  async updateTrackingNotification(statsText: string): Promise<void> {
+    await this.showTrackingNotification(
+      'Ñan Kamay — Grabando ruta',
+      statsText,
+    );
+  }
+
+  /** Elimina la notificación persistente */
+  private async dismissTrackingNotification(): Promise<void> {
+    try {
+      await Notifications.dismissNotificationAsync(TRACKING_NOTIFICATION_ID);
+    } catch {
+      // ignore
+    }
+  }
+
   async stopTracking(): Promise<void> {
     this._isTracking = false;
     _backgroundCallback = null;
@@ -181,6 +229,7 @@ export class GpsServiceImpl implements IGpsService {
     }
 
     await this.stopBackgroundTracking();
+    await this.dismissTrackingNotification();
   }
 
   isTracking(): boolean {
