@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  View, Text, TouchableOpacity, SafeAreaView,
+  View, Text, TouchableOpacity,
   FlatList, RefreshControl, Alert, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';

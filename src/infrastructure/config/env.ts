@@ -8,7 +8,17 @@ export const ENV = {
   THUNDERFOREST_API_KEY: (process.env.EXPO_PUBLIC_THUNDERFOREST_API_KEY ?? extra.thunderforestApiKey ?? '') as string,
 } as const;
 
-/** URL del tile de Thunderforest Outdoors para MapLibre */
+/** URLs de tiles de Thunderforest Outdoors (múltiples subdominios para balanceo de carga) */
+export function thunderforestTileUrls(): string[] {
+  const key = ENV.THUNDERFOREST_API_KEY;
+  return [
+    `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${key}`,
+    `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${key}`,
+    `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${key}`,
+  ];
+}
+
+/** @deprecated Usar thunderforestTileUrls() */
 export function thunderforestTileUrl(): string {
-  return `https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${ENV.THUNDERFOREST_API_KEY}`;
+  return thunderforestTileUrls()[0];
 }

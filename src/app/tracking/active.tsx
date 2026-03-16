@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Alert, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,6 +19,7 @@ import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@s
 import { colors } from '@presentation/theme/colors';
 
 export default function ActiveTrackingScreen() {
+  const insets = useSafeAreaInsets();
   const {
     status,
     routeName,
@@ -110,7 +112,7 @@ export default function ActiveTrackingScreen() {
       {/* Panel superior de estadísticas */}
       <Animated.View style={[{
         position: 'absolute',
-        top: 52,
+        top: insets.top + 8,
         left: 16,
         right: 16,
         backgroundColor: '#0D1B12E6',
@@ -129,7 +131,7 @@ export default function ActiveTrackingScreen() {
       </Animated.View>
 
       {/* Indicador GPS */}
-      <View style={{ position: 'absolute', top: 136, left: 16 }}>
+      <View style={{ position: 'absolute', top: insets.top + 92, left: 16 }}>
         <GpsIndicator accuracy={lastAccuracy} />
       </View>
 

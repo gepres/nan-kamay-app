@@ -18,7 +18,9 @@
       "Bash(node:*)",
       "Bash(expo:*)",
       "Bash(npx:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(grep:*)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  View, Text, SafeAreaView, FlatList,
+  View, Text, FlatList,
   RefreshControl, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
