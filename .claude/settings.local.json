@@ -20,7 +20,8 @@
       "Bash(npx:*)",
       "Bash(npx:*)",
       "Bash(grep:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebSearch"
     ]
   }
 }
