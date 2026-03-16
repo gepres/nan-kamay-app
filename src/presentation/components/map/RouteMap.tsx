@@ -8,13 +8,20 @@ import {
   LineLayer,
   CircleLayer,
   setAccessToken,
+  Logger,
 } from '@maplibre/maplibre-react-native';
-import { thunderforestTileUrl } from '@infrastructure/config/env';
+import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
 import { colors } from '@presentation/theme/colors';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
+
+// Silenciar errores de tile (timeouts de red son reintentos normales, no crashes)
+Logger.setLogCallback((log) => {
+  if (log.message?.includes('Failed to load tile')) return true;
+  return false;
+});
 
 interface Props {
   gpsPoints: GpsPoint[];
@@ -58,7 +65,7 @@ export default function RouteMap({
         }
       : undefined;
 
-  const tileUrl = thunderforestTileUrl();
+  const tileUrls = thunderforestTileUrls();
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -72,9 +79,10 @@ export default function RouteMap({
       >
         <RasterSource
           id="thunderforest-route"
-          tileUrlTemplates={[tileUrl]}
+          tileUrlTemplates={tileUrls}
           tileSize={256}
           maxZoomLevel={18}
+          minZoomLevel={1}
         >
           <RasterLayer
             id="thunderforest-route-layer"
@@ -130,7 +138,7 @@ export default function RouteMap({
           <ShapeSource id="route-waypoints" shape={waypointsGeoJson}>
             <CircleLayer
               id="waypoints-layer"
-              style={{ circleRadius: 5, circleColor: '#F59E0B', circleStrokeColor: '#fff', circleStrokeWidth: 2 }}
+              style={{ circleRadius: 5, circleColor: colors.accent, circleStrokeColor: '#fff', circleStrokeWidth: 2 }}
             />
           </ShapeSource>
         )}

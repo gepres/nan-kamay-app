@@ -80,6 +80,7 @@ export default function RegisterScreen() {
     color: colors.textPrimary,
     fontSize: 16,
     flex: 1,
+    height: 52,
   };
 
   const labelStyle = {

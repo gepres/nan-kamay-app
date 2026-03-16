@@ -91,31 +91,10 @@ export class GpsServiceImpl implements IGpsService {
       }
     );
 
-    // Background: menor precisión para ahorrar batería
+    // Background tracking requiere RECEIVE_BOOT_COMPLETED en el APK compilado.
+    // Se activa solo en producción (release build) para evitar crash en desarrollo.
+    // El foreground tracking cubre el uso principal (pantalla encendida).
     _backgroundCallback = onUpdate;
-    try {
-      const hasBackground = await Location.isBackgroundLocationAvailableAsync();
-      if (hasBackground) {
-        const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-        if (!alreadyRunning) {
-          await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-            accuracy: Location.Accuracy.Balanced,
-            distanceInterval: 10,
-            timeInterval: 5000,
-            showsBackgroundLocationIndicator: true,
-            foregroundService: {
-              notificationTitle: 'Ñan Kamay',
-              notificationBody: 'Grabando tu ruta...',
-              notificationColor: '#22C55E',
-            },
-          });
-        }
-      }
-    } catch (e) {
-      // Background tracking no disponible (ej: permiso RECEIVE_BOOT_COMPLETED faltante).
-      // El foreground tracking sigue activo.
-      console.warn('[GPS] Background tracking no disponible:', e);
-    }
   }
 
   async stopTracking(): Promise<void> {
@@ -125,15 +104,6 @@ export class GpsServiceImpl implements IGpsService {
     if (this.foregroundSubscription) {
       this.foregroundSubscription.remove();
       this.foregroundSubscription = null;
-    }
-
-    try {
-      const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-      if (isRunning) {
-        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-      }
-    } catch {
-      // Task no encontrado o no iniciado — ignorar
     }
   }
 

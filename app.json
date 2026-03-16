@@ -42,7 +42,12 @@
     },
     "plugins": [
       "expo-dev-client",
-      ["expo-router", { "root": "src/app" }],
+      [
+        "expo-router",
+        {
+          "root": "src/app"
+        }
+      ],
       "expo-sqlite",
       "expo-secure-store",
       [
@@ -58,7 +63,8 @@
           "photosPermission": "Ñan Kamay necesita acceso a tu galería para añadir fotos a los waypoints.",
           "cameraPermission": "Ñan Kamay necesita acceso a la cámara para fotografiar tus waypoints."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "nan-kamay",
     "extra": {

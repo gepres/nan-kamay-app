@@ -9,14 +9,20 @@ import {
   LineLayer,
   CircleLayer,
   setAccessToken,
+  Logger,
   type CameraRef,
 } from '@maplibre/maplibre-react-native';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
-import { thunderforestTileUrl } from '@infrastructure/config/env';
+import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { colors } from '@presentation/theme/colors';
 
-// setAccessToken puede ser undefined en Expo Go (requiere dev build)
 if (typeof setAccessToken === 'function') setAccessToken(null);
+
+// Silenciar errores de tile (timeouts de red son reintentos normales, no crashes)
+Logger.setLogCallback((log) => {
+  if (log.message?.includes('Failed to load tile')) return true;
+  return false;
+});
 
 interface Props {
   followUser?: boolean;
@@ -73,7 +79,7 @@ export default function TrackingMap({ followUser = true }: Props) {
     }
   }, [currentPosition, followUser]);
 
-  const tileUrl = thunderforestTileUrl();
+  const tileUrls = thunderforestTileUrls();
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -85,9 +91,10 @@ export default function TrackingMap({ followUser = true }: Props) {
       >
         <RasterSource
           id="thunderforest"
-          tileUrlTemplates={[tileUrl]}
+          tileUrlTemplates={tileUrls}
           tileSize={256}
           maxZoomLevel={18}
+          minZoomLevel={1}
         >
           <RasterLayer
             id="thunderforest-layer"

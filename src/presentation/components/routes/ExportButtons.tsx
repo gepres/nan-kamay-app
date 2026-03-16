@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Share } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { exportRouteUseCase } from '@application/export/ExportRouteUseCase';
 import { ExportFormat } from '@core/ports/services/IExportService';
@@ -25,12 +26,18 @@ export default function ExportButtons({ routeId }: Props) {
     try {
       const uri = await exportRouteUseCase({ routeId, format });
 
-      // Compartir el archivo usando el Share API nativo
-      await Share.share({
-        url: uri,          // iOS
-        message: uri,      // Android fallback
-        title: `Ruta exportada (${format.toUpperCase()})`,
-      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: format === 'gpx' ? 'application/gpx+xml'
+                  : format === 'kml' ? 'application/vnd.google-earth.kml+xml'
+                  : 'application/vnd.google-earth.kmz',
+          dialogTitle: `Exportar ruta (${format.toUpperCase()})`,
+          UTI: format === 'gpx' ? 'public.xml' : 'public.zip',
+        });
+      } else {
+        showToast('Compartir no está disponible en este dispositivo.', 'error');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al exportar.';
       showToast(msg, 'error');

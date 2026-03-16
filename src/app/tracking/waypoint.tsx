@@ -5,10 +5,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  ActionSheetIOS,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,15 +28,55 @@ export default function WaypointScreen() {
   const [imageUris, setImageUris] = useState<string[]>([]);
   const { addWaypoint, routeId, currentPosition } = useTrackingStore();
 
-  const handleAddImage = async () => {
+  const pickFromGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
-      allowsMultipleSelection: false,
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - imageUris.length,
+    });
+    if (!result.canceled) {
+      const uris = result.assets.map((a) => a.uri);
+      setImageUris((prev) => [...prev, ...uris].slice(0, 5));
+    }
+  };
+
+  const pickFromCamera = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso requerido', 'Activa el acceso a la cámara en Configuración.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setImageUris((prev) => [...prev, result.assets[0].uri]);
+      setImageUris((prev) => [...prev, result.assets[0].uri].slice(0, 5));
     }
+  };
+
+  const handleAddImage = () => {
+    if (imageUris.length >= 5) return;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Cancelar', 'Tomar foto', 'Elegir de galería'], cancelButtonIndex: 0 },
+        (index) => {
+          if (index === 1) pickFromCamera();
+          if (index === 2) pickFromGallery();
+        }
+      );
+    } else {
+      Alert.alert('Agregar foto', '', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Tomar foto', onPress: pickFromCamera },
+        { text: 'Elegir de galería', onPress: pickFromGallery },
+      ]);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImageUris((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
@@ -180,29 +222,77 @@ export default function WaypointScreen() {
             </View>
           </View>
 
-          {/* Foto */}
+          {/* Fotos */}
           <View>
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 10 }}>
-              Foto ({imageUris.length}/5)
+              Fotos ({imageUris.length}/5)
             </Text>
-            <TouchableOpacity
-              onPress={handleAddImage}
-              disabled={imageUris.length >= 5}
-              style={{
-                backgroundColor: colors.bgInput,
-                borderColor: colors.border,
-                borderWidth: 1.5,
-                borderRadius: 12,
-                paddingVertical: 30,
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
-              <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '500' }}>
-                Toca para subir foto
-              </Text>
-            </TouchableOpacity>
+
+            {/* Previsualizaciones */}
+            {imageUris.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 12 }}
+                contentContainerStyle={{ gap: 10 }}
+              >
+                {imageUris.map((uri, index) => (
+                  <View key={index} style={{ position: 'relative' }}>
+                    <Image
+                      source={{ uri }}
+                      style={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}
+                    />
+                    {/* Botón eliminar */}
+                    <TouchableOpacity
+                      onPress={() => handleRemoveImage(index)}
+                      style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        backgroundColor: colors.danger,
+                        borderRadius: 12,
+                        width: 24,
+                        height: 24,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Botón agregar foto */}
+            {imageUris.length < 5 && (
+              <TouchableOpacity
+                onPress={handleAddImage}
+                style={{
+                  backgroundColor: colors.bgInput,
+                  borderColor: colors.border,
+                  borderWidth: 1.5,
+                  borderStyle: 'dashed',
+                  borderRadius: 12,
+                  paddingVertical: 24,
+                  alignItems: 'center',
+                  gap: 8,
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
+                <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '500' }}>
+                  Tomar foto o elegir de galería
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Guardar */}

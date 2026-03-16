@@ -52,6 +52,7 @@ export default function LoginScreen() {
     color: colors.textPrimary,
     fontSize: 16,
     flex: 1,
+    height: 52,
   };
 
   return (
@@ -90,15 +91,17 @@ export default function LoginScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 6 }}>
               Correo Electrónico
             </Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="tu@email.com"
-              placeholderTextColor={colors.textMuted}
-              style={inputStyle}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="tu@email.com"
+                placeholderTextColor={colors.textMuted}
+                style={inputStyle}
+              />
+            </View>
           </View>
 
           {/* Contraseña */}
