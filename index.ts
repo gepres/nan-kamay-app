@@ -1,8 +1,6 @@
-import { registerRootComponent } from 'expo';
+// Registrar el background task ANTES de que Expo Router arranque.
+// TaskManager.defineTask() DEBE ejecutarse en el scope global del entry point.
+import '@infrastructure/services/GpsServiceImpl';
 
-import App from './App';
-
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
-registerRootComponent(App);
+// Cargar Expo Router normalmente
+import 'expo-router/entry';

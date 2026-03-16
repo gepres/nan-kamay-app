@@ -9,10 +9,6 @@ import { initDatabase } from '@infrastructure/database/sqliteDb';
 import { User } from '@core/entities/User';
 import ToastContainer from '@presentation/components/ui/ToastContainer';
 
-// IMPORTANTE: Importar el GpsServiceImpl aquí para registrar el TaskManager
-// background task antes de que la app arranque completamente.
-import '@infrastructure/services/GpsServiceImpl';
-
 async function handleAuthDeepLink(url: string) {
   // El link de confirmación llega como: nan-kamay://#access_token=...&type=signup
   const fragment = url.split('#')[1];

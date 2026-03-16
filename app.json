@@ -18,7 +18,8 @@
         "NSLocationWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación para grabar tu ruta.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación en segundo plano para continuar grabando mientras la pantalla está apagada.",
         "NSCameraUsageDescription": "Ñan Kamay necesita acceso a la cámara para añadir fotos a tus waypoints.",
-        "NSPhotoLibraryUsageDescription": "Ñan Kamay necesita acceso a tu galería para añadir fotos a tus waypoints."
+        "NSPhotoLibraryUsageDescription": "Ñan Kamay necesita acceso a tu galería para añadir fotos a tus waypoints.",
+        "UIBackgroundModes": ["location"]
       }
     },
     "android": {
@@ -54,7 +55,9 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Ñan Kamay necesita tu ubicación para grabar rutas de trekking.",
-          "isAndroidBackgroundLocationEnabled": true
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       [
