@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Ñan Kamay",
+    "slug": "nan-kamay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1B12"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gepres.nankamay",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación para grabar tu ruta.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación en segundo plano para continuar grabando mientras la pantalla está apagada.",
+        "NSCameraUsageDescription": "Ñan Kamay necesita acceso a la cámara para añadir fotos a tus waypoints.",
+        "NSPhotoLibraryUsageDescription": "Ñan Kamay necesita acceso a tu galería para añadir fotos a tus waypoints."
+      }
+    },
+    "android": {
+      "package": "com.gepres.nankamay",
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1B12",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      ["expo-router", { "root": "src/app" }],
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Ñan Kamay necesita tu ubicación para grabar rutas de trekking.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ñan Kamay necesita acceso a tu galería para añadir fotos a los waypoints.",
+          "cameraPermission": "Ñan Kamay necesita acceso a la cámara para fotografiar tus waypoints."
+        }
+      ]
+    ],
+    "scheme": "nan-kamay",
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}
