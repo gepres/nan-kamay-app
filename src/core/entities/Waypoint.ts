@@ -6,6 +6,7 @@ export interface WaypointProps {
   altitude: number | null;
   title: string;
   description?: string;
+  type?: string;
   imageUris: string[];  // URIs locales o URLs de Supabase Storage
   createdAt: Date;
 }
@@ -32,6 +33,7 @@ export class Waypoint {
   get altitude() { return this.props.altitude; }
   get title() { return this.props.title; }
   get description() { return this.props.description; }
+  get type() { return this.props.type; }
   get imageUris() { return this.props.imageUris; }
   get createdAt() { return this.props.createdAt; }
 

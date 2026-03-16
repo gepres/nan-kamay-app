@@ -9,24 +9,30 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { Difficulty, DifficultyLabel } from '@core/value-objects/Difficulty';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
+import { colors } from '@presentation/theme/colors';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'moderate', 'hard'];
 
 const difficultyColors: Record<Difficulty, string> = {
-  easy: '#4ADE80',
-  moderate: '#F59E0B',
-  hard: '#EF4444',
+  easy: colors.easy,
+  moderate: colors.medium,
+  hard: colors.hard,
 };
+
+const ACTIVITY_TYPES = ['Senderismo', 'Ciclismo', 'Escalada'];
 
 export default function PreRecordingScreen() {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [activityType, setActivityType] = useState('Senderismo');
   const [checkingGps, setCheckingGps] = useState(false);
   const { startRecording } = useTrackingStore();
 
@@ -44,12 +50,30 @@ export default function PreRecordingScreen() {
       return;
     }
 
-    startRecording(name.trim(), difficulty);
+    startRecording(name.trim(), difficulty, description.trim(), activityType);
     router.replace('/tracking/active');
   };
 
+  const inputStyle = {
+    backgroundColor: colors.bgInput,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: colors.textPrimary,
+    fontSize: 16,
+  } as const;
+
+  const labelStyle = {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500' as const,
+    marginBottom: 6,
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0D1B12' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -58,47 +82,57 @@ export default function PreRecordingScreen() {
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
           paddingHorizontal: 20,
           paddingTop: 20,
-          marginBottom: 32,
+          marginBottom: 4,
         }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={24} color="#6B8F71" />
-          </TouchableOpacity>
-          <Text style={{ color: '#E8F5E9', fontSize: 18, fontWeight: '700', marginLeft: 16 }}>
-            Nueva ruta
+          <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: '700' }}>
+            Nueva Ruta
           </Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
-        <View style={{ paddingHorizontal: 20, gap: 24 }}>
-          {/* Nombre */}
+        <Text style={{ color: colors.textSecondary, fontSize: 14, paddingHorizontal: 20, marginBottom: 28 }}>
+          Configura los detalles de tu ruta antes de empezar a grabar.
+        </Text>
+
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 24 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Título */}
           <View>
-            <Text style={{ color: '#6B8F71', fontSize: 12, fontWeight: '500', marginBottom: 6 }}>
-              Nombre de la ruta
-            </Text>
+            <Text style={labelStyle}>Título de la Ruta</Text>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Ej. Laguna Humantay"
-              placeholderTextColor="#6B8F71"
-              style={{
-                backgroundColor: '#152219',
-                borderColor: '#2D6A4F',
-                borderWidth: 1,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                color: '#E8F5E9',
-                fontSize: 16,
-              }}
+              placeholder="ej. Camino Inca Día 2"
+              placeholderTextColor={colors.textMuted}
+              style={inputStyle}
+            />
+          </View>
+
+          {/* Descripción */}
+          <View>
+            <Text style={labelStyle}>Descripción Breve</Text>
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe esta ruta..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              style={[inputStyle, { minHeight: 80 }]}
             />
           </View>
 
           {/* Dificultad */}
           <View>
-            <Text style={{ color: '#6B8F71', fontSize: 12, fontWeight: '500', marginBottom: 12 }}>
-              Dificultad
-            </Text>
+            <Text style={labelStyle}>Dificultad</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {DIFFICULTIES.map((d) => (
                 <TouchableOpacity
@@ -111,15 +145,44 @@ export default function PreRecordingScreen() {
                     alignItems: 'center',
                     backgroundColor: difficulty === d ? difficultyColors[d] + '30' : 'transparent',
                     borderWidth: 1.5,
-                    borderColor: difficulty === d ? difficultyColors[d] : '#2D6A4F',
+                    borderColor: difficulty === d ? difficultyColors[d] : colors.border,
                   }}
                 >
                   <Text style={{
-                    color: difficulty === d ? difficultyColors[d] : '#6B8F71',
+                    color: difficulty === d ? difficultyColors[d] : colors.textMuted,
                     fontWeight: '600',
                     fontSize: 13,
                   }}>
                     {DifficultyLabel[d]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Tipo de Actividad */}
+          <View>
+            <Text style={labelStyle}>Tipo de Actividad</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {ACTIVITY_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => setActivityType(type)}
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 18,
+                    borderRadius: 10,
+                    backgroundColor: activityType === type ? colors.accent : 'transparent',
+                    borderWidth: 1,
+                    borderColor: activityType === type ? colors.accent : colors.border,
+                  }}
+                >
+                  <Text style={{
+                    color: activityType === type ? colors.bgPrimary : colors.textMuted,
+                    fontWeight: activityType === type ? '600' : '500',
+                    fontSize: 13,
+                  }}>
+                    {type}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -131,32 +194,32 @@ export default function PreRecordingScreen() {
             onPress={handleStart}
             disabled={!name.trim() || checkingGps}
             style={{
-              backgroundColor: name.trim() ? '#22C55E' : '#1A2E1F',
+              backgroundColor: name.trim() ? colors.accent : colors.bgCard,
               borderRadius: 12,
               paddingVertical: 16,
               alignItems: 'center',
-              marginTop: 16,
+              marginTop: 8,
               flexDirection: 'row',
               justifyContent: 'center',
               gap: 10,
             }}
           >
             {checkingGps ? (
-              <ActivityIndicator color="#0D1B12" />
+              <ActivityIndicator color={colors.bgPrimary} />
             ) : (
               <>
-                <Ionicons name="play-circle" size={22} color={name.trim() ? '#0D1B12' : '#6B8F71'} />
+                <Ionicons name="play-circle" size={22} color={name.trim() ? colors.bgPrimary : colors.textMuted} />
                 <Text style={{
-                  color: name.trim() ? '#0D1B12' : '#6B8F71',
+                  color: name.trim() ? colors.bgPrimary : colors.textMuted,
                   fontSize: 16,
                   fontWeight: '700',
                 }}>
-                  Iniciar grabación
+                  Iniciar Grabación
                 </Text>
               </>
             )}
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -15,6 +15,7 @@ import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import TrackingMap from '@presentation/components/map/TrackingMap';
 import GpsIndicator from '@presentation/components/tracking/GpsIndicator';
 import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@shared/utils/formatters';
+import { colors } from '@presentation/theme/colors';
 
 export default function ActiveTrackingScreen() {
   const {
@@ -151,16 +152,16 @@ export default function ActiveTrackingScreen() {
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <Text style={{ color: '#E8F5E9', fontWeight: '700', fontSize: 15, flex: 1 }} numberOfLines={1}>
+          <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 15, flex: 1 }} numberOfLines={1}>
             {routeName}
           </Text>
           <View style={{
-            backgroundColor: '#1A2E1F',
+            backgroundColor: colors.bgCard,
             borderRadius: 8,
             paddingHorizontal: 8,
             paddingVertical: 3,
           }}>
-            <Text style={{ color: '#6B8F71', fontSize: 11 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 11 }}>
               {gpsPoints.length} pts
             </Text>
           </View>
@@ -172,8 +173,8 @@ export default function ActiveTrackingScreen() {
           <ControlButton
             icon="flag-outline"
             label="Waypoint"
-            color="#22C55E"
-            bgColor="#1A2E1F"
+            color=colors.accent
+            bgColor={colors.bgCard}
             onPress={handleAddWaypoint}
           />
 
@@ -182,7 +183,7 @@ export default function ActiveTrackingScreen() {
             icon={status === 'recording' ? 'pause-outline' : 'play-outline'}
             label={status === 'recording' ? 'Pausar' : 'Reanudar'}
             color="#F59E0B"
-            bgColor="#1A2E1F"
+            bgColor={colors.bgCard}
             onPress={handlePauseResume}
           />
 
@@ -206,8 +207,8 @@ export default function ActiveTrackingScreen() {
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text style={{ color: '#E8F5E9', fontSize: 15, fontWeight: '700' }}>{value}</Text>
-      <Text style={{ color: '#6B8F71', fontSize: 11, marginTop: 2 }}>{label}</Text>
+      <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700' }}>{value}</Text>
+      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{label}</Text>
     </View>
   );
 }

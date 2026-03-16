@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native';
 import { GpsPoint } from '@core/entities/GpsPoint';
+import { colors } from '@presentation/theme/colors';
 
 interface Props {
   gpsPoints: GpsPoint[];
@@ -28,8 +29,8 @@ export default function ElevationChart({ gpsPoints, height = 80 }: Props) {
   return (
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-        <Text style={{ color: '#6B8F71', fontSize: 11 }}>Perfil de elevación</Text>
-        <Text style={{ color: '#6B8F71', fontSize: 11 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 11 }}>Perfil de elevación</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 11 }}>
           {minAlt.toFixed(0)} – {maxAlt.toFixed(0)} m
         </Text>
       </View>

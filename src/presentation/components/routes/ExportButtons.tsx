@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { exportRouteUseCase } from '@application/export/ExportRouteUseCase';
 import { ExportFormat } from '@core/ports/services/IExportService';
 import { useUiStore } from '@presentation/stores/uiStore';
+import { colors } from '@presentation/theme/colors';
 
 interface Props {
   routeId: string;
@@ -41,8 +42,8 @@ export default function ExportButtons({ routeId }: Props) {
   return (
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Ionicons name="share-outline" size={18} color="#22C55E" />
-        <Text style={{ color: '#E8F5E9', fontSize: 15, fontWeight: '600' }}>Exportar ruta</Text>
+        <Ionicons name="share-outline" size={18} color={colors.accent} />
+        <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '600' }}>Exportar ruta</Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -55,23 +56,23 @@ export default function ExportButtons({ routeId }: Props) {
               disabled={loadingFormat !== null}
               style={{
                 flex: 1,
-                backgroundColor: '#1A2E1F',
+                backgroundColor: colors.bgCard,
                 borderRadius: 10,
                 padding: 12,
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: isLoading ? '#22C55E' : '#2D6A4F',
+                borderColor: isLoading ? colors.accent : '#2D6A4F',
                 gap: 4,
               }}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#22C55E" />
+                <ActivityIndicator size="small" color={colors.accent} />
               ) : (
-                <Text style={{ color: '#22C55E', fontSize: 15, fontWeight: '700' }}>
+                <Text style={{ color: colors.accent, fontSize: 15, fontWeight: '700' }}>
                   {label}
                 </Text>
               )}
-              <Text style={{ color: '#6B8F71', fontSize: 10, textAlign: 'center' }}>
+              <Text style={{ color: colors.textMuted, fontSize: 10, textAlign: 'center' }}>
                 {desc}
               </Text>
             </TouchableOpacity>

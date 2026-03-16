@@ -9,6 +9,8 @@ export interface SaveRouteInput {
   routeId: string;
   userId: string;
   name: string;
+  description?: string;
+  activityType?: string;
   difficulty: Difficulty;
   gpsPoints: GpsPoint[];
   waypoints: Waypoint[];
@@ -24,7 +26,7 @@ export interface SaveRouteOutput {
 
 export async function saveRouteUseCase(input: SaveRouteInput): Promise<SaveRouteOutput> {
   const {
-    routeId, userId, name, difficulty,
+    routeId, userId, name, description, activityType, difficulty,
     gpsPoints, waypoints, stats, startedAt, finishedAt,
     isPublic = false,
   } = input;
@@ -38,7 +40,8 @@ export async function saveRouteUseCase(input: SaveRouteInput): Promise<SaveRoute
     userId,
     name,
     difficulty,
-    description: undefined,
+    description: description || undefined,
+    activityType: activityType || undefined,
     distanceMeters: stats.distanceMeters,
     durationSeconds: stats.durationSeconds,
     elevationGainMeters: stats.elevationGainMeters,

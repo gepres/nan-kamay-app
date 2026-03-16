@@ -14,9 +14,10 @@ import { useUiStore } from '@presentation/stores/uiStore';
 import { saveRouteUseCase } from '@application/tracking/SaveRouteUseCase';
 import { syncOfflineRoutesUseCase } from '@application/routes/SyncOfflineRoutesUseCase';
 import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@shared/utils/formatters';
+import { colors } from '@presentation/theme/colors';
 
 export default function SummaryScreen() {
-  const { routeId, routeName, difficulty, liveStats, gpsPoints, waypoints, startedAt, reset } =
+  const { routeId, routeName, routeDescription, activityType, difficulty, liveStats, gpsPoints, waypoints, startedAt, reset } =
     useTrackingStore();
   const { user } = useAuthStore();
   const { addRoute, fetchRoutes } = useRoutesStore();
@@ -34,6 +35,8 @@ export default function SummaryScreen() {
         routeId,
         userId: user.id,
         name: routeName,
+        description: routeDescription || undefined,
+        activityType: activityType || undefined,
         difficulty,
         gpsPoints,
         waypoints,
@@ -92,8 +95,8 @@ export default function SummaryScreen() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
         {/* Header */}
         <View style={{ paddingTop: 24, marginBottom: 28 }}>
-          <Text style={{ color: '#6B8F71', fontSize: 13 }}>Ruta completada</Text>
-          <Text style={{ color: '#E8F5E9', fontSize: 24, fontWeight: '700', marginTop: 4 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>Ruta completada</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: '700', marginTop: 4 }}>
             {routeName}
           </Text>
           {isOffline && (
@@ -114,17 +117,17 @@ export default function SummaryScreen() {
           {stats.map((s) => (
             <View key={s.label} style={{
               width: '47%',
-              backgroundColor: '#1A2E1F',
+              backgroundColor: colors.bgCard,
               borderRadius: 12,
               padding: 16,
               borderWidth: 1,
               borderColor: '#2D6A4F',
             }}>
-              <Ionicons name={s.icon as any} size={20} color="#22C55E" />
-              <Text style={{ color: '#E8F5E9', fontSize: 20, fontWeight: '700', marginTop: 8 }}>
+              <Ionicons name={s.icon as any} size={20} color={colors.accent} />
+              <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: '700', marginTop: 8 }}>
                 {s.value}
               </Text>
-              <Text style={{ color: '#6B8F71', fontSize: 12, marginTop: 4 }}>{s.label}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>{s.label}</Text>
             </View>
           ))}
         </View>
@@ -132,7 +135,7 @@ export default function SummaryScreen() {
         {/* Perfil de elevación */}
         {gpsPoints.some((p) => p.altitude != null) && (
           <View style={{
-            backgroundColor: '#1A2E1F', borderRadius: 12, padding: 14,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 14,
             borderWidth: 1, borderColor: '#2D6A4F', marginBottom: 16,
           }}>
             <ElevationChart gpsPoints={gpsPoints} height={80} />
@@ -141,13 +144,13 @@ export default function SummaryScreen() {
 
         {/* Puntos GPS grabados */}
         <View style={{
-          backgroundColor: '#1A2E1F', borderRadius: 10, padding: 14,
+          backgroundColor: colors.bgCard, borderRadius: 10, padding: 14,
           borderWidth: 1, borderColor: '#2D6A4F',
           flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
         }}>
-          <Ionicons name="location-outline" size={18} color="#22C55E" />
-          <Text style={{ color: '#6B8F71', fontSize: 13 }}>
-            <Text style={{ color: '#E8F5E9', fontWeight: '600' }}>{gpsPoints.length}</Text>
+          <Ionicons name="location-outline" size={18} color={colors.accent} />
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+            <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{gpsPoints.length}</Text>
             {' '}puntos GPS grabados
           </Text>
         </View>
@@ -155,27 +158,27 @@ export default function SummaryScreen() {
         {/* Waypoints */}
         {waypoints.length > 0 && (
           <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: '#E8F5E9', fontSize: 15, fontWeight: '600', marginBottom: 10 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '600', marginBottom: 10 }}>
               Waypoints ({waypoints.length})
             </Text>
             {waypoints.map((wp) => (
               <View key={wp.id} style={{
-                backgroundColor: '#1A2E1F', borderRadius: 10, padding: 14,
+                backgroundColor: colors.bgCard, borderRadius: 10, padding: 14,
                 marginBottom: 8, borderWidth: 1, borderColor: '#2D6A4F',
                 flexDirection: 'row', alignItems: 'flex-start', gap: 12,
               }}>
                 <Ionicons name="flag" size={16} color="#F59E0B" style={{ marginTop: 2 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#E8F5E9', fontWeight: '600' }}>{wp.title}</Text>
+                  <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{wp.title}</Text>
                   {wp.description ? (
-                    <Text style={{ color: '#6B8F71', fontSize: 12, marginTop: 2 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
                       {wp.description}
                     </Text>
                   ) : null}
                   {wp.imageUris.length > 0 && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <Ionicons name="image-outline" size={13} color="#6B8F71" />
-                      <Text style={{ color: '#6B8F71', fontSize: 12 }}>
+                      <Ionicons name="image-outline" size={13} color={colors.textMuted} />
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                         {wp.imageUris.length} foto{wp.imageUris.length > 1 ? 's' : ''}
                       </Text>
                     </View>
@@ -189,7 +192,7 @@ export default function SummaryScreen() {
         {/* Exportar — solo disponible después de guardar */}
         {savedRouteId && (
           <View style={{
-            backgroundColor: '#1A2E1F', borderRadius: 12, padding: 16,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
             borderWidth: 1, borderColor: '#2D6A4F', marginBottom: 24,
           }}>
             <ExportButtons routeId={savedRouteId} />
@@ -204,33 +207,33 @@ export default function SummaryScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               gap: 12,
-              backgroundColor: '#1A2E1F',
+              backgroundColor: colors.bgCard,
               borderRadius: 12,
               padding: 14,
               borderWidth: 1,
-              borderColor: isPublic ? '#22C55E60' : '#2D6A4F',
+              borderColor: isPublic ? colors.accent + '60' : colors.border,
               marginBottom: 16,
             }}
           >
             <View style={{
               width: 22, height: 22, borderRadius: 11,
-              backgroundColor: isPublic ? '#22C55E' : '#0D1B12',
+              backgroundColor: isPublic ? colors.accent : '#0D1B12',
               borderWidth: 2,
-              borderColor: isPublic ? '#22C55E' : '#2D6A4F',
+              borderColor: isPublic ? colors.accent : '#2D6A4F',
               justifyContent: 'center',
               alignItems: 'center',
             }}>
               {isPublic && <Ionicons name="checkmark" size={13} color="#0D1B12" />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#E8F5E9', fontSize: 14, fontWeight: '600' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
                 Hacer ruta pública
               </Text>
-              <Text style={{ color: '#6B8F71', fontSize: 12, marginTop: 2 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
                 Visible para otros usuarios en Explorar
               </Text>
             </View>
-            <Ionicons name="globe-outline" size={18} color={isPublic ? '#22C55E' : '#2D6A4F'} />
+            <Ionicons name="globe-outline" size={18} color={isPublic ? colors.accent : '#2D6A4F'} />
           </TouchableOpacity>
         )}
 
@@ -239,7 +242,7 @@ export default function SummaryScreen() {
           <TouchableOpacity
             onPress={() => { reset(); router.replace('/(tabs)'); }}
             style={{
-              backgroundColor: '#22C55E',
+              backgroundColor: colors.accent,
               borderRadius: 12,
               paddingVertical: 16,
               alignItems: 'center',
@@ -259,7 +262,7 @@ export default function SummaryScreen() {
               onPress={handleSave}
               disabled={isSaving}
               style={{
-                backgroundColor: '#22C55E',
+                backgroundColor: colors.accent,
                 borderRadius: 12,
                 paddingVertical: 16,
                 alignItems: 'center',

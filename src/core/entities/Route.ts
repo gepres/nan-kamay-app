@@ -5,6 +5,7 @@ export interface RouteProps {
   userId: string;
   name: string;
   description?: string;
+  activityType?: string;
   difficulty: Difficulty;
   distanceMeters: number;
   durationSeconds: number;
@@ -40,6 +41,7 @@ export class Route {
   get userId() { return this.props.userId; }
   get name() { return this.props.name; }
   get description() { return this.props.description; }
+  get activityType() { return this.props.activityType; }
   get difficulty() { return this.props.difficulty; }
   get distanceMeters() { return this.props.distanceMeters; }
   get durationSeconds() { return this.props.durationSeconds; }

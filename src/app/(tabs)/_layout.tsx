@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '@presentation/theme/colors';
 
 export default function TabsLayout() {
   return (
@@ -8,14 +9,14 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#1A2E1F',
-          borderTopColor: '#2D6A4F',
+          backgroundColor: colors.bgCard,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: 62,
           paddingBottom: 8,
         },
-        tabBarActiveTintColor: '#22C55E',
-        tabBarInactiveTintColor: '#6B8F71',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
       }}
     >
       <Tabs.Screen

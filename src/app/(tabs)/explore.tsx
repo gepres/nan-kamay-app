@@ -10,14 +10,15 @@ import { useUiStore } from '@presentation/stores/uiStore';
 import { getPublicRoutesUseCase, PublicRoute } from '@application/routes/GetPublicRoutesUseCase';
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatElevation, formatDate } from '@shared/utils/formatters';
+import { colors } from '@presentation/theme/colors';
 
-const DIFF_COLORS = { easy: '#4ADE80', moderate: '#F59E0B', hard: '#EF4444' } as const;
+const DIFF_COLORS = { easy: colors.easy, moderate: colors.medium, hard: colors.hard } as const;
 
 function PublicRouteCard({ route }: { route: PublicRoute }) {
   const diffColor = DIFF_COLORS[route.difficulty];
   return (
     <View style={{
-      backgroundColor: '#1A2E1F',
+      backgroundColor: colors.bgCard,
       borderRadius: 12,
       padding: 16,
       marginBottom: 12,
@@ -38,14 +39,14 @@ function PublicRouteCard({ route }: { route: PublicRoute }) {
             {DifficultyLabel[route.difficulty]}
           </Text>
         </View>
-        <Text style={{ color: '#6B8F71', fontSize: 12 }}>{formatDate(route.startedAt)}</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDate(route.startedAt)}</Text>
       </View>
 
-      <Text style={{ color: '#E8F5E9', fontSize: 16, fontWeight: '700', marginBottom: 4 }}>
+      <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>
         {route.name}
       </Text>
       {route.description ? (
-        <Text style={{ color: '#6B8F71', fontSize: 13, marginBottom: 10 }} numberOfLines={2}>
+        <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 10 }} numberOfLines={2}>
           {route.description}
         </Text>
       ) : null}
@@ -53,20 +54,20 @@ function PublicRouteCard({ route }: { route: PublicRoute }) {
       {/* Stats chips */}
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="navigate-outline" size={13} color="#22C55E" />
-          <Text style={{ color: '#6B8F71', fontSize: 12 }}>{formatDistance(route.distanceMeters)}</Text>
+          <Ionicons name="navigate-outline" size={13} color={colors.accent} />
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDistance(route.distanceMeters)}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="time-outline" size={13} color="#22C55E" />
-          <Text style={{ color: '#6B8F71', fontSize: 12 }}>{formatDuration(route.durationSeconds)}</Text>
+          <Ionicons name="time-outline" size={13} color={colors.accent} />
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDuration(route.durationSeconds)}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="trending-up-outline" size={13} color="#22C55E" />
-          <Text style={{ color: '#6B8F71', fontSize: 12 }}>{formatElevation(route.elevationGainMeters)}</Text>
+          <Ionicons name="trending-up-outline" size={13} color={colors.accent} />
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatElevation(route.elevationGainMeters)}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="arrow-up-outline" size={13} color="#22C55E" />
-          <Text style={{ color: '#6B8F71', fontSize: 12 }}>{formatElevation(route.maxElevationMeters, false)} máx.</Text>
+          <Ionicons name="arrow-up-outline" size={13} color={colors.accent} />
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatElevation(route.maxElevationMeters, false)} máx.</Text>
         </View>
       </View>
     </View>
@@ -108,8 +109,8 @@ export default function ExploreScreen() {
         alignItems: 'center',
       }}>
         <View>
-          <Text style={{ color: '#6B8F71', fontSize: 13 }}>Descubre</Text>
-          <Text style={{ color: '#E8F5E9', fontSize: 22, fontWeight: '700' }}>Explorar</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>Descubre</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: '700' }}>Explorar</Text>
         </View>
         <TouchableOpacity
           onPress={load}
@@ -117,14 +118,14 @@ export default function ExploreScreen() {
           style={{
             width: 36, height: 36,
             borderRadius: 18,
-            backgroundColor: '#1A2E1F',
+            backgroundColor: colors.bgCard,
             borderWidth: 1,
             borderColor: '#2D6A4F',
             justifyContent: 'center',
             alignItems: 'center',
           }}
         >
-          <Ionicons name="refresh-outline" size={18} color={isOffline ? '#2D6A4F' : '#22C55E'} />
+          <Ionicons name="refresh-outline" size={18} color={isOffline ? '#2D6A4F' : colors.accent} />
         </TouchableOpacity>
       </View>
 
@@ -154,13 +155,13 @@ export default function ExploreScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={load}
-            tintColor="#22C55E"
-            colors={['#22C55E']}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
         ListHeaderComponent={
           routes.length > 0 ? (
-            <Text style={{ color: '#E8F5E9', fontSize: 15, fontWeight: '600', marginBottom: 12 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '600', marginBottom: 12 }}>
               {routes.length} ruta{routes.length !== 1 ? 's' : ''} públicas
             </Text>
           ) : null
@@ -168,19 +169,19 @@ export default function ExploreScreen() {
         ListEmptyComponent={
           isLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-              <ActivityIndicator color="#22C55E" size="large" />
+              <ActivityIndicator color={colors.accent} size="large" />
             </View>
           ) : isOffline ? (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
               <Ionicons name="wifi-outline" size={56} color="#2D6A4F" />
-              <Text style={{ color: '#6B8F71', marginTop: 12, textAlign: 'center' }}>
+              <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center' }}>
                 Conéctate a internet{'\n'}para explorar rutas de otros usuarios.
               </Text>
             </View>
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
               <Ionicons name="compass-outline" size={56} color="#2D6A4F" />
-              <Text style={{ color: '#6B8F71', marginTop: 12, textAlign: 'center', lineHeight: 22 }}>
+              <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center', lineHeight: 22 }}>
                 Aún no hay rutas públicas.{'\n'}¡Sé el primero en compartir la tuya!
               </Text>
             </View>

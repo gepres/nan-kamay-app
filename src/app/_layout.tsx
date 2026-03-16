@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Linking from 'expo-linking';
 import { useAuthStore } from '@presentation/stores/authStore';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { initDatabase } from '@infrastructure/database/sqliteDb';
@@ -12,12 +13,36 @@ import ToastContainer from '@presentation/components/ui/ToastContainer';
 // background task antes de que la app arranque completamente.
 import '@infrastructure/services/GpsServiceImpl';
 
+async function handleAuthDeepLink(url: string) {
+  // El link de confirmación llega como: nan-kamay://#access_token=...&type=signup
+  const fragment = url.split('#')[1];
+  if (!fragment) return;
+
+  const params = new URLSearchParams(fragment);
+  const access_token = params.get('access_token');
+  const refresh_token = params.get('refresh_token');
+
+  if (access_token && refresh_token) {
+    await supabase.auth.setSession({ access_token, refresh_token });
+  }
+}
+
 export default function RootLayout() {
   const { setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
     // Inicializar base de datos SQLite
     initDatabase().catch(console.error);
+
+    // Manejar deep link si la app se abrió desde el email de confirmación
+    Linking.getInitialURL().then((url) => {
+      if (url) handleAuthDeepLink(url);
+    });
+
+    // Manejar deep link si la app ya estaba abierta
+    const linkSubscription = Linking.addEventListener('url', ({ url }) => {
+      handleAuthDeepLink(url);
+    });
 
     // Escuchar cambios de autenticación en Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -38,7 +63,10 @@ export default function RootLayout() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      linkSubscription.remove();
+    };
   }, []);
 
   return (

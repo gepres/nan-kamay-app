@@ -13,6 +13,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { thunderforestTileUrl } from '@infrastructure/config/env';
+import { colors } from '@presentation/theme/colors';
 
 // setAccessToken puede ser undefined en Expo Go (requiere dev build)
 if (typeof setAccessToken === 'function') setAccessToken(null);
@@ -110,7 +111,7 @@ export default function TrackingMap({ followUser = true }: Props) {
           <ShapeSource id="route" shape={routeGeoJson}>
             <LineLayer
               id="route-line"
-              style={{ lineColor: '#22C55E', lineWidth: 4, lineCap: 'round', lineJoin: 'round' }}
+              style={{ lineColor: colors.accent, lineWidth: 4, lineCap: 'round', lineJoin: 'round' }}
             />
           </ShapeSource>
         )}
@@ -119,7 +120,7 @@ export default function TrackingMap({ followUser = true }: Props) {
           <ShapeSource id="start-marker" shape={startGeoJson}>
             <CircleLayer
               id="start-circle"
-              style={{ circleRadius: 8, circleColor: '#22C55E', circleStrokeColor: '#E8F5E9', circleStrokeWidth: 2 }}
+              style={{ circleRadius: 8, circleColor: colors.success, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 2 }}
             />
           </ShapeSource>
         )}
@@ -132,7 +133,7 @@ export default function TrackingMap({ followUser = true }: Props) {
             />
             <CircleLayer
               id="current-dot"
-              style={{ circleRadius: 8, circleColor: '#22C55E', circleStrokeColor: '#E8F5E9', circleStrokeWidth: 3 }}
+              style={{ circleRadius: 8, circleColor: colors.accent, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 3 }}
             />
           </ShapeSource>
         )}
@@ -141,7 +142,7 @@ export default function TrackingMap({ followUser = true }: Props) {
           <ShapeSource id="waypoints" shape={waypointsGeoJson}>
             <CircleLayer
               id="waypoint-circles"
-              style={{ circleRadius: 7, circleColor: '#F59E0B', circleStrokeColor: '#E8F5E9', circleStrokeWidth: 2 }}
+              style={{ circleRadius: 7, circleColor: colors.accent, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 2 }}
             />
           </ShapeSource>
         )}

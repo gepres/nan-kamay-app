@@ -12,6 +12,7 @@ import { useNetworkStatus } from '@presentation/hooks/useNetworkStatus';
 import RouteCard from '@presentation/components/routes/RouteCard';
 import OfflineBanner from '@presentation/components/ui/OfflineBanner';
 import { Route } from '@core/entities/Route';
+import { colors } from '@presentation/theme/colors';
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
@@ -79,7 +80,7 @@ export default function HomeScreen() {
   const unsyncedCount = routes.filter((r) => !r.isSynced).length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0D1B12' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       {/* Barra offline animada */}
       <OfflineBanner visible={isOffline} />
 
@@ -93,10 +94,10 @@ export default function HomeScreen() {
         paddingBottom: 16,
       }}>
         <View>
-          <Text style={{ color: '#6B8F71', fontSize: 13 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 13 }}>
             {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}
           </Text>
-          <Text style={{ color: '#E8F5E9', fontSize: 22, fontWeight: '700' }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: '700' }}>
             {user?.fullName?.split(' ')[0] ?? 'Trekker'}
           </Text>
         </View>
@@ -135,7 +136,7 @@ export default function HomeScreen() {
         onPress={() => router.push('/tracking/pre-recording')}
         style={{
           marginHorizontal: 20,
-          backgroundColor: '#22C55E',
+          backgroundColor: colors.accent,
           borderRadius: 12,
           paddingVertical: 16,
           flexDirection: 'row',
@@ -145,8 +146,8 @@ export default function HomeScreen() {
           marginBottom: 24,
         }}
       >
-        <Ionicons name="play-circle" size={24} color="#0D1B12" />
-        <Text style={{ color: '#0D1B12', fontSize: 16, fontWeight: '700' }}>
+        <Ionicons name="play-circle" size={24} color={colors.bgPrimary} />
+        <Text style={{ color: colors.bgPrimary, fontSize: 16, fontWeight: '700' }}>
           Iniciar nueva ruta
         </Text>
       </TouchableOpacity>
@@ -160,13 +161,13 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={() => user && fetchRoutes(user.id)}
-            tintColor="#22C55E"
-            colors={['#22C55E']}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
           />
         }
         ListHeaderComponent={
           routes.length > 0 ? (
-            <Text style={{ color: '#E8F5E9', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
               Mis rutas ({routes.length})
             </Text>
           ) : null
@@ -174,12 +175,12 @@ export default function HomeScreen() {
         ListEmptyComponent={
           isLoading ? (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-              <ActivityIndicator color="#22C55E" size="large" />
+              <ActivityIndicator color={colors.accent} size="large" />
             </View>
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 60 }}>
               <Ionicons name="map-outline" size={56} color="#2D6A4F" />
-              <Text style={{ color: '#6B8F71', marginTop: 12, textAlign: 'center', lineHeight: 22 }}>
+              <Text style={{ color: colors.textMuted, marginTop: 12, textAlign: 'center', lineHeight: 22 }}>
                 Aún no tienes rutas grabadas.{'\n'}¡Inicia tu primera aventura!
               </Text>
             </View>

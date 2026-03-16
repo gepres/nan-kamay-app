@@ -12,16 +12,20 @@ import {
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
+import { colors } from '@presentation/theme/colors';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password) {
+    if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Por favor completa todos los campos.');
       return;
     }
@@ -29,11 +33,22 @@ export default function RegisterScreen() {
       Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres.');
       return;
     }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      return;
+    }
+    if (!termsAccepted) {
+      Alert.alert('Error', 'Debes aceptar los Términos y Condiciones.');
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: 'nan-kamay://',
+      },
     });
     setLoading(false);
     if (error) {
@@ -47,103 +62,192 @@ export default function RegisterScreen() {
     }
   };
 
+  const handleGoogleRegister = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (error) Alert.alert('Error', error.message);
+  };
+
   const inputStyle = {
-    backgroundColor: '#152219',
-    borderColor: '#2D6A4F',
+    backgroundColor: colors.bgInput,
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: '#E8F5E9',
+    color: colors.textPrimary,
     fontSize: 16,
   };
 
   const labelStyle = {
-    color: '#6B8F71',
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: '500' as const,
     marginBottom: 6,
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0D1B12' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 32 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ marginBottom: 40, alignItems: 'center' }}>
-            <Text style={{ color: '#22C55E', fontSize: 28, fontWeight: '700' }}>
-              Crear cuenta
-            </Text>
-            <Text style={{ color: '#6B8F71', fontSize: 14, marginTop: 8 }}>
-              Únete a Ñan Kamay
+          {/* Brand */}
+          <View style={{ alignItems: 'center', marginBottom: 32, gap: 8 }}>
+            <View style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: colors.accent,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Ionicons name="trail-sign" size={30} color={colors.bgPrimary} />
+            </View>
+            <Text style={{ color: colors.accent, fontSize: 20, fontWeight: '700', letterSpacing: 3 }}>
+              ÑAN KAMAY
             </Text>
           </View>
 
+          {/* Título */}
+          <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: '700', marginBottom: 4 }}>
+            Crear Cuenta
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 24 }}>
+            Únete y empieza a registrar tus rutas
+          </Text>
+
+          {/* Nombre */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={labelStyle}>Nombre completo</Text>
+            <Text style={labelStyle}>Nombre Completo</Text>
             <TextInput
               value={fullName}
               onChangeText={setFullName}
               placeholder="Tu nombre"
-              placeholderTextColor="#6B8F71"
+              placeholderTextColor={colors.textMuted}
               style={inputStyle}
             />
           </View>
 
+          {/* Email */}
           <View style={{ marginBottom: 16 }}>
-            <Text style={labelStyle}>Correo electrónico</Text>
+            <Text style={labelStyle}>Correo Electrónico</Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholder="tu@correo.com"
-              placeholderTextColor="#6B8F71"
+              placeholder="tu@email.com"
+              placeholderTextColor={colors.textMuted}
               style={inputStyle}
             />
           </View>
 
-          <View style={{ marginBottom: 28 }}>
+          {/* Contraseña */}
+          <View style={{ marginBottom: 16 }}>
             <Text style={labelStyle}>Contraseña</Text>
             <TextInput
               value={password}
               onChangeText={setPassword}
               secureTextEntry
               placeholder="Mínimo 8 caracteres"
-              placeholderTextColor="#6B8F71"
+              placeholderTextColor={colors.textMuted}
               style={inputStyle}
             />
           </View>
 
+          {/* Confirmar Contraseña */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={labelStyle}>Confirmar Contraseña</Text>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              placeholder="Repite tu contraseña"
+              placeholderTextColor={colors.textMuted}
+              style={inputStyle}
+            />
+          </View>
+
+          {/* Terms */}
+          <TouchableOpacity
+            onPress={() => setTermsAccepted(!termsAccepted)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 }}
+          >
+            <View style={{
+              width: 18,
+              height: 18,
+              borderRadius: 4,
+              borderWidth: 1.5,
+              borderColor: termsAccepted ? colors.accent : colors.border,
+              backgroundColor: termsAccepted ? colors.accent : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {termsAccepted && <Ionicons name="checkmark" size={12} color={colors.bgPrimary} />}
+            </View>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+              Acepto los{' '}
+              <Text style={{ color: colors.accent }}>Términos y Condiciones</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* Botón Crear Cuenta */}
           <TouchableOpacity
             onPress={handleRegister}
             disabled={loading}
             style={{
-              backgroundColor: '#22C55E',
+              backgroundColor: colors.accent,
               borderRadius: 12,
               paddingVertical: 14,
               alignItems: 'center',
-              marginBottom: 24,
+              marginBottom: 16,
             }}
           >
             {loading ? (
-              <ActivityIndicator color="#0D1B12" />
+              <ActivityIndicator color={colors.bgPrimary} />
             ) : (
-              <Text style={{ color: '#0D1B12', fontSize: 16, fontWeight: '600' }}>
-                Registrarme
+              <Text style={{ color: colors.bgPrimary, fontSize: 16, fontWeight: '600' }}>
+                Crear Cuenta
               </Text>
             )}
           </TouchableOpacity>
 
+          {/* Divider */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            <Text style={{ color: colors.textMuted, marginHorizontal: 12, fontSize: 13 }}>o</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+          </View>
+
+          {/* Google */}
+          <TouchableOpacity
+            onPress={handleGoogleRegister}
+            style={{
+              backgroundColor: colors.bgCard,
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 12,
+              paddingVertical: 14,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 10,
+              marginBottom: 32,
+            }}
+          >
+            <Ionicons name="globe-outline" size={20} color={colors.textPrimary} />
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '500' }}>Google</Text>
+          </TouchableOpacity>
+
+          {/* Link login */}
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ color: '#6B8F71', textAlign: 'center', fontSize: 14 }}>
+            <Text style={{ color: colors.textSecondary, textAlign: 'center', fontSize: 14 }}>
               ¿Ya tienes cuenta?{' '}
-              <Text style={{ color: '#22C55E', fontWeight: '600' }}>Iniciar sesión</Text>
+              <Text style={{ color: colors.accent, fontWeight: '600' }}>Inicia Sesión</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>

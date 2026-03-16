@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import { colors } from '@presentation/theme/colors';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -14,9 +15,9 @@ import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatDate, formatElevation } from '@shared/utils/formatters';
 
 const difficultyColors = {
-  easy: '#4ADE80',
-  moderate: '#F59E0B',
-  hard: '#EF4444',
+  easy: colors.easy,
+  moderate: colors.medium,
+  hard: colors.hard,
 };
 
 interface Props {
@@ -59,18 +60,18 @@ export default function RouteCard({ route, onPress, onDelete, index = 0 }: Props
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         style={{
-          backgroundColor: '#1A2E1F',
+          backgroundColor: colors.bgCard,
           borderRadius: 12,
           padding: 16,
           borderWidth: 1,
-          borderColor: '#2D6A4F',
+          borderColor: colors.border,
           marginBottom: 12,
         }}
       >
         {/* Fila superior: nombre + badge dificultad + sync */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
           <Text
-            style={{ color: '#E8F5E9', fontSize: 15, fontWeight: '700', flex: 1 }}
+            style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700', flex: 1 }}
             numberOfLines={1}
           >
             {route.name}
@@ -95,7 +96,7 @@ export default function RouteCard({ route, onPress, onDelete, index = 0 }: Props
 
           {onDelete && (
             <Pressable onPress={onDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="trash-outline" size={16} color="#6B8F71" />
+              <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
             </Pressable>
           )}
         </View>
@@ -108,7 +109,7 @@ export default function RouteCard({ route, onPress, onDelete, index = 0 }: Props
           <StatChip icon="speedometer-outline" value={`${route.avgSpeedKmh.toFixed(1)} km/h`} />
         </View>
 
-        <Text style={{ color: '#6B8F71', fontSize: 12, marginTop: 10 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 10 }}>
           {formatDate(route.createdAt)}
         </Text>
       </Pressable>
@@ -119,8 +120,8 @@ export default function RouteCard({ route, onPress, onDelete, index = 0 }: Props
 function StatChip({ icon, value }: { icon: string; value: string }) {
   return (
     <View style={{ alignItems: 'center', gap: 4 }}>
-      <Ionicons name={icon as any} size={14} color="#22C55E" />
-      <Text style={{ color: '#E8F5E9', fontSize: 12, fontWeight: '600' }}>{value}</Text>
+      <Ionicons name={icon as any} size={14} color={colors.accent} />
+      <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '600' }}>{value}</Text>
     </View>
   );
 }

@@ -12,6 +12,7 @@ import {
 import { thunderforestTileUrl } from '@infrastructure/config/env';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
+import { colors } from '@presentation/theme/colors';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
 
@@ -96,7 +97,7 @@ export default function RouteMap({
           <ShapeSource id="route-preview" shape={routeGeoJson}>
             <LineLayer
               id="route-preview-line"
-              style={{ lineColor: '#22C55E', lineWidth: 3, lineCap: 'round', lineJoin: 'round' }}
+              style={{ lineColor: colors.accent, lineWidth: 3, lineCap: 'round', lineJoin: 'round' }}
             />
           </ShapeSource>
         )}
@@ -108,7 +109,7 @@ export default function RouteMap({
           >
             <CircleLayer
               id="start-dot"
-              style={{ circleRadius: 6, circleColor: '#22C55E', circleStrokeColor: '#fff', circleStrokeWidth: 2 }}
+              style={{ circleRadius: 6, circleColor: colors.accent, circleStrokeColor: '#fff', circleStrokeWidth: 2 }}
             />
           </ShapeSource>
         )}

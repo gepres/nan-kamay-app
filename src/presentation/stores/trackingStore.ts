@@ -11,6 +11,8 @@ interface TrackingState {
   status: TrackingStatus;
   routeId: string | null;
   routeName: string;
+  routeDescription: string;
+  activityType: string;
   difficulty: Difficulty;
   gpsPoints: GpsPoint[];
   waypoints: Waypoint[];
@@ -21,7 +23,7 @@ interface TrackingState {
   liveStats: RouteStats;
 
   // Acciones
-  startRecording: (name: string, difficulty: Difficulty) => void;
+  startRecording: (name: string, difficulty: Difficulty, description?: string, activityType?: string) => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
   addGpsPoint: (point: GpsPoint) => void;
@@ -46,6 +48,8 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   status: 'idle',
   routeId: null,
   routeName: '',
+  routeDescription: '',
+  activityType: 'Senderismo',
   difficulty: 'easy',
   gpsPoints: [],
   waypoints: [],
@@ -55,12 +59,14 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   totalPausedSeconds: 0,
   liveStats: initialStats,
 
-  startRecording: (name, difficulty) => {
+  startRecording: (name, difficulty, description = '', activityType = 'Senderismo') => {
     const routeId = crypto.randomUUID();
     set({
       status: 'recording',
       routeId,
       routeName: name,
+      routeDescription: description,
+      activityType,
       difficulty,
       gpsPoints: [],
       waypoints: [],
