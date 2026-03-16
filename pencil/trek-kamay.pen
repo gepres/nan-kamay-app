@@ -1266,58 +1266,111 @@
                   "id": "On0Yx",
                   "name": "diffChips",
                   "width": "fill_container",
+                  "layout": "vertical",
                   "gap": 10,
                   "children": [
                     {
-                      "id": "HfvLP",
-                      "type": "ref",
-                      "ref": "TNI6x",
-                      "name": "chipEasy",
-                      "width": "fit_content",
-                      "height": "fit_content",
-                      "x": 0,
-                      "y": 0,
-                      "descendants": {
-                        "OIwOS": {
-                          "content": "Fácil",
-                          "x": 18,
-                          "y": 10
+                      "type": "frame",
+                      "id": "UpoEh",
+                      "name": "diffRow1",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "id": "HfvLP",
+                          "type": "ref",
+                          "ref": "TNI6x",
+                          "name": "chipEasy",
+                          "width": "fit_content",
+                          "height": "fit_content",
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "OIwOS": {
+                              "content": "Fácil",
+                              "x": 18,
+                              "y": 10
+                            }
+                          }
+                        },
+                        {
+                          "id": "JPalm",
+                          "type": "ref",
+                          "ref": "fxRTP",
+                          "name": "chipMed",
+                          "width": "fit_content",
+                          "height": "fit_content",
+                          "x": 76,
+                          "y": 0,
+                          "descendants": {
+                            "mSamW": {
+                              "content": "Medio",
+                              "x": 18,
+                              "y": 10
+                            }
+                          }
+                        },
+                        {
+                          "id": "xHVXe",
+                          "type": "ref",
+                          "ref": "fxRTP",
+                          "name": "chipHard",
+                          "width": "fit_content",
+                          "height": "fit_content",
+                          "x": 161,
+                          "y": 0,
+                          "descendants": {
+                            "mSamW": {
+                              "content": "Difícil",
+                              "x": 18,
+                              "y": 10
+                            }
+                          }
                         }
-                      }
+                      ]
                     },
                     {
-                      "id": "JPalm",
-                      "type": "ref",
-                      "ref": "fxRTP",
-                      "name": "chipMed",
-                      "width": "fit_content",
-                      "height": "fit_content",
-                      "x": 76,
-                      "y": 0,
-                      "descendants": {
-                        "mSamW": {
-                          "content": "Medio",
-                          "x": 18,
-                          "y": 10
+                      "type": "frame",
+                      "id": "1NwKi",
+                      "name": "diffRow2",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "id": "VC4a9",
+                          "type": "ref",
+                          "ref": "fxRTP",
+                          "width": "fit_content",
+                          "height": "fit_content",
+                          "name": "chipVD",
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "mSamW": {
+                              "content": "Muy Difícil",
+                              "x": 18,
+                              "y": 10
+                            }
+                          }
+                        },
+                        {
+                          "id": "gwC1R",
+                          "type": "ref",
+                          "ref": "fxRTP",
+                          "width": "fit_content",
+                          "height": "fit_content",
+                          "name": "chipExp",
+                          "x": 112,
+                          "y": 0,
+                          "descendants": {
+                            "mSamW": {
+                              "content": "Expertos",
+                              "x": 18,
+                              "y": 10
+                            }
+                          }
                         }
-                      }
-                    },
-                    {
-                      "id": "xHVXe",
-                      "type": "ref",
-                      "ref": "fxRTP",
-                      "name": "chipHard",
-                      "width": "fit_content",
-                      "height": "fit_content",
-                      "x": 161,
-                      "y": 0,
-                      "descendants": {
-                        "mSamW": {
-                          "content": "Difícil",
-                          "x": 18,
-                          "y": 10
-                        }
-                      }
+                      ]
                     }
                   ]
                 }
@@ -1961,6 +2014,35 @@
                   "fill": "$text-primary"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "RzmfB",
+          "x": 331,
+          "y": 332,
+          "name": "Layer Toggle",
+          "width": 44,
+          "height": 44,
+          "fill": "#0D1B12E6",
+          "cornerRadius": 14,
+          "stroke": {
+            "thickness": 1,
+            "fill": "#2D6A4F80"
+          },
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon_font",
+              "id": "6Naxb",
+              "name": "layerIcon",
+              "width": 20,
+              "height": 20,
+              "iconFontName": "layers",
+              "iconFontFamily": "lucide",
+              "fill": "$text-primary"
             }
           ]
         }

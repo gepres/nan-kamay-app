@@ -5,7 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  
+  Image,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -109,8 +109,13 @@ export default function RegisterScreen() {
               backgroundColor: colors.accent,
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
             }}>
-              <Ionicons name="trail-sign" size={30} color={colors.bgPrimary} />
+              <Image
+                source={require('../../../assets/logo-kamay.png')}
+                style={{ width: 40, height: 40, tintColor: colors.bgPrimary }}
+                resizeMode="contain"
+              />
             </View>
             <Text style={{ color: colors.accent, fontSize: 20, fontWeight: '700', letterSpacing: 3 }}>
               ÑAN KAMAY

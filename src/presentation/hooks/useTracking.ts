@@ -5,10 +5,11 @@ import { useUiStore } from '@presentation/stores/uiStore';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { GpsUpdate } from '@core/ports/services/IGpsService';
+import { GpsFilter } from '@infrastructure/services/GpsFilter';
 
 /**
  * Hook principal para la grabación GPS.
- * Conecta el GpsServiceImpl con el trackingStore.
+ * Conecta el GpsServiceImpl → GpsFilter → trackingStore.
  */
 export function useTracking() {
   const {
@@ -22,35 +23,42 @@ export function useTracking() {
   const { showToast } = useUiStore();
   const sequenceRef = useRef(gpsPoints.length);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const gpsFilterRef = useRef(new GpsFilter());
 
   // Callback que recibe cada update de GPS
   const handleGpsUpdate = useCallback(
     (update: GpsUpdate) => {
       if (!routeId) return;
 
-      // Actualizar posición visible en el mapa
+      // Siempre actualizar posición visible en el mapa (sin filtrar)
       updatePosition(update.coordinates);
 
       // Solo grabar puntos cuando está en estado "recording"
       const currentStatus = useTrackingStore.getState().status;
       if (currentStatus !== 'recording') return;
 
-      // Usar altitud solo si la precisión vertical es confiable (≤ 50 m)
-      const altitudeAccuracyOk =
-        update.altitudeAccuracy !== null && update.altitudeAccuracy <= 50;
-      const altitude =
-        altitudeAccuracyOk && update.coordinates.altitude != null
-          ? update.coordinates.altitude
-          : null;
+      // ── Pipeline de filtrado ──
+      const filtered = gpsFilterRef.current.process(
+        update.coordinates.latitude,
+        update.coordinates.longitude,
+        update.coordinates.altitude ?? null,
+        update.accuracy,
+        update.altitudeAccuracy,
+        update.speed,
+        update.timestamp,
+      );
+
+      // Punto descartado por el filtro (ruido, drift, teleport, baja precisión)
+      if (!filtered) return;
 
       const point = GpsPoint.create({
         routeId,
-        latitude: update.coordinates.latitude,
-        longitude: update.coordinates.longitude,
-        altitude,
-        accuracy: update.accuracy,
-        speed: update.speed,
-        recordedAt: update.timestamp,
+        latitude: filtered.latitude,
+        longitude: filtered.longitude,
+        altitude: filtered.altitude,
+        accuracy: filtered.accuracy,
+        speed: filtered.speed,
+        recordedAt: filtered.timestamp,
         sequenceIndex: sequenceRef.current++,
       });
 
@@ -62,6 +70,7 @@ export function useTracking() {
   // Iniciar/detener GPS según el estado
   useEffect(() => {
     if (status === 'recording') {
+      gpsFilterRef.current.reset();
       gpsService.startTracking(handleGpsUpdate).catch((err) => {
         showToast(err.message ?? 'Error al iniciar GPS', 'error');
       });
@@ -76,9 +85,10 @@ export function useTracking() {
     };
   }, [status]);
 
-  // Actualizar el callback cuando el routeId cambia
+  // Resetear filtro y secuencia cuando cambia la ruta
   useEffect(() => {
     sequenceRef.current = 0;
+    gpsFilterRef.current.reset();
   }, [routeId]);
 
   // Manejar cambios de AppState (foreground ↔ background)

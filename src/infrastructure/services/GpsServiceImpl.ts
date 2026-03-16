@@ -69,12 +69,12 @@ export class GpsServiceImpl implements IGpsService {
 
     this._isTracking = true;
 
-    // Foreground: alta precisión mientras la pantalla está encendida
+    // Foreground: alta precisión, filtrado por distancia para evitar ruido GPS
     this.foregroundSubscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.BestForNavigation,
-        distanceInterval: 5,       // Cada 5 metros mínimo
-        timeInterval: 3000,        // O cada 3 segundos
+        distanceInterval: 10,      // 10m mínimo (5m estaba dentro del radio de ruido GPS)
+        timeInterval: 5000,        // 5 segundos (a 5 km/h caminando ≈ 7m por intervalo)
       },
       (loc) => {
         onUpdate({

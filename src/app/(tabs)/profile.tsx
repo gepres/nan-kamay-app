@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +9,7 @@ import { colors } from '@presentation/theme/colors';
 
 export default function ProfileScreen() {
   const { user } = useAuthStore();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     Alert.alert('Cerrar sesión', '¿Estás seguro?', [
@@ -16,6 +18,7 @@ export default function ProfileScreen() {
         text: 'Cerrar sesión',
         style: 'destructive',
         onPress: async () => {
+          setLoggingOut(true);
           await supabase.auth.signOut();
           router.replace('/(auth)/login');
         },
@@ -52,6 +55,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity
           onPress={handleLogout}
+          disabled={loggingOut}
           style={{
             backgroundColor: 'transparent',
             borderColor: '#EF4444',
@@ -59,11 +63,19 @@ export default function ProfileScreen() {
             borderRadius: 12,
             paddingVertical: 14,
             alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 8,
+            opacity: loggingOut ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: '600' }}>
-            Cerrar sesión
-          </Text>
+          {loggingOut ? (
+            <ActivityIndicator size="small" color="#EF4444" />
+          ) : (
+            <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: '600' }}>
+              Cerrar sesión
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

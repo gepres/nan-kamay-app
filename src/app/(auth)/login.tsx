@@ -5,7 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  
+  Image,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -71,8 +71,13 @@ export default function LoginScreen() {
               backgroundColor: colors.accent,
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
             }}>
-              <Ionicons name="trail-sign" size={36} color={colors.bgPrimary} />
+              <Image
+                source={require('../../../assets/logo-kamay.png')}
+                style={{ width: 48, height: 48, tintColor: colors.bgPrimary }}
+                resizeMode="contain"
+              />
             </View>
             <Text style={{ color: colors.accent, fontSize: 24, fontWeight: '700', letterSpacing: 3 }}>
               ÑAN KAMAY
