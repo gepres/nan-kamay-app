@@ -173,7 +173,7 @@ export default function ActiveTrackingScreen() {
           <ControlButton
             icon="flag-outline"
             label="Waypoint"
-            color=colors.accent
+            color={colors.accent}
             bgColor={colors.bgCard}
             onPress={handleAddWaypoint}
           />

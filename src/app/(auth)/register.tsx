@@ -21,6 +21,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -76,6 +78,7 @@ export default function RegisterScreen() {
     paddingVertical: 14,
     color: colors.textPrimary,
     fontSize: 16,
+    flex: 1,
   };
 
   const labelStyle = {
@@ -149,27 +152,51 @@ export default function RegisterScreen() {
           {/* Contraseña */}
           <View style={{ marginBottom: 16 }}>
             <Text style={labelStyle}>Contraseña</Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="Mínimo 8 caracteres"
-              placeholderTextColor={colors.textMuted}
-              style={inputStyle}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholder="Mínimo 8 caracteres"
+                placeholderTextColor={colors.textMuted}
+                style={inputStyle}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 14, padding: 4 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Confirmar Contraseña */}
           <View style={{ marginBottom: 20 }}>
             <Text style={labelStyle}>Confirmar Contraseña</Text>
-            <TextInput
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              placeholder="Repite tu contraseña"
-              placeholderTextColor={colors.textMuted}
-              style={inputStyle}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                placeholder="Repite tu contraseña"
+                placeholderTextColor={colors.textMuted}
+                style={inputStyle}
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{ position: 'absolute', right: 14, padding: 4 }}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Terms */}

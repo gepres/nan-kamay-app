@@ -18,6 +18,7 @@ import { colors } from '@presentation/theme/colors';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -30,8 +31,9 @@ export default function LoginScreen() {
     setLoading(false);
     if (error) {
       Alert.alert('Error al iniciar sesión', error.message);
+    } else {
+      router.replace('/(tabs)');
     }
-    // La redirección la maneja _layout.tsx via onAuthStateChange
   };
 
   const handleGoogleLogin = async () => {
@@ -48,6 +50,7 @@ export default function LoginScreen() {
     paddingVertical: 14,
     color: colors.textPrimary,
     fontSize: 16,
+    flex: 1,
   };
 
   return (
@@ -102,14 +105,30 @@ export default function LoginScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 6 }}>
               Contraseña
             </Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="••••••••"
-              placeholderTextColor={colors.textMuted}
-              style={inputStyle}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textMuted}
+                style={inputStyle}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: 14,
+                  padding: 4,
+                }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Olvidé mi contraseña */}

@@ -35,11 +35,19 @@ export function useTracking() {
       const currentStatus = useTrackingStore.getState().status;
       if (currentStatus !== 'recording') return;
 
+      // Usar altitud solo si la precisión vertical es confiable (≤ 50 m)
+      const altitudeAccuracyOk =
+        update.altitudeAccuracy !== null && update.altitudeAccuracy <= 50;
+      const altitude =
+        altitudeAccuracyOk && update.coordinates.altitude != null
+          ? update.coordinates.altitude
+          : null;
+
       const point = GpsPoint.create({
         routeId,
         latitude: update.coordinates.latitude,
         longitude: update.coordinates.longitude,
-        altitude: update.coordinates.altitude ?? null,
+        altitude,
         accuracy: update.accuracy,
         speed: update.speed,
         recordedAt: update.timestamp,

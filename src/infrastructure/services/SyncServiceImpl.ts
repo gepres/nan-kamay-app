@@ -55,7 +55,7 @@ export async function syncOfflineRoutes(userId: string): Promise<SyncResult> {
         // Upsert de las imágenes en la tabla waypoint_images
         if (remoteUris.length > 0) {
           const images = remoteUris.map((url) => ({
-            id: crypto.randomUUID(),
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
             waypoint_id: wp.id,
             storage_path: url,
             created_at: new Date().toISOString(),

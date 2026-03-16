@@ -34,6 +34,15 @@ export class StatsCalculator {
     let minElevation = Infinity;
     let maxSpeedKmh = 0;
 
+    // Incluir el primer punto en tracking de elevación
+    if (points[0].altitude !== null) {
+      maxElevation = points[0].altitude;
+      minElevation = points[0].altitude;
+    }
+
+    // Umbral mínimo para filtrar ruido GPS (el GPS de altitud fluctúa ±3-5m)
+    const ELEVATION_NOISE_THRESHOLD = 2;
+
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1];
       const curr = points[i];
@@ -44,11 +53,11 @@ export class StatsCalculator {
         { latitude: curr.latitude, longitude: curr.longitude },
       );
 
-      // Elevación
+      // Elevación — solo contar cambios significativos (> umbral de ruido)
       if (prev.altitude !== null && curr.altitude !== null) {
         const diff = curr.altitude - prev.altitude;
-        if (diff > 0) elevationGain += diff;
-        else elevationLoss += Math.abs(diff);
+        if (diff > ELEVATION_NOISE_THRESHOLD) elevationGain += diff;
+        else if (diff < -ELEVATION_NOISE_THRESHOLD) elevationLoss += Math.abs(diff);
       }
 
       if (curr.altitude !== null) {

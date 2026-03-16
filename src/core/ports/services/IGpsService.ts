@@ -2,8 +2,9 @@ import { Coordinates } from '../../value-objects/Coordinates';
 
 export interface GpsUpdate {
   coordinates: Coordinates;
-  speed: number | null;    // m/s
-  accuracy: number | null;
+  speed: number | null;           // m/s
+  accuracy: number | null;        // precisión horizontal en metros
+  altitudeAccuracy: number | null; // precisión vertical en metros (null = no disponible)
   timestamp: Date;
 }
 

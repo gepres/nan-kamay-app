@@ -27,7 +27,7 @@ export class Route {
   static create(props: Omit<RouteProps, 'id' | 'createdAt' | 'isSynced'>): Route {
     return new Route({
       ...props,
-      id: crypto.randomUUID(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       isSynced: false,
       createdAt: new Date(),
     });

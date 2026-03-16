@@ -60,7 +60,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   liveStats: initialStats,
 
   startRecording: (name, difficulty, description = '', activityType = 'Senderismo') => {
-    const routeId = crypto.randomUUID();
+    const routeId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     set({
       status: 'recording',
       routeId,

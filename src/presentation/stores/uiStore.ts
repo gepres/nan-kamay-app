@@ -19,7 +19,7 @@ export const useUiStore = create<UiState>((set) => ({
   isOffline: false,
 
   showToast: (message, type = 'info') => {
-    const id = crypto.randomUUID();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     set((state) => ({
       toasts: [...state.toasts, { id, message, type }],
     }));

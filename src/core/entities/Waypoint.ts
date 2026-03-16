@@ -17,7 +17,7 @@ export class Waypoint {
   static create(props: Omit<WaypointProps, 'id' | 'createdAt'>): Waypoint {
     return new Waypoint({
       ...props,
-      id: crypto.randomUUID(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       createdAt: new Date(),
     });
   }

@@ -29,6 +29,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskMan
         },
         speed: loc.coords.speed,
         accuracy: loc.coords.accuracy,
+        altitudeAccuracy: loc.coords.altitudeAccuracy ?? null,
         timestamp: new Date(loc.timestamp),
       });
     }
@@ -84,6 +85,7 @@ export class GpsServiceImpl implements IGpsService {
           },
           speed: loc.coords.speed,
           accuracy: loc.coords.accuracy,
+          altitudeAccuracy: loc.coords.altitudeAccuracy ?? null,
           timestamp: new Date(loc.timestamp),
         });
       }
@@ -91,22 +93,28 @@ export class GpsServiceImpl implements IGpsService {
 
     // Background: menor precisión para ahorrar batería
     _backgroundCallback = onUpdate;
-    const hasBackground = await Location.isBackgroundLocationAvailableAsync();
-    if (hasBackground) {
-      const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-      if (!alreadyRunning) {
-        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-          accuracy: Location.Accuracy.Balanced,
-          distanceInterval: 10,
-          timeInterval: 5000,
-          showsBackgroundLocationIndicator: true,
-          foregroundService: {
-            notificationTitle: 'Ñan Kamay',
-            notificationBody: 'Grabando tu ruta...',
-            notificationColor: '#22C55E',
-          },
-        });
+    try {
+      const hasBackground = await Location.isBackgroundLocationAvailableAsync();
+      if (hasBackground) {
+        const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+        if (!alreadyRunning) {
+          await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 10,
+            timeInterval: 5000,
+            showsBackgroundLocationIndicator: true,
+            foregroundService: {
+              notificationTitle: 'Ñan Kamay',
+              notificationBody: 'Grabando tu ruta...',
+              notificationColor: '#22C55E',
+            },
+          });
+        }
       }
+    } catch (e) {
+      // Background tracking no disponible (ej: permiso RECEIVE_BOOT_COMPLETED faltante).
+      // El foreground tracking sigue activo.
+      console.warn('[GPS] Background tracking no disponible:', e);
     }
   }
 
@@ -119,10 +127,13 @@ export class GpsServiceImpl implements IGpsService {
       this.foregroundSubscription = null;
     }
 
-    const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
-      .catch(() => false);
-    if (isRunning) {
-      await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    try {
+      const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      if (isRunning) {
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+      }
+    } catch {
+      // Task no encontrado o no iniciado — ignorar
     }
   }
 

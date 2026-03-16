@@ -46,7 +46,14 @@ export default function RootLayout() {
 
     // Escuchar cambios de autenticación en Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          // Token inválido/expirado — limpiar sesión y redirigir a login
+          await supabase.auth.signOut();
+          setUser(null);
+          setLoading(false);
+          return;
+        }
         if (session?.user) {
           const user = User.fromProps({
             id: session.user.id,

@@ -59,7 +59,7 @@ export default function RouteDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#0D1B12', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color=colors.accent size="large" />
+        <ActivityIndicator color={colors.accent} size="large" />
       </SafeAreaView>
     );
   }
@@ -92,7 +92,7 @@ export default function RouteDetailScreen() {
         paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 12,
       }}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color=colors.textPrimary />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700', flex: 1 }} numberOfLines={1}>
           {route.name}
@@ -131,7 +131,7 @@ export default function RouteDetailScreen() {
               borderRadius: 12, padding: 14,
               borderWidth: 1, borderColor: '#2D6A4F',
             }}>
-              <Ionicons name={s.icon as any} size={18} color=colors.accent />
+              <Ionicons name={s.icon as any} size={18} color={colors.accent} />
               <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700', marginTop: 6 }}>
                 {s.value}
               </Text>
@@ -166,7 +166,7 @@ export default function RouteDetailScreen() {
           borderWidth: 1, borderColor: '#2D6A4F',
           flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
         }}>
-          <Ionicons name="location-outline" size={18} color=colors.accent />
+          <Ionicons name="location-outline" size={18} color={colors.accent} />
           <Text style={{ color: colors.textMuted, fontSize: 13 }}>
             <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{gpsPoints.length}</Text>
             {' '}puntos GPS registrados
@@ -193,7 +193,7 @@ export default function RouteDetailScreen() {
                   ) : null}
                   {wp.imageUris.length > 0 && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <Ionicons name="image-outline" size={12} color=colors.textMuted />
+                      <Ionicons name="image-outline" size={12} color={colors.textMuted} />
                       <Text style={{ color: colors.textMuted, fontSize: 12 }}>
                         {wp.imageUris.length} foto{wp.imageUris.length > 1 ? 's' : ''}
                       </Text>

@@ -14,7 +14,8 @@ export class GpsPoint {
   private constructor(private readonly props: GpsPointProps) {}
 
   static create(props: Omit<GpsPointProps, 'id'>): GpsPoint {
-    return new GpsPoint({ ...props, id: crypto.randomUUID() });
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    return new GpsPoint({ ...props, id });
   }
 
   static fromProps(props: GpsPointProps): GpsPoint {
