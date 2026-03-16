@@ -7308,6 +7308,755 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "9UscH",
+      "x": 3236,
+      "y": 0,
+      "name": "Layer Selector Modal",
+      "clip": true,
+      "width": 393,
+      "height": 852,
+      "fill": "#00000099",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "DcnW3",
+          "x": 0,
+          "y": 320,
+          "name": "Bottom Sheet",
+          "width": 393,
+          "fill": "$bg-primary",
+          "cornerRadius": [
+            20,
+            20,
+            0,
+            0
+          ],
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            12,
+            20,
+            24,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "7n6vc",
+              "name": "Handle",
+              "width": "fill_container",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 2,
+                  "id": "EikvR",
+                  "name": "handleBar",
+                  "fill": "$border",
+                  "width": 40,
+                  "height": 4
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GKgMZ",
+              "name": "headerRow",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FaiMl",
+                  "name": "title",
+                  "fill": "$text-primary",
+                  "content": "Tipo de Mapa",
+                  "fontFamily": "Sora",
+                  "fontSize": 20,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.5
+                },
+                {
+                  "type": "frame",
+                  "id": "h3mpi",
+                  "name": "closeBtn",
+                  "width": 32,
+                  "height": 32,
+                  "fill": "$bg-card",
+                  "cornerRadius": 16,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "81eel",
+                      "name": "closeIcon",
+                      "width": 16,
+                      "height": 16,
+                      "iconFontName": "x",
+                      "iconFontFamily": "lucide",
+                      "fill": "$text-secondary"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "n8aqq",
+              "name": "subtitle",
+              "fill": "$text-secondary",
+              "content": "Selecciona el estilo de mapa para tu ruta",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "tGIBj",
+              "name": "layerList",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Zk2hZ",
+                  "name": "Outdoors",
+                  "width": "fill_container",
+                  "fill": "$accent-soft",
+                  "cornerRadius": 12,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "$accent"
+                  },
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "uq6GD",
+                      "name": "r1ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "EEqqa",
+                          "name": "r1i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "mountain",
+                          "iconFontFamily": "lucide",
+                          "fill": "$accent"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zLlWM",
+                      "name": "r1txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hVZFv",
+                          "name": "r1n",
+                          "fill": "$text-primary",
+                          "content": "Outdoors",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rDadP",
+                          "name": "r1d",
+                          "fill": "$text-secondary",
+                          "content": "Senderismo (actual)",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon_font",
+                      "id": "dETOo",
+                      "name": "r1chk",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "circle-check",
+                      "iconFontFamily": "lucide",
+                      "fill": "$accent"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "8MXN8",
+                  "name": "Landscape",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "KV2jx",
+                      "name": "r2ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "GtcPD",
+                          "name": "r2i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "image",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "5tzDy",
+                      "name": "r2txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QC4wT",
+                          "name": "r2n",
+                          "fill": "$text-primary",
+                          "content": "Landscape",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "1bHZC",
+                          "name": "r2d",
+                          "fill": "$text-secondary",
+                          "content": "Vista general del terreno",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "0Myuc",
+                  "name": "Cycle",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "qEyS6",
+                      "name": "r3ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "mEYER",
+                          "name": "r3i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "bike",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "4DYAN",
+                      "name": "r3txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bdN74",
+                          "name": "r3n",
+                          "fill": "$text-primary",
+                          "content": "Cycle",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Dpl3Y",
+                          "name": "r3d",
+                          "fill": "$text-secondary",
+                          "content": "Ciclismo, rutas de bici",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JIBXt",
+                  "name": "Transport",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "V15Gj",
+                      "name": "r4ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "V6VP5",
+                          "name": "r4i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "bus",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "adHOx",
+                      "name": "r4txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IcfBO",
+                          "name": "r4n",
+                          "fill": "$text-primary",
+                          "content": "Transport",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "g8Ew5",
+                          "name": "r4d",
+                          "fill": "$text-secondary",
+                          "content": "Transporte público",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "0k14y",
+                  "name": "Atlas",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kMduL",
+                      "name": "r5ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "698Md",
+                          "name": "r5i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "globe",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TyuqU",
+                      "name": "r5txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hrcHc",
+                          "name": "r5n",
+                          "fill": "$text-primary",
+                          "content": "Atlas",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "p4NSa",
+                          "name": "r5d",
+                          "fill": "$text-secondary",
+                          "content": "Estilo atlas clásico",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "h1FjM",
+                  "name": "Pioneer",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bngSy",
+                      "name": "r6ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "QFG99",
+                          "name": "r6i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "compass",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y9qZ4",
+                      "name": "r6txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g4EwS",
+                          "name": "r6n",
+                          "fill": "$text-primary",
+                          "content": "Pioneer",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "cKp6A",
+                          "name": "r6d",
+                          "fill": "$text-secondary",
+                          "content": "Estilo vintage/retro",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qdEok",
+                  "name": "Neighbourhood",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bdNr1",
+                      "name": "r7ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "a48Je",
+                          "name": "r7i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "building-2",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "3w8d5",
+                      "name": "r7txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xVIF2",
+                          "name": "r7n",
+                          "fill": "$text-primary",
+                          "content": "Neighbourhood",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tvmkh",
+                          "name": "r7d",
+                          "fill": "$text-secondary",
+                          "content": "Detalle urbano",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zmkvP",
+                  "name": "Mobile Atlas",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "f53RJ",
+                      "name": "r8ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "rTGQP",
+                          "name": "r8i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "smartphone",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tj3Qe",
+                      "name": "r8txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sjm2U",
+                          "name": "r8n",
+                          "fill": "$text-primary",
+                          "content": "Mobile Atlas",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "PlJdu",
+                          "name": "r8d",
+                          "fill": "$text-secondary",
+                          "content": "Optimizado para móvil",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "p09oT",
+                  "name": "Spinal Map",
+                  "width": "fill_container",
+                  "cornerRadius": 12,
+                  "gap": 14,
+                  "padding": [
+                    14,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "CCswW",
+                      "name": "r9ic",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-card",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "QLtGi",
+                          "name": "r9i",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "contrast",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-secondary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jQJup",
+                      "name": "r9txt",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "PoNew",
+                          "name": "r9n",
+                          "fill": "$text-primary",
+                          "content": "Spinal Map",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "DVQpg",
+                          "name": "r9d",
+                          "fill": "$text-secondary",
+                          "content": "Alto contraste",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

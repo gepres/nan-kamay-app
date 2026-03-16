@@ -11,7 +11,6 @@ import {
   setAccessToken,
   Logger,
   type CameraRef,
-  type MapViewRef,
 } from '@maplibre/maplibre-react-native';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
@@ -22,6 +21,7 @@ if (typeof setAccessToken === 'function') setAccessToken(null);
 // Silenciar errores de tile (timeouts de red son reintentos normales, no crashes)
 Logger.setLogCallback((log) => {
   if (log.message?.includes('Failed to load tile')) return true;
+  if (log.message?.includes('permanent error: Canceled')) return true;
   return false;
 });
 
@@ -33,25 +33,33 @@ export interface TrackingMapHandle {
 
 interface Props {
   followUser?: boolean;
+  /** @deprecated Use mapLayer instead */
   useOutdoorTiles?: boolean;
+  /** Thunderforest tile style key (e.g. 'outdoors', 'landscape', 'cycle'). Defaults to 'outdoors'. */
+  mapLayer?: string;
+  /** Called when the map heading/zoom changes (after user gesture or programmatic) */
+  onRegionChange?: (heading: number, zoom: number) => void;
 }
 
-const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-
 export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
-  { followUser = true, useOutdoorTiles = true },
+  { followUser = true, useOutdoorTiles, mapLayer = 'outdoors', onRegionChange },
   ref,
 ) {
+  // Resolve the effective layer key (support legacy useOutdoorTiles prop)
+  const effectiveLayer = useOutdoorTiles !== undefined
+    ? (useOutdoorTiles ? 'outdoors' : 'osm')
+    : mapLayer;
   const { gpsPoints, waypoints, currentPosition } = useTrackingStore();
   const cameraRef = useRef<CameraRef>(null);
-  const mapViewRef = useRef<MapViewRef>(null);
   const currentZoom = useRef(16);
+  const currentHeading = useRef(0);
 
   useImperativeHandle(ref, () => ({
     zoomIn: () => {
       currentZoom.current = Math.min(currentZoom.current + 1, 18);
       cameraRef.current?.setCamera({
         zoomLevel: currentZoom.current,
+        heading: currentHeading.current,
         animationDuration: 300,
       });
     },
@@ -59,14 +67,18 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
       currentZoom.current = Math.max(currentZoom.current - 1, 1);
       cameraRef.current?.setCamera({
         zoomLevel: currentZoom.current,
+        heading: currentHeading.current,
         animationDuration: 300,
       });
     },
     resetNorth: () => {
+      currentHeading.current = 0;
       cameraRef.current?.setCamera({
         heading: 0,
+        zoomLevel: currentZoom.current,
         animationDuration: 300,
       });
+      onRegionChange?.(0, currentZoom.current);
     },
   }));
 
@@ -112,46 +124,58 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     if (followUser && currentPosition && cameraRef.current) {
       cameraRef.current.setCamera({
         centerCoordinate: [currentPosition.longitude, currentPosition.latitude],
+        zoomLevel: currentZoom.current,
+        heading: currentHeading.current,
         animationDuration: 500,
       });
     }
   }, [currentPosition, followUser]);
 
-  const tileUrls = useOutdoorTiles ? thunderforestTileUrls() : [OSM_TILE_URL];
+  const tileUrls = thunderforestTileUrls(effectiveLayer);
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <MapView
-        ref={mapViewRef}
         style={StyleSheet.absoluteFill}
         logoEnabled={false}
         attributionEnabled={true}
         compassEnabled={false}
         rotateEnabled={true}
+        onRegionDidChange={(feature) => {
+          // Extract heading and zoom from the region change event
+          const props = feature?.properties;
+          if (props) {
+            const heading = props.heading ?? 0;
+            const zoom = props.zoomLevel ?? currentZoom.current;
+            currentHeading.current = heading;
+            currentZoom.current = zoom;
+            onRegionChange?.(heading, zoom);
+          }
+        }}
       >
         <RasterSource
-          id="tiles"
+          id={`tiles-${effectiveLayer}`}
+          key={`tiles-${effectiveLayer}`}
           tileUrlTemplates={tileUrls}
           tileSize={256}
           maxZoomLevel={18}
           minZoomLevel={1}
         >
           <RasterLayer
-            id="tiles-layer"
-            sourceID="tiles"
+            id={`layer-${effectiveLayer}`}
+            sourceID={`tiles-${effectiveLayer}`}
             style={{ rasterOpacity: 1 }}
           />
         </RasterSource>
 
         <Camera
           ref={cameraRef}
-          zoomLevel={16}
-          centerCoordinate={
-            currentPosition
+          defaultSettings={{
+            zoomLevel: 16,
+            centerCoordinate: currentPosition
               ? [currentPosition.longitude, currentPosition.latitude]
-              : [-75.0152, -9.1900]
-          }
-          animationMode="flyTo"
+              : [-75.0152, -9.1900],
+          }}
         />
 
         {gpsPoints.length > 1 && (

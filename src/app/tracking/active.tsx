@@ -15,6 +15,7 @@ import { useTracking } from '@presentation/hooks/useTracking';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import TrackingMap from '@presentation/components/map/TrackingMap';
 import GpsIndicator from '@presentation/components/tracking/GpsIndicator';
+import LayerSelectorModal from '@presentation/components/map/LayerSelectorModal';
 import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
 
@@ -35,7 +36,9 @@ export default function ActiveTrackingScreen() {
 
   // Map control refs
   const mapRef = useRef<{ zoomIn: () => void; zoomOut: () => void; resetNorth: () => void } | null>(null);
-  const [useOutdoorTiles, setUseOutdoorTiles] = useState(true);
+  const [mapLayer, setMapLayer] = useState('outdoors');
+  const [mapHeading, setMapHeading] = useState(0);
+  const [layerModalVisible, setLayerModalVisible] = useState(false);
 
   // Animación de entrada de paneles
   const statsOpacity    = useSharedValue(0);
@@ -119,7 +122,7 @@ export default function ActiveTrackingScreen() {
   };
 
   const handleToggleLayer = () => {
-    setUseOutdoorTiles((prev) => !prev);
+    setLayerModalVisible(true);
   };
 
   return (
@@ -130,7 +133,8 @@ export default function ActiveTrackingScreen() {
       <TrackingMap
         ref={mapRef}
         followUser={status === 'recording'}
-        useOutdoorTiles={useOutdoorTiles}
+        mapLayer={mapLayer}
+        onRegionChange={(heading) => setMapHeading(heading)}
       />
 
       {/* Panel superior de estadísticas */}
@@ -159,7 +163,7 @@ export default function ActiveTrackingScreen() {
         <GpsIndicator accuracy={lastAccuracy} />
       </View>
 
-      {/* Brújula */}
+      {/* Brújula — rotates with map heading, press to reset north */}
       <TouchableOpacity
         onPress={handleCompass}
         style={{
@@ -176,8 +180,10 @@ export default function ActiveTrackingScreen() {
           justifyContent: 'center',
         }}
       >
-        <Text style={{ color: '#EF4444', fontSize: 10, fontWeight: '700', fontFamily: 'Sora' }}>N</Text>
-        <Ionicons name="navigate" size={20} color={colors.textPrimary} />
+        <View style={{ transform: [{ rotate: `${-mapHeading}deg` }], alignItems: 'center' }}>
+          <Text style={{ color: '#EF4444', fontSize: 10, fontWeight: '700' }}>N</Text>
+          <Ionicons name="navigate" size={20} color={colors.textPrimary} />
+        </View>
       </TouchableOpacity>
 
       {/* Zoom Controls */}
@@ -292,6 +298,17 @@ export default function ActiveTrackingScreen() {
           />
         </View>
       </Animated.View>
+
+      {/* Layer Selector Modal */}
+      <LayerSelectorModal
+        visible={layerModalVisible}
+        selectedLayer={mapLayer}
+        onSelect={(key) => {
+          setMapLayer(key);
+          setLayerModalVisible(false);
+        }}
+        onClose={() => setLayerModalVisible(false)}
+      />
     </View>
   );
 }

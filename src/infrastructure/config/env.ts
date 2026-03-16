@@ -8,13 +8,13 @@ export const ENV = {
   THUNDERFOREST_API_KEY: (process.env.EXPO_PUBLIC_THUNDERFOREST_API_KEY ?? extra.thunderforestApiKey ?? '') as string,
 } as const;
 
-/** URLs de tiles de Thunderforest Outdoors (múltiples subdominios para balanceo de carga) */
-export function thunderforestTileUrls(): string[] {
+/** URLs de tiles de Thunderforest para cualquier estilo (múltiples subdominios para balanceo de carga) */
+export function thunderforestTileUrls(style: string = 'outdoors'): string[] {
   const key = ENV.THUNDERFOREST_API_KEY;
   return [
-    `https://a.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${key}`,
-    `https://b.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${key}`,
-    `https://c.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${key}`,
+    `https://a.tile.thunderforest.com/${style}/{z}/{x}/{y}.png?apikey=${key}`,
+    `https://b.tile.thunderforest.com/${style}/{z}/{x}/{y}.png?apikey=${key}`,
+    `https://c.tile.thunderforest.com/${style}/{z}/{x}/{y}.png?apikey=${key}`,
   ];
 }
 
