@@ -13,7 +13,7 @@ import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatElevation, formatDate } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
 
-const DIFF_COLORS = { easy: colors.easy, moderate: colors.medium, hard: colors.hard } as const;
+const DIFF_COLORS: Record<string, string> = { easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert };
 
 function PublicRouteCard({ route }: { route: PublicRoute }) {
   const diffColor = DIFF_COLORS[route.difficulty];

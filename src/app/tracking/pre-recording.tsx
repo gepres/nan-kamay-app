@@ -18,23 +18,46 @@ import { Difficulty, DifficultyLabel } from '@core/value-objects/Difficulty';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { colors } from '@presentation/theme/colors';
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'moderate', 'hard'];
+const DIFF_ROW_1: Difficulty[] = ['easy', 'moderate', 'hard'];
+const DIFF_ROW_2: Difficulty[] = ['very_hard', 'expert'];
 
 const difficultyColors: Record<Difficulty, string> = {
   easy: colors.easy,
   moderate: colors.medium,
   hard: colors.hard,
+  very_hard: colors.veryHard,
+  expert: colors.expert,
 };
 
-const ACTIVITY_TYPES = ['Senderismo', 'Ciclismo', 'Escalada'];
+const DEFAULT_ACTIVITIES = ['Senderismo', 'Ciclismo', 'Escalada'];
 
 export default function PreRecordingScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [activityType, setActivityType] = useState('Senderismo');
+  const [customActivities, setCustomActivities] = useState<string[]>([]);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customActivityName, setCustomActivityName] = useState('');
   const [checkingGps, setCheckingGps] = useState(false);
   const { startRecording } = useTrackingStore();
+
+  const allActivities = [...DEFAULT_ACTIVITIES, ...customActivities];
+
+  const handleAddCustomActivity = () => {
+    const trimmed = customActivityName.trim();
+    if (!trimmed) return;
+    if (allActivities.includes(trimmed)) {
+      setActivityType(trimmed);
+      setShowCustomInput(false);
+      setCustomActivityName('');
+      return;
+    }
+    setCustomActivities((prev) => [...prev, trimmed]);
+    setActivityType(trimmed);
+    setShowCustomInput(false);
+    setCustomActivityName('');
+  };
 
   const handleStart = async () => {
     if (!name.trim()) return;
@@ -70,6 +93,34 @@ export default function PreRecordingScreen() {
     fontSize: 12,
     fontWeight: '500' as const,
     marginBottom: 6,
+  };
+
+  const renderDiffChip = (d: Difficulty) => {
+    const isActive = difficulty === d;
+    return (
+      <TouchableOpacity
+        key={d}
+        onPress={() => setDifficulty(d)}
+        style={{
+          paddingVertical: 10,
+          paddingHorizontal: 18,
+          borderRadius: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isActive ? colors.accent : 'transparent',
+          borderWidth: 1,
+          borderColor: isActive ? colors.accent : colors.border,
+        }}
+      >
+        <Text style={{
+          color: isActive ? colors.bgPrimary : colors.textSecondary,
+          fontWeight: isActive ? '600' : '500',
+          fontSize: 13,
+        }}>
+          {DifficultyLabel[d]}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -130,41 +181,24 @@ export default function PreRecordingScreen() {
             />
           </View>
 
-          {/* Dificultad */}
+          {/* Dificultad — 2 filas como en Pencil */}
           <View>
             <Text style={labelStyle}>Dificultad</Text>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {DIFFICULTIES.map((d) => (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setDifficulty(d)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    backgroundColor: difficulty === d ? difficultyColors[d] + '30' : 'transparent',
-                    borderWidth: 1.5,
-                    borderColor: difficulty === d ? difficultyColors[d] : colors.border,
-                  }}
-                >
-                  <Text style={{
-                    color: difficulty === d ? difficultyColors[d] : colors.textMuted,
-                    fontWeight: '600',
-                    fontSize: 13,
-                  }}>
-                    {DifficultyLabel[d]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={{ gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {DIFF_ROW_1.map(renderDiffChip)}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {DIFF_ROW_2.map(renderDiffChip)}
+              </View>
             </View>
           </View>
 
-          {/* Tipo de Actividad */}
+          {/* Tipo de Actividad — con opción "Nuevo Tipo" */}
           <View>
             <Text style={labelStyle}>Tipo de Actividad</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {ACTIVITY_TYPES.map((type) => (
+              {allActivities.map((type) => (
                 <TouchableOpacity
                   key={type}
                   onPress={() => setActivityType(type)}
@@ -178,7 +212,7 @@ export default function PreRecordingScreen() {
                   }}
                 >
                   <Text style={{
-                    color: activityType === type ? colors.bgPrimary : colors.textMuted,
+                    color: activityType === type ? colors.bgPrimary : colors.textSecondary,
                     fontWeight: activityType === type ? '600' : '500',
                     fontSize: 13,
                   }}>
@@ -186,7 +220,69 @@ export default function PreRecordingScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
+
+              {/* Botón "Nuevo Tipo" */}
+              <TouchableOpacity
+                onPress={() => setShowCustomInput(true)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <Ionicons name="add" size={14} color={colors.textMuted} />
+                <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '500' }}>
+                  Nuevo Tipo
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* Input para actividad personalizada */}
+            {showCustomInput && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <TextInput
+                  value={customActivityName}
+                  onChangeText={setCustomActivityName}
+                  placeholder="Nombre de la actividad"
+                  placeholderTextColor={colors.textMuted}
+                  autoFocus
+                  style={[inputStyle, { flex: 1 }]}
+                  onSubmitEditing={handleAddCustomActivity}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity
+                  onPress={handleAddCustomActivity}
+                  disabled={!customActivityName.trim()}
+                  style={{
+                    backgroundColor: customActivityName.trim() ? colors.accent : colors.bgCard,
+                    borderRadius: 10,
+                    paddingHorizontal: 16,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons
+                    name="checkmark"
+                    size={20}
+                    color={customActivityName.trim() ? colors.bgPrimary : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setShowCustomInput(false); setCustomActivityName(''); }}
+                  style={{
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Botón iniciar */}

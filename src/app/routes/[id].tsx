@@ -19,7 +19,7 @@ import { useRoutesStore } from '@presentation/stores/routesStore';
 import { useAuthStore } from '@presentation/stores/authStore';
 
 import { colors } from '@presentation/theme/colors';
-const difficultyColors = { easy: colors.easy, moderate: colors.medium, hard: colors.hard };
+const difficultyColors: Record<string, string> = { easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert };
 
 export default function RouteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

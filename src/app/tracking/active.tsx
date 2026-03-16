@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -32,6 +32,10 @@ export default function ActiveTrackingScreen() {
 
   const { requestPermissions } = useTracking();
   const elapsed = useElapsedTime();
+
+  // Map control refs
+  const mapRef = useRef<{ zoomIn: () => void; zoomOut: () => void; resetNorth: () => void } | null>(null);
+  const [useOutdoorTiles, setUseOutdoorTiles] = useState(true);
 
   // Animación de entrada de paneles
   const statsOpacity    = useSharedValue(0);
@@ -102,12 +106,32 @@ export default function ActiveTrackingScreen() {
     router.push('/tracking/waypoint');
   };
 
+  const handleCompass = () => {
+    mapRef.current?.resetNorth();
+  };
+
+  const handleZoomIn = () => {
+    mapRef.current?.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    mapRef.current?.zoomOut();
+  };
+
+  const handleToggleLayer = () => {
+    setUseOutdoorTiles((prev) => !prev);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: '#0D1B12' }}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* Mapa MapLibre con Thunderforest Outdoors */}
-      <TrackingMap followUser={status === 'recording'} />
+      <TrackingMap
+        ref={mapRef}
+        followUser={status === 'recording'}
+        useOutdoorTiles={useOutdoorTiles}
+      />
 
       {/* Panel superior de estadísticas */}
       <Animated.View style={[{
@@ -134,6 +158,74 @@ export default function ActiveTrackingScreen() {
       <View style={{ position: 'absolute', top: insets.top + 92, left: 16 }}>
         <GpsIndicator accuracy={lastAccuracy} />
       </View>
+
+      {/* Brújula */}
+      <TouchableOpacity
+        onPress={handleCompass}
+        style={{
+          position: 'absolute',
+          top: insets.top + 92,
+          right: 16,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: '#0D1B12E6',
+          borderWidth: 1,
+          borderColor: '#2D6A4F80',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: '#EF4444', fontSize: 10, fontWeight: '700', fontFamily: 'Sora' }}>N</Text>
+        <Ionicons name="navigate" size={20} color={colors.textPrimary} />
+      </TouchableOpacity>
+
+      {/* Zoom Controls */}
+      <View style={{
+        position: 'absolute',
+        top: insets.top + 152,
+        right: 16,
+        borderRadius: 14,
+        backgroundColor: '#0D1B12E6',
+        borderWidth: 1,
+        borderColor: '#2D6A4F80',
+        overflow: 'hidden',
+        width: 44,
+      }}>
+        <TouchableOpacity
+          onPress={handleZoomIn}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="add" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={{ height: 1, backgroundColor: '#2D6A4F80' }} />
+        <TouchableOpacity
+          onPress={handleZoomOut}
+          style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="remove" size={20} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Layer Toggle */}
+      <TouchableOpacity
+        onPress={handleToggleLayer}
+        style={{
+          position: 'absolute',
+          top: insets.top + 252,
+          right: 16,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          backgroundColor: '#0D1B12E6',
+          borderWidth: 1,
+          borderColor: '#2D6A4F80',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons name="layers" size={20} color={colors.textPrimary} />
+      </TouchableOpacity>
 
       {/* Controles inferiores */}
       <Animated.View style={[{

@@ -14,10 +14,12 @@ import { Route } from '@core/entities/Route';
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatDate, formatElevation } from '@shared/utils/formatters';
 
-const difficultyColors = {
+const difficultyColors: Record<string, string> = {
   easy: colors.easy,
   moderate: colors.medium,
   hard: colors.hard,
+  very_hard: colors.veryHard,
+  expert: colors.expert,
 };
 
 interface Props {

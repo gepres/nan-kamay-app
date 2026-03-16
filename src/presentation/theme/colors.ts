@@ -33,6 +33,10 @@ export const colors = {
   medium: '#F59E0B',
   /** Dificultad difícil */
   hard: '#EF4444',
+  /** Dificultad muy difícil */
+  veryHard: '#DC2626',
+  /** Solo expertos */
+  expert: '#991B1B',
 
   /** Éxito */
   success: '#22C55E',

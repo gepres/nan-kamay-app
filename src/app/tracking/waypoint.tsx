@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
@@ -13,20 +13,50 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { Waypoint } from '@core/entities/Waypoint';
+import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
+import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
 import { colors } from '@presentation/theme/colors';
 
-const WAYPOINT_TYPES = ['Mirador', 'Peligro', 'Campamento', 'Agua'];
+const DEFAULT_ICON_COLOR = '#F59E0B';
 
 export default function WaypointScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [waypointType, setWaypointType] = useState('Mirador');
   const [imageUris, setImageUris] = useState<string[]>([]);
+  const [recentTypes, setRecentTypes] = useState<WaypointTypeInfo[]>([]);
   const { addWaypoint, routeId, currentPosition } = useTrackingStore();
+
+  // Check for pending type selection when screen regains focus (returning from selector)
+  useFocusEffect(
+    useCallback(() => {
+      const pending = consumePendingWaypointType();
+      if (pending) {
+        setWaypointType(pending);
+        addToRecents(pending);
+      }
+    }, [])
+  );
+
+  const addToRecents = (label: string) => {
+    setRecentTypes((prev) => {
+      const info = getWaypointTypeInfo(label);
+      if (!info) return prev;
+      const filtered = prev.filter((t) => t.label !== label);
+      return [info, ...filtered].slice(0, 5);
+    });
+  };
+
+  const handleSelectType = (label: string) => {
+    setWaypointType(label);
+    addToRecents(label);
+  };
 
   const pickFromGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,9 +127,22 @@ export default function WaypointScreen() {
     router.back();
   };
 
+  const handleViewAllTypes = () => {
+    router.push({
+      pathname: '/tracking/waypoint-types',
+      params: {
+        current: waypointType,
+        recents: JSON.stringify(recentTypes),
+      },
+    });
+  };
+
   const lat = currentPosition?.latitude;
   const lon = currentPosition?.longitude;
   const alt = currentPosition?.altitude;
+
+  // Current type info for the chip display
+  const currentTypeInfo = getWaypointTypeInfo(waypointType);
 
   const inputStyle = {
     backgroundColor: colors.bgInput,
@@ -191,41 +234,77 @@ export default function WaypointScreen() {
             />
           </View>
 
-          {/* Tipo de Punto */}
+          {/* Tipo de Punto — label row with "Ver todos" + recent chips */}
           <View>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 10 }}>
-              Tipo de Punto
-            </Text>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 10,
+            }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500' }}>
+                Tipo de Punto
+              </Text>
+              <TouchableOpacity
+                onPress={handleViewAllTypes}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              >
+                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '600' }}>
+                  Ver todos
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Chips: show current selected + recents */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {WAYPOINT_TYPES.map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  onPress={() => setWaypointType(type)}
-                  style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 18,
-                    borderRadius: 10,
-                    backgroundColor: waypointType === type ? colors.accent : 'transparent',
-                    borderWidth: 1,
-                    borderColor: waypointType === type ? colors.accent : colors.border,
-                  }}
-                >
-                  <Text style={{
-                    color: waypointType === type ? colors.bgPrimary : colors.textMuted,
-                    fontWeight: waypointType === type ? '600' : '500',
-                    fontSize: 13,
-                  }}>
-                    {type}
+              {/* Always show the current selected type as active chip */}
+              {currentTypeInfo && (
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingVertical: 10,
+                  paddingHorizontal: 18,
+                  borderRadius: 10,
+                  backgroundColor: colors.accent,
+                }}>
+                  <Text style={{ color: colors.bgPrimary, fontWeight: '600', fontSize: 13 }}>
+                    {currentTypeInfo.label}
                   </Text>
-                </TouchableOpacity>
-              ))}
+                </View>
+              )}
+
+              {/* Show recent types (excluding the currently selected one) */}
+              {recentTypes
+                .filter((t) => t.label !== waypointType)
+                .map(({ label, icon, iconColor }) => (
+                  <TouchableOpacity
+                    key={label}
+                    onPress={() => handleSelectType(label)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 20,
+                      backgroundColor: colors.bgCard,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    <WaypointIcon name={icon} size={14} color={iconColor || DEFAULT_ICON_COLOR} />
+                    <Text style={{ color: colors.textPrimary, fontSize: 13 }}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
             </View>
           </View>
 
-          {/* Fotos */}
+          {/* Foto */}
           <View>
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 10 }}>
-              Fotos ({imageUris.length}/5)
+              Foto
             </Text>
 
             {/* Previsualizaciones */}
@@ -270,7 +349,7 @@ export default function WaypointScreen() {
               </ScrollView>
             )}
 
-            {/* Botón agregar foto */}
+            {/* Botón agregar foto — vertical, solid border (matches Pencil) */}
             {imageUris.length < 5 && (
               <TouchableOpacity
                 onPress={handleAddImage}
@@ -278,18 +357,16 @@ export default function WaypointScreen() {
                   backgroundColor: colors.bgInput,
                   borderColor: colors.border,
                   borderWidth: 1.5,
-                  borderStyle: 'dashed',
                   borderRadius: 12,
-                  paddingVertical: 24,
+                  height: 120,
                   alignItems: 'center',
-                  gap: 8,
-                  flexDirection: 'row',
                   justifyContent: 'center',
+                  gap: 8,
                 }}
               >
-                <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
+                <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
                 <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '500' }}>
-                  Tomar foto o elegir de galería
+                  Toca para subir foto
                 </Text>
               </TouchableOpacity>
             )}

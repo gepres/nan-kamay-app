@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   MapView,
@@ -11,6 +11,7 @@ import {
   setAccessToken,
   Logger,
   type CameraRef,
+  type MapViewRef,
 } from '@maplibre/maplibre-react-native';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
@@ -24,13 +25,50 @@ Logger.setLogCallback((log) => {
   return false;
 });
 
-interface Props {
-  followUser?: boolean;
+export interface TrackingMapHandle {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetNorth: () => void;
 }
 
-export default function TrackingMap({ followUser = true }: Props) {
+interface Props {
+  followUser?: boolean;
+  useOutdoorTiles?: boolean;
+}
+
+const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
+  { followUser = true, useOutdoorTiles = true },
+  ref,
+) {
   const { gpsPoints, waypoints, currentPosition } = useTrackingStore();
   const cameraRef = useRef<CameraRef>(null);
+  const mapViewRef = useRef<MapViewRef>(null);
+  const currentZoom = useRef(16);
+
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => {
+      currentZoom.current = Math.min(currentZoom.current + 1, 18);
+      cameraRef.current?.setCamera({
+        zoomLevel: currentZoom.current,
+        animationDuration: 300,
+      });
+    },
+    zoomOut: () => {
+      currentZoom.current = Math.max(currentZoom.current - 1, 1);
+      cameraRef.current?.setCamera({
+        zoomLevel: currentZoom.current,
+        animationDuration: 300,
+      });
+    },
+    resetNorth: () => {
+      cameraRef.current?.setCamera({
+        heading: 0,
+        animationDuration: 300,
+      });
+    },
+  }));
 
   const routeGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
     type: 'Feature',
@@ -79,26 +117,28 @@ export default function TrackingMap({ followUser = true }: Props) {
     }
   }, [currentPosition, followUser]);
 
-  const tileUrls = thunderforestTileUrls();
+  const tileUrls = useOutdoorTiles ? thunderforestTileUrls() : [OSM_TILE_URL];
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <MapView
+        ref={mapViewRef}
         style={StyleSheet.absoluteFill}
         logoEnabled={false}
         attributionEnabled={true}
-        compassEnabled={true}
+        compassEnabled={false}
+        rotateEnabled={true}
       >
         <RasterSource
-          id="thunderforest"
+          id="tiles"
           tileUrlTemplates={tileUrls}
           tileSize={256}
           maxZoomLevel={18}
           minZoomLevel={1}
         >
           <RasterLayer
-            id="thunderforest-layer"
-            sourceID="thunderforest"
+            id="tiles-layer"
+            sourceID="tiles"
             style={{ rasterOpacity: 1 }}
           />
         </RasterSource>
@@ -156,4 +196,4 @@ export default function TrackingMap({ followUser = true }: Props) {
       </MapView>
     </View>
   );
-}
+});
