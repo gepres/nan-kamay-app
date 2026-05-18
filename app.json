@@ -19,7 +19,9 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación en segundo plano para continuar grabando mientras la pantalla está apagada.",
         "NSCameraUsageDescription": "Ñan Kamay necesita acceso a la cámara para añadir fotos a tus waypoints.",
         "NSPhotoLibraryUsageDescription": "Ñan Kamay necesita acceso a tu galería para añadir fotos a tus waypoints.",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
@@ -29,16 +31,22 @@
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
-        "RECEIVE_BOOT_COMPLETED",
-        "POST_NOTIFICATIONS",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -82,7 +90,11 @@
     "scheme": "nan-kamay",
     "extra": {
       "router": {
-        "origin": false
+        "origin": false,
+        "root": "src/app"
+      },
+      "eas": {
+        "projectId": "36f62acc-a023-440c-a108-be7a20a7eba1"
       }
     }
   }

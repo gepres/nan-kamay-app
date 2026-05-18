@@ -1,86 +1,101 @@
-# 🏔️ Ñan Kamay — Guía del Proyecto para Claude
+# Ñan Kamay — Guia del Proyecto para Claude
 
-> "Ñan Kamay" (Quechua: "el camino de la mano") — App React Native para grabación de rutas de sendero y montaña.
-
----
-
-## 📋 Descripción del Proyecto
-
-Aplicación móvil para registrar rutas de trekking/senderismo con GPS, funcional online y offline. Los usuarios pueden grabar su recorrido, añadir waypoints con multimedia, ver estadísticas al finalizar y exportar la ruta en formatos estándar.
+> "Ñan Kamay" (Quechua: "el camino de la mano") — App React Native para grabacion de rutas de sendero y montana.
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Descripcion del Proyecto
 
-| Capa | Tecnología |
+Aplicacion movil para registrar rutas de trekking/senderismo con GPS, funcional online y offline. Los usuarios pueden grabar su recorrido, anadir waypoints con multimedia, ver estadisticas al finalizar y exportar la ruta en formatos estandar.
+
+---
+
+## Stack Tecnologico
+
+| Capa | Tecnologia |
 |------|------------|
-| Framework | **Expo** (React Native) + TypeScript |
+| Framework | **Expo SDK 55** (React Native) + TypeScript |
 | Routing | **Expo Router** (file-based) |
 | Estilos | **NativeWind** (TailwindCSS para RN) |
 | Estado Global | **Zustand** |
 | HTTP Client | **Axios** |
 | Base de Datos | **Supabase** (PostgreSQL) |
-| Autenticación | **Supabase Auth** (Email + Google OAuth) |
-| Mapas | **MapLibre GL** + **Thunderforest Outdoors** tiles |
-| GPS | **expo-location** (foreground + background) |
+| Autenticacion | **Supabase Auth** (Email + Google OAuth) |
+| Mapas | **MapLibre GL** (`@maplibre/maplibre-react-native` v10.4) + **Thunderforest** tiles (9 estilos) |
+| GPS | **expo-location** (foreground + background via TaskManager) |
+| Notificaciones | **expo-notifications** (notificacion persistente con stats en vivo) |
 | Storage Offline | **expo-sqlite** (rutas no sincronizadas) |
-| Storage Rápido | **react-native-mmkv** (caché y preferencias) |
+| Storage Rapido | **react-native-mmkv** (cache y preferencias) |
 | Storage Seguro | **expo-secure-store** (tokens) |
-| Imágenes | **expo-image-picker** + **expo-file-system** |
-| Exportación | Custom: GPX, KML, KMZ (JSZip) |
+| Imagenes | **expo-image-picker** + **expo-file-system** |
+| Iconos | **lucide-react-native** (waypoint types + layer selector) + **@expo/vector-icons** (Ionicons) |
+| Exportacion | Custom: GPX, KML, KMZ (JSZip) |
+| Animaciones | **react-native-reanimated** |
 
 ---
 
-## 🎨 Diseño
+## Diseno
 
 - **Archivo Pencil**: `pencil/trek-kamay.pen`
-- **Tema**: Dark mode, paleta verde bosque
-- **Fuente**: Inter
+- **Tema**: Dark mode, paleta verde bosque + accent ambar
+- **Fuente**: Inter (UI general), Sora (titulos destacados)
 
-### Colores Design Tokens
-| Variable | Uso |
-|----------|-----|
-| `$accent` | Verde principal (#22C55E aprox.) |
-| `$bg-primary` | Fondo principal (#0D1B12) |
-| `$bg-card` | Fondo tarjetas |
-| `$bg-input` | Fondo inputs |
-| `$text-primary` | Texto principal |
-| `$text-secondary` | Texto secundario |
-| `$border` | Bordes |
-| `$easy` | Badge "Fácil" |
-| `$success` | Marcadores de éxito |
+### Colores Design Tokens (`src/presentation/theme/colors.ts`)
+| Variable | Hex | Uso |
+|----------|-----|-----|
+| `accent` | `#F59E0B` | Ambar — color principal de accion |
+| `accentSoft` | `#F59E0B30` | Ambar con transparencia (fondos activos) |
+| `bgPrimary` | `#0D1B12` | Fondo principal |
+| `bgCard` | `#1B4332` | Fondo tarjetas |
+| `bgElevated` | `#2D6A4F` | Fondo elevado / hover |
+| `bgInput` | `#14291D` | Fondo inputs |
+| `textPrimary` | `#FFFFFF` | Texto principal |
+| `textSecondary` | `#A7C4B5` | Texto secundario |
+| `textMuted` | `#6B8F7B` | Texto apagado |
+| `border` | `#2D6A4F` | Bordes |
+| `easy` | `#22C55E` | Dificultad facil |
+| `medium` | `#F59E0B` | Dificultad media |
+| `hard` | `#EF4444` | Dificultad dificil |
+| `veryHard` | `#DC2626` | Dificultad muy dificil |
+| `expert` | `#991B1B` | Solo expertos |
+| `success` | `#22C55E` | Marcadores de exito |
+| `danger` | `#EF4444` | Peligro / error |
 
-### Pantallas diseñadas
+### Pantallas disenadas (Pencil)
 1. **Home Screen** — Lista de rutas guardadas + TabBar
-2. **Pre-recording Modal** — Configuración antes de grabar (nombre, dificultad)
-3. **Active Tracking** — Mapa en vivo + estadísticas en tiempo real + controles
-4. **Add Waypoint Modal** — Añadir waypoint con título, descripción, fotos
-5. **Route Summary** — Estadísticas finales de la ruta
-6. **Login Screen** — Email + Google OAuth
-7. **Register Screen** — Registro con email + Google OAuth
+2. **Pre-recording Modal** — Nombre, dificultad (5 niveles), tipo actividad (custom), permisos GPS
+3. **Active Tracking** — Mapa en vivo + stats + controles + brujula + zoom + selector de capas
+4. **Add Waypoint Modal** — Titulo, descripcion, tipo de punto (50+ tipos), fotos (camara/galeria)
+5. **Waypoint Type Selector** — Grid categorizado con busqueda, recientes, 4 categorias
+6. **Layer Selector Modal** — Bottom sheet con 9 estilos de mapa Thunderforest
+7. **Route Summary** — Estadisticas finales + perfil de elevacion + exportacion
+8. **Route Detail** (`routes/[id].tsx`) — Stats grid, mapa, waypoints, export
+9. **Login Screen** — Email + Google OAuth
+10. **Register Screen** — Registro con email + Google OAuth
 
 ### Componentes Reutilizables (Pencil)
-- `Component/Button/Primary` — Botón primario (fill accent)
-- `Component/Button/Secondary` — Botón secundario (borde accent)
-- `Component/Badge` — Badge de dificultad (Fácil/Moderado/Difícil)
+- `Component/Button/Primary` — Boton primario (fill accent)
+- `Component/Button/Secondary` — Boton secundario (borde accent)
+- `Component/Badge` — Badge de dificultad (Facil/Moderado/Dificil/Muy Dificil/Expertos)
 - `Component/Input` — Input con label
-- `Component/RouteCard` — Tarjeta de ruta con estadísticas
-- `Component/TabBar` — Barra de navegación inferior
+- `Component/RouteCard` — Tarjeta de ruta con estadisticas
+- `Component/TabBar` — Barra de navegacion inferior
 - `Component/Chip/Active` y `Component/Chip/Inactive` — Chips de filtro
 
 ---
 
-## 🏗️ Arquitectura (Clean Architecture + Hexagonal)
-
-Ver `ARCHITECTURE.md` para la guía completa. La regla clave:
+## Arquitectura (Clean Architecture + Hexagonal)
 
 ```
-Presentación → Aplicación → Dominio ← Infraestructura
+Presentacion → Aplicacion → Dominio ← Infraestructura
 ```
 
-### Estructura de Carpetas del Proyecto
+### Estructura de Carpetas
 
 ```
+index.ts                          # Entry point custom (registra TaskManager ANTES de Expo Router)
+app.json                          # Configuracion Expo + permisos nativos
+eas.json                          # EAS Build config (preview = APK)
 src/
 ├── app/                          # Expo Router (file-based routing)
 │   ├── (auth)/
@@ -90,28 +105,32 @@ src/
 │   ├── (tabs)/
 │   │   ├── _layout.tsx
 │   │   ├── index.tsx             # Home (lista de rutas)
-│   │   ├── explore.tsx           # Explorar rutas públicas
+│   │   ├── explore.tsx           # Explorar rutas publicas
 │   │   └── profile.tsx           # Perfil de usuario
 │   ├── tracking/
-│   │   ├── pre-recording.tsx     # Modal configuración
-│   │   ├── active.tsx            # Grabación activa
+│   │   ├── pre-recording.tsx     # Modal configuracion (nombre, dificultad, actividad)
+│   │   ├── active.tsx            # Grabacion activa (mapa + stats + controles)
+│   │   ├── waypoint.tsx          # Modal agregar waypoint
+│   │   ├── waypoint-types.tsx    # Selector de tipo de waypoint (grid categorizado)
 │   │   └── summary.tsx           # Resumen post-ruta
-│   ├── _layout.tsx
-│   └── index.tsx                 # Redirect según auth
+│   ├── routes/
+│   │   └── [id].tsx              # Detalle de ruta guardada
+│   ├── _layout.tsx               # Root layout (auth listener, SQLite init, toasts)
+│   └── index.tsx                 # Redirect segun auth
 │
 ├── core/                         # DOMINIO — cero dependencias externas
 │   ├── entities/
 │   │   ├── User.ts
-│   │   ├── Route.ts              # Entidad principal de ruta
-│   │   ├── Waypoint.ts           # Punto de interés
-│   │   └── GpsPoint.ts           # Coordenada GPS con metadatos
+│   │   ├── Route.ts
+│   │   ├── Waypoint.ts
+│   │   └── GpsPoint.ts
 │   ├── value-objects/
-│   │   ├── Coordinates.ts        # lat/lon/elevation
-│   │   ├── Distance.ts           # metros, km formateados
-│   │   ├── Duration.ts           # segundos, formateado hh:mm:ss
-│   │   ├── Speed.ts              # km/h, m/s
-│   │   ├── Elevation.ts          # Ganancia/pérdida de elevación
-│   │   └── Difficulty.ts         # Enum: easy | moderate | hard
+│   │   ├── Coordinates.ts
+│   │   ├── Distance.ts
+│   │   ├── Duration.ts
+│   │   ├── Speed.ts
+│   │   ├── Elevation.ts
+│   │   └── Difficulty.ts         # 'easy' | 'moderate' | 'hard' | 'very_hard' | 'expert'
 │   ├── errors/
 │   │   ├── DomainError.ts
 │   │   ├── AuthError.ts
@@ -120,225 +139,136 @@ src/
 │   ├── ports/
 │   │   ├── repositories/
 │   │   │   ├── IAuthRepository.ts
-│   │   │   ├── IRouteRepository.ts     # CRUD rutas (online + offline)
+│   │   │   ├── IRouteRepository.ts
 │   │   │   └── IWaypointRepository.ts
 │   │   └── services/
-│   │       ├── IGpsService.ts          # Tracking GPS
-│   │       ├── IStorageService.ts      # Archivos locales
-│   │       ├── IExportService.ts       # GPX / KML / KMZ
-│   │       └── ISyncService.ts         # Sincronización offline→online
+│   │       ├── IGpsService.ts
+│   │       ├── IStorageService.ts
+│   │       ├── IExportService.ts
+│   │       └── ISyncService.ts
 │   └── rules/
-│       ├── RouteRules.ts              # Validaciones de ruta
-│       └── StatsCalculator.ts         # Cálculo de distancia, elevación, etc.
+│       ├── RouteRules.ts
+│       └── StatsCalculator.ts
 │
 ├── application/                  # CASOS DE USO
 │   ├── auth/
-│   │   ├── LoginUseCase.ts
-│   │   ├── LoginWithGoogleUseCase.ts
-│   │   ├── RegisterUseCase.ts
-│   │   └── LogoutUseCase.ts
 │   ├── tracking/
-│   │   ├── StartTrackingUseCase.ts     # Inicia grabación GPS
-│   │   ├── StopTrackingUseCase.ts      # Finaliza y calcula stats
-│   │   ├── PauseTrackingUseCase.ts
-│   │   ├── ResumeTrackingUseCase.ts
-│   │   ├── AddWaypointUseCase.ts
-│   │   └── GetLiveStatsUseCase.ts      # Stats en tiempo real
 │   ├── routes/
 │   │   ├── GetRoutesUseCase.ts
 │   │   ├── GetRouteDetailUseCase.ts
+│   │   ├── GetPublicRoutesUseCase.ts
 │   │   ├── DeleteRouteUseCase.ts
-│   │   └── SyncOfflineRoutesUseCase.ts # Sube rutas grabadas offline
+│   │   ├── SaveRouteUseCase.ts
+│   │   └── SyncOfflineRoutesUseCase.ts
 │   └── export/
-│       ├── ExportGpxUseCase.ts
-│       ├── ExportKmlUseCase.ts
-│       └── ExportKmzUseCase.ts
+│       └── ExportRouteUseCase.ts  # GPX/KML/KMZ
 │
-├── infrastructure/               # ADAPTADORES
+├── infrastructure/
 │   ├── supabase/
-│   │   ├── supabaseClient.ts     # Cliente Supabase configurado
-│   │   └── dtos/                 # Shapes de la DB
+│   │   ├── supabaseClient.ts
+│   │   ├── schema.sql            # Tablas, indices, RLS, Storage bucket
+│   │   └── dtos/
 │   ├── repositories/
-│   │   ├── AuthRepositoryImpl.ts        # Supabase Auth
-│   │   ├── RouteRepositoryImpl.ts       # Supabase + SQLite (offline-first)
+│   │   ├── AuthRepositoryImpl.ts
+│   │   ├── RouteRepositoryImpl.ts  # SQLite offline-first + Supabase sync
 │   │   └── WaypointRepositoryImpl.ts
 │   ├── services/
-│   │   ├── GpsServiceImpl.ts            # expo-location
-│   │   ├── StorageServiceImpl.ts        # expo-file-system
-│   │   ├── ExportServiceImpl.ts         # GPX/KML/KMZ generators
-│   │   └── SyncServiceImpl.ts           # Lógica offline→online
+│   │   ├── GpsServiceImpl.ts       # expo-location foreground + background (TaskManager)
+│   │   ├── GpsFilter.ts            # Pipeline 5 etapas: precision → estacionario → Kalman → desplazamiento → anti-teleport
+│   │   ├── KalmanFilter1D.ts       # Filtro Kalman por eje (lat/lon/alt)
+│   │   ├── ImageUploadService.ts   # Sube imagenes a Supabase Storage
+│   │   ├── ExportServiceImpl.ts    # GPX 1.1, KML 2.2, KMZ (JSZip)
+│   │   └── SyncServiceImpl.ts
 │   ├── database/
-│   │   ├── sqliteDb.ts                  # expo-sqlite setup
-│   │   └── migrations/                  # Migraciones de esquema local
+│   │   ├── sqliteDb.ts
+│   │   └── migrations/
 │   ├── mappers/
 │   │   ├── RouteMapper.ts
 │   │   ├── WaypointMapper.ts
 │   │   └── GpsPointMapper.ts
 │   └── config/
-│       ├── env.ts                       # Variables de entorno tipadas
-│       └── constants.ts                 # Thunderforest API key, etc.
+│       └── env.ts                  # Variables de entorno + thunderforestTileUrls(style)
 │
-├── presentation/                 # UI
+├── presentation/
 │   ├── components/
-│   │   ├── ui/                   # Design system (basado en diseño Pencil)
-│   │   │   ├── Button.tsx        # Primary / Secondary
+│   │   ├── ui/
+│   │   │   ├── Button.tsx
 │   │   │   ├── Input.tsx
-│   │   │   ├── Badge.tsx         # Dificultad
-│   │   │   ├── Chip.tsx          # Active / Inactive
-│   │   │   ├── RouteCard.tsx
-│   │   │   ├── TabBar.tsx
-│   │   │   ├── Modal.tsx
-│   │   │   └── StatItem.tsx      # Item de estadística (icono + valor)
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Chip.tsx
+│   │   │   ├── RouteCard.tsx       # Animated entry + press scale
+│   │   │   ├── WaypointIcon.tsx    # Wrapper lucide-react-native (50+ iconos mapeados)
+│   │   │   ├── ToastContainer.tsx  # Notificaciones animadas (spring + fade)
+│   │   │   ├── OfflineBanner.tsx   # Banner animado online/offline
+│   │   │   └── ElevationChart.tsx  # Perfil de elevacion (barras con degradado)
 │   │   ├── map/
-│   │   │   ├── TrackingMap.tsx   # MapLibre con ruta en tiempo real
-│   │   │   ├── RoutePolyline.tsx # Línea de la ruta en el mapa
-│   │   │   └── WaypointMarker.tsx
+│   │   │   ├── TrackingMap.tsx     # MapLibre: ruta, waypoints, posicion, capas dinamicas
+│   │   │   ├── RouteMap.tsx        # Mapa estatico para rutas guardadas (bounds auto-fit)
+│   │   │   └── LayerSelectorModal.tsx  # Bottom sheet: 9 estilos Thunderforest
 │   │   ├── tracking/
-│   │   │   ├── LiveStatsPanel.tsx       # Panel superior con stats live
-│   │   │   ├── TrackingControls.tsx     # Botones pause/stop/waypoint
-│   │   │   └── GpsIndicator.tsx         # Indicador señal GPS
+│   │   │   └── GpsIndicator.tsx    # Indicador senal GPS (±Xm) con pulso animado
 │   │   └── routes/
-│   │       ├── RouteList.tsx
-│   │       └── RouteSummaryCard.tsx
+│   │       └── ExportButtons.tsx   # GPX/KML/KMZ con loading + Share nativo
 │   ├── hooks/
 │   │   ├── useAuth.ts
-│   │   ├── useTracking.ts        # Hook principal de grabación GPS
-│   │   ├── useLiveStats.ts       # Stats actualizadas en tiempo real
-│   │   ├── useNetworkStatus.ts   # Online/offline detection
+│   │   ├── useTracking.ts         # GPS → GpsFilter → trackingStore + notificacion persistente
+│   │   ├── useElapsedTime.ts      # Timer 1s (descuenta pausas)
+│   │   ├── useNetworkStatus.ts
 │   │   └── useRoutes.ts
-│   ├── stores/                   # Zustand
+│   ├── stores/                    # Zustand
 │   │   ├── authStore.ts
-│   │   ├── trackingStore.ts      # Estado de la grabación activa
+│   │   ├── trackingStore.ts       # status, gpsPoints, waypoints, liveStats, currentPosition
 │   │   ├── routesStore.ts
-│   │   └── uiStore.ts            # Toasts, modals, loading
+│   │   └── uiStore.ts
 │   └── theme/
-│       ├── colors.ts             # Tokens del diseño Pencil
-│       └── tailwind.config.js    # NativeWind config
+│       └── colors.ts
 │
-├── shared/
-│   ├── types/
-│   │   ├── Result.ts             # Result<T, E> monad
-│   │   └── AsyncState.ts
-│   ├── utils/
-│   │   ├── formatDistance.ts     # "1.2 km" / "450 m"
-│   │   ├── formatDuration.ts     # "1h 23m 45s"
-│   │   ├── formatSpeed.ts        # "4.5 km/h"
-│   │   ├── formatElevation.ts    # "+340 m / -120 m"
-│   │   └── logger.ts
-│   └── constants/
-│       └── queryKeys.ts
-│
-└── di/                           # Inyección de Dependencias
-    ├── container.ts
-    └── providers.tsx
+└── shared/
+    ├── types/
+    │   ├── Result.ts
+    │   └── AsyncState.ts
+    ├── utils/
+    │   ├── formatters.ts          # formatDistance, formatDuration, formatSpeed, formatElevation
+    │   ├── waypointSelection.ts   # Module-level state para pasar tipo seleccionado entre pantallas
+    │   └── logger.ts
+    └── constants/
+        ├── waypointTypes.ts       # 50+ tipos en 4 categorias con iconos Lucide
+        └── mapLayers.ts           # 9 estilos Thunderforest (outdoors, landscape, cycle, etc.)
 ```
 
 ---
 
-## 🗄️ Esquema de Base de Datos (Supabase)
+## Esquema de Base de Datos (Supabase)
 
 ```sql
--- Usuarios (gestionado por Supabase Auth)
-
--- Rutas
 routes (
-  id UUID PK,
-  user_id UUID FK → auth.users,
-  name TEXT,
-  description TEXT,
-  difficulty TEXT, -- 'easy' | 'moderate' | 'hard'
-  distance_meters FLOAT,
-  duration_seconds INT,
-  elevation_gain_meters FLOAT,
-  elevation_loss_meters FLOAT,
-  max_elevation_meters FLOAT,
-  avg_speed_kmh FLOAT,
-  started_at TIMESTAMPTZ,
-  finished_at TIMESTAMPTZ,
-  is_public BOOLEAN DEFAULT false,
-  synced_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now()
+  id UUID PK, user_id UUID FK, name TEXT, description TEXT,
+  difficulty TEXT, -- 'easy' | 'moderate' | 'hard' | 'very_hard' | 'expert'
+  distance_meters FLOAT, duration_seconds INT,
+  elevation_gain_meters FLOAT, elevation_loss_meters FLOAT, max_elevation_meters FLOAT,
+  avg_speed_kmh FLOAT, started_at TIMESTAMPTZ, finished_at TIMESTAMPTZ,
+  is_public BOOLEAN DEFAULT false, synced_at TIMESTAMPTZ, created_at TIMESTAMPTZ
 )
 
--- Puntos GPS de la ruta
 gps_points (
-  id UUID PK,
-  route_id UUID FK → routes,
-  latitude FLOAT,
-  longitude FLOAT,
-  altitude FLOAT,
-  accuracy FLOAT,
-  speed FLOAT,
-  recorded_at TIMESTAMPTZ,
-  sequence_index INT
+  id UUID PK, route_id UUID FK, latitude FLOAT, longitude FLOAT,
+  altitude FLOAT, accuracy FLOAT, speed FLOAT,
+  recorded_at TIMESTAMPTZ, sequence_index INT
 )
 
--- Waypoints
 waypoints (
-  id UUID PK,
-  route_id UUID FK → routes,
-  latitude FLOAT,
-  longitude FLOAT,
-  altitude FLOAT,
-  title TEXT,
-  description TEXT,
-  created_at TIMESTAMPTZ
+  id UUID PK, route_id UUID FK, latitude FLOAT, longitude FLOAT,
+  altitude FLOAT, title TEXT, description TEXT, type TEXT, created_at TIMESTAMPTZ
 )
 
--- Imágenes de waypoints
 waypoint_images (
-  id UUID PK,
-  waypoint_id UUID FK → waypoints,
-  storage_path TEXT,  -- Supabase Storage
-  created_at TIMESTAMPTZ
+  id UUID PK, waypoint_id UUID FK, storage_path TEXT, created_at TIMESTAMPTZ
 )
 ```
 
 ---
 
-## 📱 Funcionalidades Clave
-
-### Grabación de Ruta
-- [x] Diseño completado (Pencil)
-- [ ] Tracking GPS background con `expo-location`
-- [ ] Cálculo en tiempo real: distancia, velocidad, elevación
-- [ ] Pausa/reanuda grabación
-- [ ] Funciona sin internet (guarda en SQLite local)
-- [ ] Auto-sincronización al recuperar conexión
-
-### Waypoints
-- [ ] Añadir waypoint durante grabación
-- [ ] Título y descripción libre
-- [ ] Adjuntar fotos (cámara o galería)
-- [ ] Visualización en mapa como markers
-
-### Estadísticas Finales
-- [ ] Distancia total
-- [ ] Duración (activo, sin pausas)
-- [ ] Elevación: ganancia, pérdida, máxima
-- [ ] Velocidad promedio y máxima
-- [ ] Perfil de elevación (gráfico)
-
-### Exportación
-- [ ] **GPX** — Formato estándar GPS (compatible con Garmin, Strava, etc.)
-- [ ] **KML** — Google Earth / Maps
-- [ ] **KMZ** — KML comprimido con imágenes embebidas
-
-### Autenticación
-- [ ] Registro con email/contraseña (Supabase)
-- [ ] Login con Google (Supabase OAuth)
-- [ ] Persistencia de sesión (expo-secure-store)
-
-### Mapa
-- [ ] MapLibre GL con tiles Thunderforest Outdoors
-- [ ] Ruta dibujada en tiempo real
-- [ ] Marcadores de inicio/fin
-- [ ] Marcadores de waypoints
-- [ ] Funciona offline (tiles cacheados)
-
----
-
-## ⚙️ Variables de Entorno (.env)
+## Variables de Entorno (.env)
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=
@@ -348,114 +278,201 @@ EXPO_PUBLIC_THUNDERFOREST_API_KEY=
 
 ---
 
-## 🚀 Configuración Inicial
+## Entry Point y Background Tasks
 
-```bash
-# Crear proyecto Expo
-npx create-expo-app@latest nan-kamay --template expo-template-blank-typescript
+**IMPORTANTE**: El entry point es `index.ts` (NO `expo-router/entry` directo).
 
-# Dependencias principales
-npx expo install expo-location expo-sqlite expo-file-system expo-image-picker expo-secure-store
-
-# MapLibre
-npm install @maplibre/maplibre-react-native
-
-# Supabase
-npm install @supabase/supabase-js
-
-# Estado y estilos
-npm install zustand
-npm install nativewind tailwindcss
-npm install react-native-mmkv
-
-# Utilidades
-npm install axios jszip
-npm install @shopify/react-native-skia  # Para gráfico de elevación
+```
+index.ts → import GpsServiceImpl (registra TaskManager.defineTask) → import expo-router/entry
 ```
 
+Esto garantiza que `BACKGROUND_LOCATION_TASK` esta registrado ANTES de que cualquier pantalla intente usarlo. Si `expo prebuild --clean` regenera `index.ts` o `App.tsx`, hay que restaurar nuestro `index.ts` y eliminar `App.tsx`.
+
+`package.json` tiene `"main": "./index.ts"`.
+
 ---
 
-## 📊 Progreso
+## GPS y Background Tracking
 
-### Fase 1 — Setup y Autenticación
-- [x] Diseño UI completado (Pencil)
-- [x] CLAUDE.md creado
-- [ ] Inicialización del proyecto Expo
-- [ ] Configuración NativeWind + Tailwind
-- [ ] Configuración Supabase (auth + db)
-- [ ] Pantallas Login / Register
-- [ ] Navegación básica (Expo Router)
+### Pipeline de filtrado GPS (`GpsFilter.ts`)
+5 etapas en serie:
+1. **Precision Gate** — Rechaza lecturas con accuracy > 25m
+2. **Deteccion estacionaria** — 3 lecturas consecutivas < 0.5 m/s → congela posicion
+3. **Kalman 1D** — Suaviza lat/lon/alt por separado
+4. **Desplazamiento minimo** — Ignora movimientos < 8m (ruido GPS)
+5. **Anti-teleport** — Rechaza saltos > 15 km/h (para senderismo)
 
-### Fase 2 — Grabación GPS ✅
-- [x] `GpsServiceImpl.ts` — expo-location foreground + background task (TaskManager)
-- [x] `useTracking.ts` — Hook que conecta GPS → trackingStore
-- [x] `useElapsedTime.ts` — Timer activo en tiempo real (intervalo 1s)
-- [x] `TrackingMap.tsx` — MapLibre con tiles Thunderforest Outdoors
-  - Ruta dibujada como LineString en tiempo real
-  - Marcador inicio (verde), posición actual (verde con pulso naranja)
-  - Marcadores de waypoints (amarillo)
-  - Cámara sigue posición actual (followUser)
-- [x] `RouteMap.tsx` — Mapa estático para ver rutas guardadas
-- [x] `GpsIndicator.tsx` — Indicador de calidad de señal GPS (±Xm)
-- [x] Pantalla `active.tsx` actualizada — GPS real + MapLibre integrados
-- [x] Pantalla `pre-recording.tsx` — Solicita permisos GPS antes de iniciar
+### Foreground tracking
+- `Location.watchPositionAsync` con `Accuracy.BestForNavigation`
+- `distanceInterval: 10m`, `timeInterval: 5000ms`
+
+### Background tracking
+- `Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, ...)` via TaskManager
+- SIN `foregroundService` de expo-location (causa crash en Android 12+)
+- Notificacion persistente via `expo-notifications` con stats en vivo (distancia + duracion)
+- Se actualiza cada 5 segundos desde `useTracking.ts`
+- Canal de notificacion `tracking` con importancia LOW (sin sonido)
+
+### Permisos requeridos (app.json)
+- Android: `ACCESS_FINE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`
+- iOS: `UIBackgroundModes: ["location"]`, `isIosBackgroundLocationEnabled: true`
+
+---
+
+## Mapa y Capas
+
+### TrackingMap (`src/presentation/components/map/TrackingMap.tsx`)
+- `forwardRef` con `TrackingMapHandle` (zoomIn, zoomOut, resetNorth)
+- `Camera` usa `defaultSettings` (no props declarativas) para evitar reset de zoom
+- `onRegionDidChange` → sincroniza `currentZoom` y `currentHeading` refs
+- Cada `setCamera` pasa `zoomLevel` + `heading` explicitamente
+- `RasterSource` con `key` dinamico por capa para forzar recarga de tiles
+- ShapeSources de ruta/waypoints/posicion tienen IDs fijos (no se pierden al cambiar capa)
+
+### Capas disponibles (`src/shared/constants/mapLayers.ts`)
+| Key | Nombre | Descripcion |
+|-----|--------|-------------|
+| `outdoors` | Outdoors | Senderismo (default) |
+| `landscape` | Landscape | Vista general del terreno |
+| `cycle` | Cycle | Ciclismo, rutas de bici |
+| `transport` | Transport | Transporte publico |
+| `atlas` | Atlas | Estilo atlas clasico |
+| `pioneer` | Pioneer | Estilo vintage/retro |
+| `neighbourhood` | Neighbourhood | Detalle urbano |
+| `mobile-atlas` | Mobile Atlas | Optimizado para movil |
+| `spinal-map` | Spinal Map | Alto contraste |
+
+### Tiles URL
+`thunderforestTileUrls(style)` en `env.ts` genera URLs para subdominios a/b/c de Thunderforest.
+
+### Controles del mapa (active.tsx)
+- **Brujula**: Rota con heading del mapa (`transform: rotate(-heading)`), press → resetNorth
+- **Zoom +/-**: Sincronizado con `onRegionDidChange`, no se resetea con GPS updates
+- **Capas**: Abre `LayerSelectorModal` (bottom sheet con 9 opciones)
+
+---
+
+## Waypoints
+
+### 50+ tipos organizados en 4 categorias (`src/shared/constants/waypointTypes.ts`)
+- **Geografia y Naturaleza** (16): Interseccion, Cima, Paso de Montana, Cueva, Fuente, Rio, Lago, Cascada, Aguas Termales, Mirador, Playa, Flora, Fauna, Arbol, Obs. de Aves, Panoramica
+- **Construcciones Humanas** (19): Refugio Mnt., Refugio Libre, Puente, Puerta, Tunel, Monumento, Castillo, Ruinas, Yacimiento, Arqueologico, Sitio Religioso, Mina, Museo, Patrimonio, Inst. Deportiva, Amarre, Sin Salida, Fin Pavimento, Pago Requerido
+- **Viajes** (9): Aparcamiento, Camping, Pernoctacion, Picnic, Parque, Parada Bus, Parada Tren, Metro, Ferry
+- **Otros** (6): Waypoint, Foto, Riesgo (rojo), Informacion, Avituallamiento, Geocache
+
+### Flujo de seleccion de tipo
+- `waypoint.tsx` muestra tipo actual + recientes como chips
+- "Ver todos" navega a `waypoint-types.tsx` (grid 4 columnas con busqueda)
+- Seleccion usa `waypointSelection.ts` (module-level state) + `router.back()` + `useFocusEffect` para evitar crear nueva instancia de pantalla
+
+### WaypointIcon (`src/presentation/components/ui/WaypointIcon.tsx`)
+- Wrapper sobre lucide-react-native con `ICON_MAP` lookup
+- Necesario porque `lucide-react-native` NO exporta un objeto `icons` como `lucide-react`
+
+---
+
+## Builds y Deployment
+
+### Development (con hot reload)
+```bash
+npx expo prebuild --clean
+npx expo run:android
+```
+
+### APK de prueba (EAS Cloud)
+```bash
+eas build --platform android --profile preview
+```
+`eas.json` configurado con `"buildType": "apk"` para preview y production.
+
+### Notas de prebuild
+- `expo prebuild --clean` puede regenerar `index.ts` y `App.tsx` — hay que restaurar nuestro `index.ts` y eliminar `App.tsx`
+- Cambios en `app.json` (permisos, plugins) requieren rebuild nativo
+
+---
+
+## Progreso
+
+### Fase 1 — Setup y Autenticacion ✅
+- [x] Proyecto Expo inicializado
+- [x] NativeWind + Tailwind configurados
+- [x] Supabase (auth + db + schema.sql)
+- [x] Pantallas Login / Register
+- [x] Navegacion Expo Router
+- [x] Deep linking para confirmacion email
+
+### Fase 2 — Grabacion GPS ✅
+- [x] `GpsServiceImpl.ts` — foreground + background (TaskManager + expo-notifications)
+- [x] `GpsFilter.ts` + `KalmanFilter1D.ts` — pipeline de filtrado 5 etapas
+- [x] `useTracking.ts` — GPS → filtro → store + notificacion persistente con stats
+- [x] `useElapsedTime.ts` — Timer 1s (descuenta pausas)
+- [x] `TrackingMap.tsx` — MapLibre con 9 estilos Thunderforest
+- [x] `RouteMap.tsx` — Mapa estatico con bounds auto-fit
+- [x] `GpsIndicator.tsx` — Indicador senal GPS con pulso animado
+- [x] `active.tsx` — GPS real + mapa + brujula + zoom + selector capas
+- [x] `pre-recording.tsx` — 5 niveles dificultad + actividades custom + permisos GPS
+- [x] Background tracking con notificacion persistente (distancia + duracion en vivo)
 
 ### Fase 3 — Persistencia y Sync ✅
-- [x] Mappers: RouteMapper, GpsPointMapper, WaypointMapper (SQLite ↔ Entidad ↔ Supabase)
-- [x] `RouteRepositoryImpl` — SQLite offline-first (save, getAll, getById, getGps, getWaypoints, delete, markAsSynced)
-- [x] `ImageUploadService` — sube imágenes locales a Supabase Storage (base64)
-- [x] `SyncServiceImpl` — sincroniza rutas offline → Supabase (upsert rutas + GPS + waypoints + imágenes)
-- [x] `SaveRouteUseCase` — orquesta el guardado completo al finalizar
-- [x] `GetRoutesUseCase`, `DeleteRouteUseCase`, `SyncOfflineRoutesUseCase`
-- [x] `routesStore` (Zustand) — lista de rutas, fetch, delete, sync
-- [x] `useNetworkStatus` hook — detecta online/offline con NetInfo, actualiza uiStore
-- [x] `RouteCard` component — tarjeta con stats, badge de dificultad, indicador sync pendiente
-- [x] `summary.tsx` — guardado real con SQLite + Supabase sync automático post-save
-- [x] `HomeScreen` — lista rutas con FlatList, pull-to-refresh, auto-sync al volver online, barra offline
-- [x] `supabase/schema.sql` — tablas, índices, RLS policies y Storage bucket listos para ejecutar
+- [x] Mappers (SQLite ↔ Entidad ↔ Supabase)
+- [x] `RouteRepositoryImpl` — SQLite offline-first
+- [x] `ImageUploadService` — Supabase Storage (base64)
+- [x] `SyncServiceImpl` — offline → Supabase (rutas + GPS + waypoints + imagenes)
+- [x] `SaveRouteUseCase`, `GetRoutesUseCase`, `DeleteRouteUseCase`, `SyncOfflineRoutesUseCase`
+- [x] `routesStore` (Zustand) + `useNetworkStatus`
+- [x] `RouteCard` — stats, badge dificultad, indicador sync
+- [x] `HomeScreen` — FlatList, pull-to-refresh, auto-sync, barra offline
+- [x] `summary.tsx` — guardado real + sync automatico
 
-### Fase 4 — Exportación y Detalle de Ruta ✅
-- [x] `IExportService` port + `ExportFormat` type
-- [x] `ExportServiceImpl` — GPX (1.1), KML (2.2), KMZ (JSZip + imágenes embebidas) → `documentDirectory/exports/`
-- [x] `ExportRouteUseCase` — carga ruta+GPS+waypoints de SQLite y llama al service
-- [x] `ExportButtons` component — 3 botones (GPX/KML/KMZ) con loading individual + Share nativo
-- [x] `routes/[id].tsx` — pantalla detalle de ruta con stats grid, mapa, waypoints, export
-- [x] `summary.tsx` — botón exportar disponible tras guardar ruta
+### Fase 4 — Exportacion y Detalle ✅
+- [x] `ExportServiceImpl` — GPX 1.1, KML 2.2, KMZ (JSZip + imagenes)
+- [x] `ExportRouteUseCase` + `ExportButtons` (3 formatos + Share nativo)
+- [x] `routes/[id].tsx` — stats grid, mapa, waypoints, export
 
 ### Fase 5 — Polish ✅
-- [x] `ToastContainer` — componente de notificaciones animadas (success/error/info) montado en root layout
-- [x] Mapa de ruta en pantalla detalle (`routes/[id].tsx`) — RouteMap con bounds auto-fit
-- [x] `ElevationChart` — perfil de elevación con barras coloreadas por altitud (degradé verde→naranja)
-- [x] Perfil de elevación en pantalla resumen (`summary.tsx`)
-- [x] **Vel. Máxima** añadida a stats grid en `summary.tsx` y `routes/[id].tsx`
-- [x] **Tab Explorar** — lista rutas públicas de Supabase (`GetPublicRoutesUseCase`), offline-aware, pull-to-refresh
-- [x] **Toggle "Hacer ruta pública"** en `summary.tsx` antes de guardar — pasa `isPublic` al `SaveRouteUseCase`
-- [x] **Animaciones y transiciones (reanimated)** — `react-native-worklets` instalado, plugin habilitado en babel
-  - `RouteCard`: entrada staggered por index (slide+fade+spring), scale al presionar (Pressable)
-  - `GpsIndicator`: pulso animado del dot mientras graba (scale+opacity repeat)
-  - `ToastContainer`: spring slide-down al aparecer, timing fade al dismiss (con `runOnJS`)
-  - `OfflineBanner`: nuevo componente con slide-down/up animado según `visible`
-  - `active.tsx`: paneles superior e inferior con fade+spring de entrada; `ControlButton` con scale spring al presionar
-- [ ] Testing
+- [x] `ToastContainer` — notificaciones animadas
+- [x] `ElevationChart` — perfil de elevacion con barras degradado
+- [x] Tab Explorar — rutas publicas
+- [x] Toggle ruta publica en summary
+- [x] Animaciones reanimated en RouteCard, GpsIndicator, ToastContainer, OfflineBanner, active.tsx
+
+### Fase 6 — Waypoints y Capas ✅
+- [x] 50+ tipos de waypoint en 4 categorias con iconos Lucide
+- [x] Selector de tipo con busqueda y recientes
+- [x] Fotos (camara + galeria) en waypoints
+- [x] `LayerSelectorModal` — 9 estilos Thunderforest
+- [x] Brujula funcional (rota con heading del mapa)
+- [x] Zoom +/- funcional (sincronizado con gestos)
+- [x] Background tracking con notificacion persistente
+
+### Pendiente
+- [ ] Testing (unit + integration)
+- [ ] Tiles offline (cache MapLibre)
+- [ ] Perfil de usuario (tab profile)
 
 ---
 
-## 🔑 Decisiones Técnicas Importantes
+## Decisiones Tecnicas Importantes
 
 1. **Offline-first**: SQLite como fuente de verdad local. Supabase como sync remoto.
-2. **Background GPS**: Usar `expo-location` con `LocationTaskName` para seguir grabando con pantalla apagada.
-3. **Tiles offline**: Investigar tile caching en MapLibre para uso sin internet.
-4. **GPX/KML**: Generación manual (no librería) para control total del formato.
-5. **Imágenes**: Almacenar en Supabase Storage, referencia local en SQLite hasta sync.
-6. **Elevación**: Usar datos del GPS (`altitude`). Para mayor precisión, considerar Open Elevation API.
+2. **Background GPS sin foregroundService de expo-location**: En Android 12+ causa crash. Usamos `expo-notifications` para la notificacion persistente + `startLocationUpdatesAsync` sin `foregroundService`.
+3. **Entry point custom** (`index.ts`): `TaskManager.defineTask()` debe ejecutarse ANTES de Expo Router. Sin esto: "Task not found".
+4. **Camera con defaultSettings**: Usar props declarativas en `<Camera zoomLevel={16}>` causa reset de zoom en cada render. `defaultSettings` solo aplica al montar.
+5. **RasterSource con key dinamico**: MapLibre no recarga tiles cuando solo cambia `tileUrlTemplates` en el mismo source ID. El `key` fuerza remount.
+6. **Waypoint type selection via module-level state**: `router.navigate` crea nueva instancia de pantalla (pierde datos del form). Solucion: `setPendingWaypointType()` + `router.back()` + `useFocusEffect` + `consumePendingWaypointType()`.
+7. **GPX/KML/KMZ manuales**: Generacion sin libreria para control total del formato.
+8. **lucide-react-native**: No exporta objeto `icons`. Se usa `WaypointIcon.tsx` con `ICON_MAP` lookup individual.
+9. **GpsFilter pipeline**: 5 etapas (precision gate → estacionario → Kalman → desplazamiento minimo → anti-teleport) para limpiar ruido GPS en tiempo real.
 
 ---
 
-## 📐 Convenciones del Proyecto
+## Convenciones del Proyecto
 
 - Archivos: `PascalCase.tsx` para componentes, `camelCase.ts` para utilidades
-- Imports absolutos desde `src/` (configurar en tsconfig)
+- Imports absolutos: `@core/`, `@application/`, `@infrastructure/`, `@presentation/`, `@shared/` (babel + tsconfig)
 - Commits: `feat:`, `fix:`, `refactor:`, `docs:`
 - Ramas: `feat/nombre-feature`, `fix/nombre-bug`
-- No lógica de negocio en componentes React — solo en UseCases y Stores
-- Todos los textos en español (UI) con soporte futuro i18n
+- No logica de negocio en componentes React — solo en UseCases y Stores
+- Todos los textos UI en espanol
+- Colores: SIEMPRE usar tokens de `colors.ts`, nunca hardcodear hex en componentes
+- MapLibre logs silenciados: "Failed to load tile" y "permanent error: Canceled" (son normales)
