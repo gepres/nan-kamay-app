@@ -21,7 +21,10 @@
       "Bash(npx:*)",
       "Bash(grep:*)",
       "Bash(curl:*)",
-      "WebSearch"
+      "WebSearch",
+      "PowerShell($adb = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\"; & $adb devices; \"---\"; & $adb -s emulator-5554 shell df -h /data)",
+      "Bash(set -e)",
+      "Bash(unzip -o \"../Mercado.kmz\" -d mercado)"
     ]
   }
 }

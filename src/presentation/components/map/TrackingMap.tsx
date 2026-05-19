@@ -15,6 +15,7 @@ import {
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { colors } from '@presentation/theme/colors';
+import MissingTileKeyBanner from './MissingTileKeyBanner';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
 
@@ -33,8 +34,6 @@ export interface TrackingMapHandle {
 
 interface Props {
   followUser?: boolean;
-  /** @deprecated Use mapLayer instead */
-  useOutdoorTiles?: boolean;
   /** Thunderforest tile style key (e.g. 'outdoors', 'landscape', 'cycle'). Defaults to 'outdoors'. */
   mapLayer?: string;
   /** Called when the map heading/zoom changes (after user gesture or programmatic) */
@@ -42,21 +41,25 @@ interface Props {
 }
 
 export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
-  { followUser = true, useOutdoorTiles, mapLayer = 'outdoors', onRegionChange },
+  { followUser = true, mapLayer = 'outdoors', onRegionChange },
   ref,
 ) {
-  // Resolve the effective layer key (support legacy useOutdoorTiles prop)
-  const effectiveLayer = useOutdoorTiles !== undefined
-    ? (useOutdoorTiles ? 'outdoors' : 'osm')
-    : mapLayer;
   const { gpsPoints, waypoints, currentPosition } = useTrackingStore();
   const cameraRef = useRef<CameraRef>(null);
+  // `currentZoom` es la ÚNICA fuente de verdad del zoom: solo lo cambian los
+  // botones. No lo sobrescribimos desde onRegionDidChange (reporta valores
+  // intermedios durante una animación y hacía que el auto-follow "rebotara"
+  // el zoom al siguiente fix GPS).
   const currentZoom = useRef(16);
   const currentHeading = useRef(0);
+  // Mientras esté activo, el auto-follow NO recentra: deja al usuario hacer
+  // zoom / mirar el mapa sin que la cámara lo arrastre de vuelta en cada fix.
+  const suspendFollowUntil = useRef(0);
 
   useImperativeHandle(ref, () => ({
     zoomIn: () => {
       currentZoom.current = Math.min(currentZoom.current + 1, 18);
+      suspendFollowUntil.current = Date.now() + 6000;
       cameraRef.current?.setCamera({
         zoomLevel: currentZoom.current,
         heading: currentHeading.current,
@@ -65,6 +68,7 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     },
     zoomOut: () => {
       currentZoom.current = Math.max(currentZoom.current - 1, 1);
+      suspendFollowUntil.current = Date.now() + 6000;
       cameraRef.current?.setCamera({
         zoomLevel: currentZoom.current,
         heading: currentHeading.current,
@@ -121,17 +125,20 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
   };
 
   useEffect(() => {
-    if (followUser && currentPosition && cameraRef.current) {
-      cameraRef.current.setCamera({
-        centerCoordinate: [currentPosition.longitude, currentPosition.latitude],
-        zoomLevel: currentZoom.current,
-        heading: currentHeading.current,
-        animationDuration: 500,
-      });
-    }
+    if (!followUser || !currentPosition || !cameraRef.current) return;
+    // Tras un zoom manual no recentramos durante unos segundos: si no, el
+    // siguiente fix GPS interrumpía la animación de zoom y "deshacía" el botón.
+    if (Date.now() < suspendFollowUntil.current) return;
+
+    cameraRef.current.setCamera({
+      centerCoordinate: [currentPosition.longitude, currentPosition.latitude],
+      zoomLevel: currentZoom.current,
+      heading: currentHeading.current,
+      animationDuration: 350,
+    });
   }, [currentPosition, followUser]);
 
-  const tileUrls = thunderforestTileUrls(effectiveLayer);
+  const tileUrls = thunderforestTileUrls(mapLayer);
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -142,28 +149,29 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
         compassEnabled={false}
         rotateEnabled={true}
         onRegionDidChange={(feature) => {
-          // Extract heading and zoom from the region change event
+          // Solo sincronizamos el heading (para la brújula). El zoom NO se
+          // toma de aquí: durante una animación reporta valores intermedios
+          // y rebotaba el zoom de los botones. La fuente de verdad del zoom
+          // es `currentZoom`, que solo cambian los botones.
           const props = feature?.properties;
           if (props) {
             const heading = props.heading ?? 0;
-            const zoom = props.zoomLevel ?? currentZoom.current;
             currentHeading.current = heading;
-            currentZoom.current = zoom;
-            onRegionChange?.(heading, zoom);
+            onRegionChange?.(heading, currentZoom.current);
           }
         }}
       >
         <RasterSource
-          id={`tiles-${effectiveLayer}`}
-          key={`tiles-${effectiveLayer}`}
+          id={`tiles-${mapLayer}`}
+          key={`tiles-${mapLayer}`}
           tileUrlTemplates={tileUrls}
           tileSize={256}
           maxZoomLevel={18}
           minZoomLevel={1}
         >
           <RasterLayer
-            id={`layer-${effectiveLayer}`}
-            sourceID={`tiles-${effectiveLayer}`}
+            id={`layer-${mapLayer}`}
+            sourceID={`tiles-${mapLayer}`}
             style={{ rasterOpacity: 1 }}
           />
         </RasterSource>
@@ -218,6 +226,7 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
           </ShapeSource>
         )}
       </MapView>
+      <MissingTileKeyBanner />
     </View>
   );
 });

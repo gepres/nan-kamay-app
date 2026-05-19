@@ -85,7 +85,8 @@
           "icon": "./assets/icon.png",
           "color": "#22C55E"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "scheme": "nan-kamay",
     "extra": {

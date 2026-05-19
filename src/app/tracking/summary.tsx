@@ -13,6 +13,7 @@ import ExportButtons from '@presentation/components/routes/ExportButtons';
 import ElevationChart from '@presentation/components/routes/ElevationChart';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { saveRouteUseCase } from '@application/tracking/SaveRouteUseCase';
+import { discardDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import { syncOfflineRoutesUseCase } from '@application/routes/SyncOfflineRoutesUseCase';
 import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
@@ -55,8 +56,19 @@ export default function SummaryScreen() {
         syncOfflineRoutesUseCase(user.id)
           .then((result) => {
             if (result.synced > 0) fetchRoutes(user.id);
+            if (result.failed > 0) {
+              showToast(
+                `No se pudo sincronizar: ${result.errors[0] ?? 'error del servidor'}`,
+                'error'
+              );
+            }
           })
-          .catch(console.error);
+          .catch((err) => {
+            showToast(
+              err instanceof Error ? err.message : 'Error al sincronizar con el servidor.',
+              'error'
+            );
+          });
       } else {
         showToast('Ruta guardada localmente. Se sincronizará cuando haya conexión.', 'info');
       }
@@ -76,7 +88,13 @@ export default function SummaryScreen() {
       {
         text: 'Descartar',
         style: 'destructive',
-        onPress: () => { reset(); router.replace('/(tabs)'); },
+        onPress: () => {
+          // Borrar también el borrador persistido en SQLite (si no, se
+          // ofrecería recuperarlo al reabrir la app).
+          if (routeId) discardDraftRoute(routeId).catch((e) => console.error(e));
+          reset();
+          router.replace('/(tabs)');
+        },
       },
     ]);
   };
@@ -89,6 +107,7 @@ export default function SummaryScreen() {
     { icon: 'arrow-up-outline',    label: 'Subida',       value: formatElevation(liveStats.elevationGainMeters) },
     { icon: 'arrow-down-outline',  label: 'Bajada',       value: formatElevation(liveStats.elevationLossMeters) },
     { icon: 'trending-up-outline', label: 'Elev. máx.',   value: formatElevation(liveStats.maxElevationMeters, false) },
+    { icon: 'trending-down-outline', label: 'Elev. mín.', value: formatElevation(liveStats.minElevationMeters, false) },
   ];
 
   return (

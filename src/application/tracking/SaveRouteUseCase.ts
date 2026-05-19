@@ -47,6 +47,7 @@ export async function saveRouteUseCase(input: SaveRouteInput): Promise<SaveRoute
     elevationGainMeters: stats.elevationGainMeters,
     elevationLossMeters: stats.elevationLossMeters,
     maxElevationMeters: stats.maxElevationMeters,
+    minElevationMeters: stats.minElevationMeters,
     avgSpeedKmh: stats.avgSpeedKmh,
     maxSpeedKmh: stats.maxSpeedKmh,
     startedAt,

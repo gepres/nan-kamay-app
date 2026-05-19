@@ -1,7 +1,8 @@
 import { readAsStringAsync } from 'expo-file-system';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
+import { NK_BUCKET } from '@infrastructure/supabase/tables';
 
-const BUCKET = 'waypoint-images';
+const BUCKET = NK_BUCKET;
 
 /**
  * Sube una imagen local (URI) a Supabase Storage.

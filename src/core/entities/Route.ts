@@ -1,4 +1,5 @@
 import { Difficulty } from '../value-objects/Difficulty';
+import { uuidv4 } from '@shared/utils/uuid';
 
 export interface RouteProps {
   id: string;
@@ -12,12 +13,15 @@ export interface RouteProps {
   elevationGainMeters: number;
   elevationLossMeters: number;
   maxElevationMeters: number;
+  minElevationMeters?: number;
   avgSpeedKmh: number;
   maxSpeedKmh: number;
   startedAt: Date;
   finishedAt?: Date;
   isPublic: boolean;
   isSynced: boolean;
+  /** true mientras la grabación está en curso (no finalizada/guardada). */
+  isDraft?: boolean;
   createdAt: Date;
 }
 
@@ -27,7 +31,7 @@ export class Route {
   static create(props: Omit<RouteProps, 'id' | 'createdAt' | 'isSynced'>): Route {
     return new Route({
       ...props,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      id: uuidv4(),
       isSynced: false,
       createdAt: new Date(),
     });
@@ -48,12 +52,14 @@ export class Route {
   get elevationGainMeters() { return this.props.elevationGainMeters; }
   get elevationLossMeters() { return this.props.elevationLossMeters; }
   get maxElevationMeters() { return this.props.maxElevationMeters; }
+  get minElevationMeters() { return this.props.minElevationMeters ?? 0; }
   get avgSpeedKmh() { return this.props.avgSpeedKmh; }
   get maxSpeedKmh() { return this.props.maxSpeedKmh; }
   get startedAt() { return this.props.startedAt; }
   get finishedAt() { return this.props.finishedAt; }
   get isPublic() { return this.props.isPublic; }
   get isSynced() { return this.props.isSynced; }
+  get isDraft() { return this.props.isDraft ?? false; }
   get createdAt() { return this.props.createdAt; }
 
   toProps(): RouteProps {

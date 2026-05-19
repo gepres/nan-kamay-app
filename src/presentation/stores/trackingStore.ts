@@ -3,7 +3,8 @@ import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
 import { Coordinates } from '@core/value-objects/Coordinates';
 import { Difficulty } from '@core/value-objects/Difficulty';
-import { StatsCalculator, RouteStats } from '@core/rules/StatsCalculator';
+import { StatsCalculator, RouteStats, StatsAccumulator } from '@core/rules/StatsCalculator';
+import { uuidv4 } from '@shared/utils/uuid';
 
 export type TrackingStatus = 'idle' | 'recording' | 'paused' | 'finished';
 
@@ -21,6 +22,8 @@ interface TrackingState {
   pausedAt: Date | null;
   totalPausedSeconds: number;
   liveStats: RouteStats;
+  /** Acumulador incremental de stats (interno; evita recalcular O(n²)). */
+  _statsAcc: StatsAccumulator;
 
   // Acciones
   startRecording: (name: string, difficulty: Difficulty, description?: string, activityType?: string) => void;
@@ -30,6 +33,16 @@ interface TrackingState {
   addWaypoint: (waypoint: Waypoint) => void;
   updatePosition: (coords: Coordinates) => void;
   finishRecording: () => void;
+  restoreSession: (payload: {
+    routeId: string;
+    routeName: string;
+    routeDescription: string;
+    activityType: string;
+    difficulty: Difficulty;
+    startedAt: Date;
+    gpsPoints: GpsPoint[];
+    waypoints: Waypoint[];
+  }) => void;
   reset: () => void;
 }
 
@@ -58,9 +71,10 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   pausedAt: null,
   totalPausedSeconds: 0,
   liveStats: initialStats,
+  _statsAcc: StatsCalculator.createAccumulator(),
 
   startRecording: (name, difficulty, description = '', activityType = 'Senderismo') => {
-    const routeId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const routeId = uuidv4();
     set({
       status: 'recording',
       routeId,
@@ -74,6 +88,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: null,
       totalPausedSeconds: 0,
       liveStats: initialStats,
+      _statsAcc: StatsCalculator.createAccumulator(),
     });
   },
 
@@ -98,9 +113,11 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       const gpsPoints = [...state.gpsPoints, point];
       const { startedAt, totalPausedSeconds } = state;
       const elapsed = startedAt
-        ? Math.floor((Date.now() - startedAt.getTime()) / 1000) - totalPausedSeconds
+        ? Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000) - totalPausedSeconds)
         : 0;
-      const liveStats = StatsCalculator.calculate(gpsPoints, elapsed);
+      // O(1): acumulador incremental en vez de recalcular todo el array.
+      StatsCalculator.accumulate(state._statsAcc, point);
+      const liveStats = StatsCalculator.finalize(state._statsAcc, elapsed);
       return { gpsPoints, liveStats };
     });
   },
@@ -123,11 +140,45 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
     set({ status: 'finished', liveStats: finalStats });
   },
 
+  restoreSession: (p) => {
+    // Recupera una grabación interrumpida desde SQLite. Queda en 'paused'
+    // para que el usuario decida (reanudar o finalizar); el GPS no arranca
+    // solo. La duración se reconstruye del span de puntos, y totalPausedSeconds
+    // se ajusta para que finishRecording() no infle el tiempo con el hueco
+    // que el proceso estuvo muerto.
+    const now = Date.now();
+    const lastPoint = p.gpsPoints[p.gpsPoints.length - 1];
+    const lastAt = lastPoint ? lastPoint.recordedAt.getTime() : p.startedAt.getTime();
+    const activeSeconds = Math.max(0, Math.floor((lastAt - p.startedAt.getTime()) / 1000));
+    const gapSeconds = Math.max(0, Math.floor((now - lastAt) / 1000));
+
+    set({
+      status: 'paused',
+      routeId: p.routeId,
+      routeName: p.routeName,
+      routeDescription: p.routeDescription,
+      activityType: p.activityType,
+      difficulty: p.difficulty,
+      gpsPoints: p.gpsPoints,
+      waypoints: p.waypoints,
+      currentPosition: lastPoint
+        ? { latitude: lastPoint.latitude, longitude: lastPoint.longitude, altitude: lastPoint.altitude ?? undefined }
+        : null,
+      startedAt: p.startedAt,
+      pausedAt: new Date(now),
+      totalPausedSeconds: gapSeconds,
+      liveStats: StatsCalculator.calculate(p.gpsPoints, activeSeconds),
+      _statsAcc: StatsCalculator.buildAccumulator(p.gpsPoints),
+    });
+  },
+
   reset: () => {
     set({
       status: 'idle',
       routeId: null,
       routeName: '',
+      routeDescription: '',
+      activityType: 'Senderismo',
       difficulty: 'easy',
       gpsPoints: [],
       waypoints: [],
@@ -136,6 +187,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: null,
       totalPausedSeconds: 0,
       liveStats: initialStats,
+      _statsAcc: StatsCalculator.createAccumulator(),
     });
   },
 }));

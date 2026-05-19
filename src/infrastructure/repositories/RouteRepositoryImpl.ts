@@ -19,19 +19,21 @@ export class RouteRepositoryImpl implements IRouteRepository {
       // 1. Ruta principal
       await db.runAsync(
         `INSERT OR REPLACE INTO routes
-          (id, user_id, name, description, difficulty,
+          (id, user_id, name, description, activity_type, difficulty,
            distance_meters, duration_seconds,
-           elevation_gain_meters, elevation_loss_meters, max_elevation_meters,
+           elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
            avg_speed_kmh, max_speed_kmh,
-           started_at, finished_at, is_public, is_synced, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           started_at, finished_at, is_public, is_synced, is_draft, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           routeRow.id, routeRow.user_id, routeRow.name, routeRow.description,
-          routeRow.difficulty, routeRow.distance_meters, routeRow.duration_seconds,
+          routeRow.activity_type, routeRow.difficulty,
+          routeRow.distance_meters, routeRow.duration_seconds,
           routeRow.elevation_gain_meters, routeRow.elevation_loss_meters,
-          routeRow.max_elevation_meters, routeRow.avg_speed_kmh, routeRow.max_speed_kmh,
+          routeRow.max_elevation_meters, routeRow.min_elevation_meters,
+          routeRow.avg_speed_kmh, routeRow.max_speed_kmh,
           routeRow.started_at, routeRow.finished_at,
-          routeRow.is_public, routeRow.is_synced, routeRow.created_at,
+          routeRow.is_public, routeRow.is_synced, routeRow.is_draft, routeRow.created_at,
         ] as (string | number | null)[]
       );
 
@@ -56,18 +58,76 @@ export class RouteRepositoryImpl implements IRouteRepository {
         const r = waypointToRow(wp);
         await db.runAsync(
           `INSERT OR REPLACE INTO waypoints
-            (id, route_id, latitude, longitude, altitude, title, description, image_uris, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?)`,
+            (id, route_id, latitude, longitude, altitude, title, description, type, image_uris, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?)`,
           [r.id, r.route_id, r.latitude, r.longitude,
-           r.altitude, r.title, r.description, r.image_uris, r.created_at] as (string | number | null)[]
+           r.altitude, r.title, r.description, r.type, r.image_uris, r.created_at] as (string | number | null)[]
         );
       }
     });
   }
 
+  /**
+   * Crea (o reemplaza) la fila de ruta como BORRADOR (is_draft = 1), sin
+   * puntos. A partir de aquí los puntos/waypoints se persisten incrementalmente
+   * para sobrevivir a un cierre/kill del proceso durante la grabación.
+   */
+  async createDraft(route: Route): Promise<void> {
+    const r = routeToRow(route);
+    await db.runAsync(
+      `INSERT OR REPLACE INTO routes
+        (id, user_id, name, description, activity_type, difficulty,
+         distance_meters, duration_seconds,
+         elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
+         avg_speed_kmh, max_speed_kmh,
+         started_at, finished_at, is_public, is_synced, is_draft, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
+      [
+        r.id, r.user_id, r.name, r.description, r.activity_type, r.difficulty,
+        r.distance_meters, r.duration_seconds,
+        r.elevation_gain_meters, r.elevation_loss_meters, r.max_elevation_meters,
+        r.min_elevation_meters, r.avg_speed_kmh, r.max_speed_kmh,
+        r.started_at, r.finished_at, r.is_public, r.is_synced, r.created_at,
+      ] as (string | number | null)[]
+    );
+  }
+
+  /** Inserta un punto GPS individual (idempotente por id). */
+  async appendGpsPoint(point: GpsPoint): Promise<void> {
+    const r = gpsPointToRow(point);
+    await db.runAsync(
+      `INSERT OR IGNORE INTO gps_points
+        (id, route_id, latitude, longitude, altitude, accuracy, speed, recorded_at, sequence_index)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [r.id, r.route_id, r.latitude, r.longitude,
+       r.altitude, r.accuracy, r.speed, r.recorded_at, r.sequence_index] as (string | number | null)[]
+    );
+  }
+
+  /** Inserta/actualiza un waypoint individual. */
+  async appendWaypoint(wp: Waypoint): Promise<void> {
+    const r = waypointToRow(wp);
+    await db.runAsync(
+      `INSERT OR REPLACE INTO waypoints
+        (id, route_id, latitude, longitude, altitude, title, description, type, image_uris, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [r.id, r.route_id, r.latitude, r.longitude,
+       r.altitude, r.title, r.description, r.type, r.image_uris, r.created_at] as (string | number | null)[]
+    );
+  }
+
+  /** Borrador de grabación interrumpida más reciente (is_draft = 1), si existe. */
+  async getActiveDraft(userId: string): Promise<Route | null> {
+    const row = await db.getFirstAsync<Record<string, unknown>>(
+      'SELECT * FROM routes WHERE user_id = ? AND is_draft = 1 ORDER BY created_at DESC LIMIT 1',
+      [userId]
+    );
+    return row ? rowToRoute(row) : null;
+  }
+
   async getAll(userId: string): Promise<Route[]> {
     const rows = await db.getAllAsync<Record<string, unknown>>(
-      'SELECT * FROM routes WHERE user_id = ? ORDER BY created_at DESC',
+      'SELECT * FROM routes WHERE user_id = ? AND is_draft = 0 ORDER BY created_at DESC',
       [userId]
     );
     return rows.map(rowToRoute);
@@ -104,7 +164,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
 
   async getUnsyncedRoutes(userId: string): Promise<Route[]> {
     const rows = await db.getAllAsync<Record<string, unknown>>(
-      'SELECT * FROM routes WHERE user_id = ? AND is_synced = 0 ORDER BY created_at ASC',
+      'SELECT * FROM routes WHERE user_id = ? AND is_synced = 0 AND is_draft = 0 ORDER BY created_at ASC',
       [userId]
     );
     return rows.map(rowToRoute);
@@ -114,6 +174,17 @@ export class RouteRepositoryImpl implements IRouteRepository {
     await db.runAsync(
       'UPDATE routes SET is_synced = 1 WHERE id = ?',
       [routeId]
+    );
+  }
+
+  /**
+   * Reemplaza las URIs de imágenes de un waypoint por las URLs remotas tras
+   * subirlas. Así un re-sync ve URLs `http` y no las vuelve a subir (A8).
+   */
+  async updateWaypointImageUris(waypointId: string, uris: string[]): Promise<void> {
+    await db.runAsync(
+      'UPDATE waypoints SET image_uris = ? WHERE id = ?',
+      [JSON.stringify(uris), waypointId]
     );
   }
 }

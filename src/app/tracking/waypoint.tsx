@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
@@ -21,9 +22,11 @@ import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { Waypoint } from '@core/entities/Waypoint';
 import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
 import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
+import { appendDraftWaypoint } from '@application/tracking/DraftRouteUseCase';
 import { colors } from '@presentation/theme/colors';
 
 const DEFAULT_ICON_COLOR = '#F59E0B';
+const RECENTS_KEY = 'nk:recentWaypointTypes';
 
 export default function WaypointScreen() {
   const [title, setTitle] = useState('');
@@ -44,12 +47,32 @@ export default function WaypointScreen() {
     }, [])
   );
 
+  // Cargar recientes persistidos al montar (sobreviven al cierre del modal/app).
+  useEffect(() => {
+    AsyncStorage.getItem(RECENTS_KEY)
+      .then((raw) => {
+        if (!raw) return;
+        try {
+          const labels: string[] = JSON.parse(raw);
+          const infos = labels
+            .map((l) => getWaypointTypeInfo(l))
+            .filter((x): x is WaypointTypeInfo => !!x)
+            .slice(0, 5);
+          setRecentTypes(infos);
+        } catch {
+          /* JSON corrupto: ignorar */
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const addToRecents = (label: string) => {
+    const info = getWaypointTypeInfo(label);
+    if (!info) return;
     setRecentTypes((prev) => {
-      const info = getWaypointTypeInfo(label);
-      if (!info) return prev;
-      const filtered = prev.filter((t) => t.label !== label);
-      return [info, ...filtered].slice(0, 5);
+      const next = [info, ...prev.filter((t) => t.label !== label)].slice(0, 5);
+      AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(next.map((t) => t.label))).catch(() => {});
+      return next;
     });
   };
 
@@ -124,6 +147,9 @@ export default function WaypointScreen() {
     });
 
     addWaypoint(waypoint);
+    appendDraftWaypoint(waypoint).catch((e) =>
+      console.error('[draft] no se pudo persistir waypoint', e)
+    );
     router.back();
   };
 

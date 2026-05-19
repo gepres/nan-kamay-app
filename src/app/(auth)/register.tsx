@@ -15,6 +15,8 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
+import { signInWithGoogle } from '@infrastructure/supabase/googleAuth';
+import { authErrorMessage } from '@shared/utils/authErrors';
 import { colors } from '@presentation/theme/colors';
 
 export default function RegisterScreen() {
@@ -26,6 +28,7 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -55,19 +58,26 @@ export default function RegisterScreen() {
     });
     setLoading(false);
     if (error) {
-      Alert.alert('Error al registrarse', error.message);
+      Alert.alert('No se pudo crear la cuenta', authErrorMessage(error));
     } else {
       Alert.alert(
-        '¡Registro exitoso!',
-        'Revisa tu correo para confirmar tu cuenta.',
+        '¡Cuenta creada!',
+        'Tu cuenta quedó lista. Ya puedes iniciar sesión con tu correo y contraseña.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
       );
     }
   };
 
   const handleGoogleRegister = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) Alert.alert('Error', error.message);
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (result === 'success') router.replace('/(tabs)');
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo continuar con Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const inputStyle = {
@@ -260,6 +270,7 @@ export default function RegisterScreen() {
           {/* Google */}
           <TouchableOpacity
             onPress={handleGoogleRegister}
+            disabled={googleLoading}
             style={{
               backgroundColor: colors.bgCard,
               borderColor: colors.border,
@@ -271,10 +282,17 @@ export default function RegisterScreen() {
               justifyContent: 'center',
               gap: 10,
               marginBottom: 32,
+              opacity: googleLoading ? 0.6 : 1,
             }}
           >
-            <Ionicons name="globe-outline" size={20} color={colors.textPrimary} />
-            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '500' }}>Google</Text>
+            {googleLoading ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <>
+                <Ionicons name="globe-outline" size={20} color={colors.textPrimary} />
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '500' }}>Google</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Link login */}

@@ -6,6 +6,7 @@ import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { GpsUpdate } from '@core/ports/services/IGpsService';
 import { GpsFilter } from '@infrastructure/services/GpsFilter';
+import { appendDraftGpsPoint } from '@application/tracking/DraftRouteUseCase';
 import { formatDistance, formatDuration } from '@shared/utils/formatters';
 
 /**
@@ -64,6 +65,11 @@ export function useTracking() {
       });
 
       addGpsPoint(point);
+
+      // Persistir incrementalmente en SQLite (sobrevive a un kill del proceso)
+      appendDraftGpsPoint(point).catch((e) =>
+        console.error('[draft] no se pudo persistir punto', e)
+      );
     },
     [routeId, addGpsPoint, updatePosition]
   );
@@ -71,7 +77,9 @@ export function useTracking() {
   // Iniciar/detener GPS según el estado
   useEffect(() => {
     if (status === 'recording') {
-      gpsFilterRef.current.reset();
+      // No reseteamos el filtro aquí: el efecto [routeId] ya lo resetea al
+      // iniciar una ruta nueva. Resetearlo en cada 'recording' rompía la
+      // continuidad del Kalman al reanudar tras una pausa (M4).
       gpsService.startTracking(handleGpsUpdate).catch((err) => {
         showToast(err.message ?? 'Error al iniciar GPS', 'error');
       });

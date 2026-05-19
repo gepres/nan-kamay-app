@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { useTracking } from '@presentation/hooks/useTracking';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
+import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import TrackingMap from '@presentation/components/map/TrackingMap';
 import GpsIndicator from '@presentation/components/tracking/GpsIndicator';
 import LayerSelectorModal from '@presentation/components/map/LayerSelectorModal';
@@ -96,7 +97,14 @@ export default function ActiveTrackingScreen() {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Finalizar',
-          onPress: () => {
+          onPress: async () => {
+            // Detener el GPS explícitamente ANTES de navegar para no depender
+            // del efecto de useTracking (race al desmontar → GPS/notif vivos).
+            try {
+              await gpsService.stopTracking();
+            } catch (e) {
+              console.error(e);
+            }
             finishRecording();
             router.replace('/tracking/summary');
           },

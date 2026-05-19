@@ -1,3 +1,5 @@
+import { uuidv4 } from '@shared/utils/uuid';
+
 export interface WaypointProps {
   id: string;
   routeId: string;
@@ -17,7 +19,7 @@ export class Waypoint {
   static create(props: Omit<WaypointProps, 'id' | 'createdAt'>): Waypoint {
     return new Waypoint({
       ...props,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      id: uuidv4(),
       createdAt: new Date(),
     });
   }

@@ -1,3 +1,5 @@
+import { uuidv4 } from '@shared/utils/uuid';
+
 export interface GpsPointProps {
   id: string;
   routeId: string;
@@ -14,8 +16,7 @@ export class GpsPoint {
   private constructor(private readonly props: GpsPointProps) {}
 
   static create(props: Omit<GpsPointProps, 'id'>): GpsPoint {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    return new GpsPoint({ ...props, id });
+    return new GpsPoint({ ...props, id: uuidv4() });
   }
 
   static fromProps(props: GpsPointProps): GpsPoint {

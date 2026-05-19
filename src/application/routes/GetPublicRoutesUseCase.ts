@@ -1,5 +1,5 @@
 import { supabase } from '@infrastructure/supabase/supabaseClient';
-import { Route } from '@core/entities/Route';
+import { NK_TABLES } from '@infrastructure/supabase/tables';
 import { Difficulty } from '@core/value-objects/Difficulty';
 
 export interface PublicRoute {
@@ -28,7 +28,7 @@ export async function getPublicRoutesUseCase(
   limit = 50,
 ): Promise<PublicRoute[]> {
   const { data, error } = await supabase
-    .from('routes')
+    .from(NK_TABLES.routes)
     .select('*')
     .eq('is_public', true)
     .neq('user_id', currentUserId)

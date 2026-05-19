@@ -14,8 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
+import { useAuthStore } from '@presentation/stores/authStore';
 import { Difficulty, DifficultyLabel } from '@core/value-objects/Difficulty';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
+import { startDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import { colors } from '@presentation/theme/colors';
 
 const DIFF_ROW_1: Difficulty[] = ['easy', 'moderate', 'hard'];
@@ -41,6 +43,7 @@ export default function PreRecordingScreen() {
   const [customActivityName, setCustomActivityName] = useState('');
   const [checkingGps, setCheckingGps] = useState(false);
   const { startRecording } = useTrackingStore();
+  const { user } = useAuthStore();
 
   const allActivities = [...DEFAULT_ACTIVITIES, ...customActivities];
 
@@ -74,6 +77,26 @@ export default function PreRecordingScreen() {
     }
 
     startRecording(name.trim(), difficulty, description.trim(), activityType);
+
+    // Crear el borrador en SQLite ANTES de navegar: a partir de aquí cada
+    // punto se persiste incrementalmente y la ruta sobrevive a un kill.
+    const st = useTrackingStore.getState();
+    if (user && st.routeId && st.startedAt) {
+      try {
+        await startDraftRoute({
+          routeId: st.routeId,
+          userId: user.id,
+          name: name.trim(),
+          description: description.trim() || undefined,
+          activityType,
+          difficulty,
+          startedAt: st.startedAt,
+        });
+      } catch (e) {
+        console.error('[draft] no se pudo crear el borrador', e);
+      }
+    }
+
     router.replace('/tracking/active');
   };
 

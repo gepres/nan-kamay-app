@@ -14,12 +14,14 @@ import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
 import { colors } from '@presentation/theme/colors';
+import MissingTileKeyBanner from './MissingTileKeyBanner';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
 
 // Silenciar errores de tile (timeouts de red son reintentos normales, no crashes)
 Logger.setLogCallback((log) => {
   if (log.message?.includes('Failed to load tile')) return true;
+  if (log.message?.includes('permanent error: Canceled')) return true;
   return false;
 });
 
@@ -143,6 +145,7 @@ export default function RouteMap({
           </ShapeSource>
         )}
       </MapView>
+      <MissingTileKeyBanner />
     </View>
   );
 }

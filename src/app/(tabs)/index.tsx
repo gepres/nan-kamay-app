@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, TouchableOpacity,
@@ -10,6 +10,8 @@ import { useAuthStore } from '@presentation/stores/authStore';
 import { useRoutesStore } from '@presentation/stores/routesStore';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { useNetworkStatus } from '@presentation/hooks/useNetworkStatus';
+import { useTrackingStore } from '@presentation/stores/trackingStore';
+import { getRecoverableDraft, discardDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import RouteCard from '@presentation/components/routes/RouteCard';
 import OfflineBanner from '@presentation/components/ui/OfflineBanner';
 import { Route } from '@core/entities/Route';
@@ -29,21 +31,82 @@ export default function HomeScreen() {
     if (user) fetchRoutes(user.id);
   }, [user?.id]);
 
-  // Auto-sync cuando vuelve la conexión
+  // Recuperación de grabación interrumpida (A3): si el proceso fue matado
+  // durante una grabación, al abrir la app ofrecemos reanudar/finalizar.
+  const recoveryChecked = useRef(false);
   useEffect(() => {
-    if (!isOffline && user) {
-      const unsyncedCount = routes.filter((r) => !r.isSynced).length;
-      if (unsyncedCount > 0) {
-        syncRoutes(user.id)
-          .then((result) => {
-            if (result.synced > 0) {
-              showToast(`${result.synced} ruta${result.synced > 1 ? 's' : ''} sincronizada${result.synced > 1 ? 's' : ''}`, 'success');
-            }
-          })
-          .catch(console.error);
-      }
-    }
-  }, [isOffline]);
+    if (!user || recoveryChecked.current) return;
+    recoveryChecked.current = true;
+    if (useTrackingStore.getState().status !== 'idle') return; // ya grabando
+    getRecoverableDraft(user.id)
+      .then((draft) => {
+        if (!draft) return;
+        const { route, gpsPoints, waypoints } = draft;
+        const restore = () =>
+          useTrackingStore.getState().restoreSession({
+            routeId: route.id,
+            routeName: route.name,
+            routeDescription: route.description ?? '',
+            activityType: route.activityType ?? 'Senderismo',
+            difficulty: route.difficulty,
+            startedAt: route.startedAt,
+            gpsPoints,
+            waypoints,
+          });
+        Alert.alert(
+          'Grabación interrumpida',
+          `Se recuperó "${route.name}" con ${gpsPoints.length} puntos GPS sin finalizar. ¿Qué deseas hacer?`,
+          [
+            {
+              text: 'Descartar',
+              style: 'destructive',
+              onPress: () => {
+                discardDraftRoute(route.id).catch((e) => console.error(e));
+              },
+            },
+            {
+              text: 'Finalizar',
+              onPress: () => {
+                restore();
+                useTrackingStore.getState().finishRecording();
+                router.replace('/tracking/summary');
+              },
+            },
+            {
+              text: 'Reanudar',
+              onPress: () => {
+                restore();
+                router.replace('/tracking/active');
+              },
+            },
+          ]
+        );
+      })
+      .catch((e) => console.error('[draft] recuperación falló', e));
+  }, [user?.id]);
+
+  // Sync bidireccional (push + pull) al estar online / al entrar.
+  useEffect(() => {
+    if (isOffline || !user) return;
+    syncRoutes(user.id)
+      .then((result) => {
+        if (result.synced > 0) {
+          showToast(`${result.synced} ruta${result.synced > 1 ? 's' : ''} sincronizada${result.synced > 1 ? 's' : ''}`, 'success');
+        }
+        if (result.failed > 0) {
+          showToast(
+            `No se pudo sincronizar ${result.failed} ruta${result.failed > 1 ? 's' : ''}: ${result.errors[0] ?? 'error del servidor'}`,
+            'error'
+          );
+        }
+      })
+      .catch((err) => {
+        showToast(
+          err instanceof Error ? err.message : 'Error de sincronización',
+          'error'
+        );
+      });
+  }, [isOffline, user?.id]);
 
   const handleDelete = useCallback((route: Route) => {
     Alert.alert(
@@ -71,9 +134,13 @@ export default function HomeScreen() {
     const result = await syncRoutes(user.id);
     if (result.synced > 0) {
       showToast(`${result.synced} ruta${result.synced > 1 ? 's' : ''} sincronizada${result.synced > 1 ? 's' : ''}`, 'success');
-    } else if (result.failed > 0) {
-      showToast(`Error al sincronizar ${result.failed} ruta${result.failed > 1 ? 's' : ''}`, 'error');
-    } else {
+    }
+    if (result.failed > 0) {
+      showToast(
+        `No se pudo sincronizar ${result.failed} ruta${result.failed > 1 ? 's' : ''}: ${result.errors[0] ?? 'error del servidor'}`,
+        'error'
+      );
+    } else if (result.synced === 0) {
       showToast('Todo sincronizado', 'success');
     }
   };

@@ -5,10 +5,18 @@ import { KalmanFilter1D } from './KalmanFilter1D';
  *
  * Capas:
  * 1. Gate de precisión — descarta puntos con accuracy > umbral
- * 2. Detección estacionaria — congela TODO si velocidad ≈ 0 y no hay desplazamiento real
- * 3. Kalman 1D — suaviza coordenadas (solo si en movimiento)
- * 4. Desplazamiento mínimo — no contar movimiento menor que el error GPS
- * 5. Anti-teleport — descartar saltos imposibles
+ * 2. Anti-teleport — descarta saltos imposibles (sobre fix crudo)
+ * 3. Detección estacionaria — congela TODO si NO hay desplazamiento real
+ *    (basada en velocidad CALCULADA, no en el `speed` del SO)
+ * 4. Kalman 1D — suaviza coordenadas
+ * 5. Desplazamiento mínimo — no contar jitter menor que el error GPS
+ *
+ * ⚠️ Lección de campo (2026-05-19): el `speed` reportado por expo-location
+ * es 0/null en muchos Android caminando a paso normal. Usarlo como única
+ * señal de "estacionario" hacía que el filtro creyera que el usuario estaba
+ * parado mientras caminaba y descartara casi toda la ruta (6 puntos en 7 min
+ * en pruebas reales). Ahora la velocidad se CALCULA del desplazamiento entre
+ * fixes crudos; el `speed` del dispositivo solo corrobora si es > 0.
  */
 
 export interface FilteredPoint {
@@ -21,36 +29,38 @@ export interface FilteredPoint {
 }
 
 export class GpsFilter {
-  // Kalman filters
-  private latKalman = new KalmanFilter1D(0.000005, 0.0001);
-  private lonKalman = new KalmanFilter1D(0.000005, 0.0001);
-  private altKalman = new KalmanFilter1D(0.5, 150);
+  // Kalman filters — q más alto = sigue mejor el movimiento real (menos lag
+  // en curvas). El valor anterior (0.000005) suavizaba tanto que recortaba
+  // esquinas y reducía el desplazamiento entre puntos hasta hacerlos caer en
+  // el gate de desplazamiento mínimo.
+  private latKalman = new KalmanFilter1D(0.00003, 0.0001);
+  private lonKalman = new KalmanFilter1D(0.00003, 0.0001);
+  private altKalman = new KalmanFilter1D(0.8, 150);
 
   // Estado estacionario
-  private stationaryCount = 0;
+  private slowCount = 0;
   private isStationary = false;
-  private movingCount = 0;
 
-  // Último punto aceptado
+  // Último punto aceptado (coords ya suavizadas)
   private lastAccepted: { lat: number; lon: number; time: number } | null = null;
+  // Último fix crudo (para velocidad calculada y anti-teleport)
+  private lastRaw: { lat: number; lon: number; time: number } | null = null;
   // Ancla estacionaria (posición fija mientras está parado)
   private stationaryAnchor: { lat: number; lon: number } | null = null;
 
-  // ── Umbrales (ajustados para trekking real) ────────────────
-  /** Precisión máxima aceptada (metros). */
-  private readonly MAX_ACCURACY = 25;
-  /** Velocidad bajo la cual se considera "parado" (m/s). 0.5 m/s ≈ 1.8 km/h. */
-  private readonly STATIONARY_SPEED = 0.5;
+  // ── Umbrales (ajustados con datos reales de campo) ─────────────
+  /** Precisión máxima aceptada (metros). 30 m: mejor línea ruidosa que sin línea. */
+  private readonly MAX_ACCURACY = 30;
+  /** Velocidad CALCULADA bajo la cual se considera "parado" (m/s). ≈1.4 km/h. */
+  private readonly STATIONARY_SPEED = 0.4;
   /** Lecturas lentas consecutivas para declarar estacionario. */
-  private readonly STATIONARY_READINGS = 3;
-  /** Lecturas rápidas consecutivas para salir de estacionario. */
-  private readonly MOVING_READINGS = 3;
+  private readonly STATIONARY_READINGS = 4;
   /** Radio de drift ignorado mientras está parado (metros). */
-  private readonly DRIFT_RADIUS = 25;
+  private readonly DRIFT_RADIUS = 12;
   /** Desplazamiento mínimo para contar como movimiento real (metros). */
-  private readonly MIN_DISPLACEMENT = 8;
+  private readonly MIN_DISPLACEMENT = 4;
   /** Velocidad máxima razonable caminando/trekking (km/h). */
-  private readonly MAX_HIKING_SPEED_KMH = 15;
+  private readonly MAX_HIKING_SPEED_KMH = 18;
 
   process(
     latitude: number,
@@ -69,27 +79,46 @@ export class GpsFilter {
 
     const now = timestamp.getTime();
 
-    // ── 2. Detección estacionaria (antes del Kalman para no contaminarlo) ──
-    const reportedSpeed = speed ?? 0;
-    const isSlowReading = reportedSpeed < this.STATIONARY_SPEED;
+    // ── Velocidad calculada del desplazamiento entre fixes crudos ──
+    // (fiable, a diferencia del `speed` del SO).
+    let computedSpeed: number | null = null;
+    if (this.lastRaw) {
+      const dt = (now - this.lastRaw.time) / 1000;
+      if (dt > 0) {
+        const rawDist = fastDistance(
+          this.lastRaw.lat, this.lastRaw.lon, latitude, longitude,
+        );
+        computedSpeed = rawDist / dt;
 
-    if (isSlowReading) {
-      this.stationaryCount++;
-      this.movingCount = 0;
-    } else {
-      this.movingCount++;
-      if (this.movingCount >= this.MOVING_READINGS) {
-        this.stationaryCount = 0;
+        // ── 2. Anti-teleport (solo intervalos cortos) ──
+        // No actualizamos lastRaw: así el siguiente fix se mide contra la
+        // posición previa al salto y el ruido espurio se ignora.
+        if (dt < 60 && (rawDist / dt) * 3.6 > this.MAX_HIKING_SPEED_KMH) {
+          return null;
+        }
+      }
+    }
+    this.lastRaw = { lat: latitude, lon: longitude, time: now };
+
+    // ── 3. Detección estacionaria (por velocidad calculada, no por `speed`) ──
+    // Si no hay velocidad fiable aún, el `speed` del SO solo cuenta si es > 0.
+    const movingSpeed =
+      computedSpeed ?? (speed != null && speed > 0 ? speed : null);
+
+    if (movingSpeed !== null) {
+      if (movingSpeed < this.STATIONARY_SPEED) {
+        this.slowCount++;
+      } else {
+        this.slowCount = 0;
         this.isStationary = false;
         this.stationaryAnchor = null;
       }
     }
 
-    if (this.stationaryCount >= this.STATIONARY_READINGS) {
+    if (this.slowCount >= this.STATIONARY_READINGS) {
       this.isStationary = true;
     }
 
-    // Si estamos parados, verificar si el GPS reporta posición lejos del ancla
     if (this.isStationary) {
       if (!this.stationaryAnchor && this.lastAccepted) {
         this.stationaryAnchor = { lat: this.lastAccepted.lat, lon: this.lastAccepted.lon };
@@ -106,14 +135,14 @@ export class GpsFilter {
           return null;
         }
 
-        // Desplazamiento grande → probablemente empezó a caminar
+        // Se alejó del ancla → volvió a caminar
         this.isStationary = false;
-        this.stationaryCount = 0;
+        this.slowCount = 0;
         this.stationaryAnchor = null;
       }
     }
 
-    // ── 3. Kalman — suavizar (solo cuando en movimiento) ──
+    // ── 4. Kalman — suavizar ──
     const accVal = accuracy ?? undefined;
     const filteredLat = this.latKalman.filter(latitude, accVal);
     const filteredLon = this.lonKalman.filter(longitude, accVal);
@@ -126,30 +155,14 @@ export class GpsFilter {
       }
     }
 
-    // ── 4. Desplazamiento mínimo ──
+    // ── 5. Desplazamiento mínimo (anti-jitter) ──
     if (this.lastAccepted) {
       const dist = fastDistance(
         this.lastAccepted.lat, this.lastAccepted.lon,
         filteredLat, filteredLon,
       );
-
-      // Si speed es nulo/0 y movimiento < accuracy → es ruido
-      if (reportedSpeed < 0.1 && accuracy !== null && dist < accuracy) {
-        return null;
-      }
-
-      // Desplazamiento menor que umbral mínimo → ruido
       if (dist < this.MIN_DISPLACEMENT) {
         return null;
-      }
-
-      // ── 5. Anti-teleport ──
-      const dtSec = (now - this.lastAccepted.time) / 1000;
-      if (dtSec > 0 && dtSec < 60) { // solo para intervalos cortos (< 1 min)
-        const segSpeedKmh = (dist / dtSec) * 3.6;
-        if (segSpeedKmh > this.MAX_HIKING_SPEED_KMH) {
-          return null;
-        }
       }
     }
 
@@ -169,11 +182,11 @@ export class GpsFilter {
     this.latKalman.reset();
     this.lonKalman.reset();
     this.altKalman.reset();
-    this.stationaryCount = 0;
-    this.movingCount = 0;
+    this.slowCount = 0;
     this.isStationary = false;
     this.stationaryAnchor = null;
     this.lastAccepted = null;
+    this.lastRaw = null;
   }
 }
 

@@ -5,12 +5,77 @@ import { Platform } from 'react-native';
 import { IGpsService, GpsUpdate } from '@core/ports/services/IGpsService';
 import { Coordinates } from '@core/value-objects/Coordinates';
 import { GpsError } from '@core/errors/GpsError';
+import { db } from '@infrastructure/database/sqliteDb';
+import { uuidv4 } from '@shared/utils/uuid';
 
 export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 const TRACKING_NOTIFICATION_ID = 'tracking-active';
 
 // Callback global para que el background task envíe updates al store
 let _backgroundCallback: ((update: GpsUpdate) => void) | null = null;
+
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Persiste un punto DIRECTAMENTE en SQLite cuando el SO revivió el proceso
+ * en headless (app matada durante background tracking) y no hay contexto JS
+ * de React: el estado del filtro Kalman no sobrevive, así que se aplica solo
+ * un gate de precisión + desplazamiento mínimo (track algo más ruidoso pero
+ * NO se pierde la ruta). Nunca lanza.
+ */
+async function persistBackgroundLocation(loc: Location.LocationObject): Promise<void> {
+  try {
+    const draft = await db.getFirstAsync<{ id: string }>(
+      `SELECT id FROM routes WHERE is_draft = 1 ORDER BY created_at DESC LIMIT 1`
+    );
+    if (!draft) return;
+
+    const acc = loc.coords.accuracy;
+    if (acc == null || acc > 30) return; // gate de precisión (alineado con GpsFilter)
+
+    const last = await db.getFirstAsync<{
+      latitude: number; longitude: number; sequence_index: number;
+    }>(
+      `SELECT latitude, longitude, sequence_index FROM gps_points
+       WHERE route_id = ? ORDER BY sequence_index DESC LIMIT 1`,
+      [draft.id]
+    );
+
+    let seq = 0;
+    if (last) {
+      seq = last.sequence_index + 1;
+      const d = haversineMeters(
+        last.latitude, last.longitude,
+        loc.coords.latitude, loc.coords.longitude
+      );
+      if (d < 4) return; // desplazamiento mínimo (igual que el filtro foreground)
+    }
+
+    await db.runAsync(
+      `INSERT OR IGNORE INTO gps_points
+        (id, route_id, latitude, longitude, altitude, accuracy, speed, recorded_at, sequence_index)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [
+        uuidv4(), draft.id,
+        loc.coords.latitude, loc.coords.longitude,
+        loc.coords.altitude ?? null, acc,
+        loc.coords.speed ?? null,
+        new Date(loc.timestamp).toISOString(), seq,
+      ] as (string | number | null)[]
+    );
+  } catch (e) {
+    console.error('[GPS Background] persist error', e);
+  }
+}
 
 /**
  * Define la tarea de ubicación en background.
@@ -21,8 +86,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskMan
     console.error('[GPS Background]', error.message);
     return;
   }
-  if (data && _backgroundCallback) {
-    const { locations } = data as { locations: Location.LocationObject[] };
+  if (!data) return;
+  const { locations } = data as { locations: Location.LocationObject[] };
+
+  if (_backgroundCallback) {
+    // App viva (foreground/background): el store + useTracking persisten.
     for (const loc of locations) {
       _backgroundCallback({
         coordinates: {
@@ -35,6 +103,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskMan
         altitudeAccuracy: loc.coords.altitudeAccuracy ?? null,
         timestamp: new Date(loc.timestamp),
       });
+    }
+  } else {
+    // Proceso revivido por el SO sin contexto JS → escribir directo a SQLite.
+    for (const loc of locations) {
+      await persistBackgroundLocation(loc);
     }
   }
 });
@@ -100,15 +173,25 @@ export class GpsServiceImpl implements IGpsService {
     const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') throw GpsError.permissionDenied();
 
+    // Idempotente: si ya estamos rastreando (p. ej. reanudar tras pausa),
+    // solo refrescamos el callback. Evita crear una segunda suscripción
+    // de watchPositionAsync (leak de sensor/batería en cada resume).
+    if (this._isTracking) {
+      _backgroundCallback = onUpdate;
+      return;
+    }
+
     this._isTracking = true;
     _backgroundCallback = onUpdate;
 
     // Foreground: alta precisión, filtrado por distancia para evitar ruido GPS
     this.foregroundSubscription = await Location.watchPositionAsync(
       {
+        // Muestreo más fino: el filtro GpsFilter ya limpia el ruido.
+        // 10 m era demasiado grueso para senderos con curvas cerradas.
         accuracy: Location.Accuracy.BestForNavigation,
-        distanceInterval: 10,
-        timeInterval: 5000,
+        distanceInterval: 5,
+        timeInterval: 3000,
       },
       (loc) => {
         onUpdate({
@@ -148,12 +231,12 @@ export class GpsServiceImpl implements IGpsService {
 
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
         accuracy: Location.Accuracy.BestForNavigation,
-        distanceInterval: 10,
-        timeInterval: 5000,
+        distanceInterval: 5,
+        timeInterval: 3000,
         showsBackgroundLocationIndicator: true,
         pausesUpdatesAutomatically: false,
-        deferredUpdatesInterval: 5000,
-        deferredUpdatesDistance: 10,
+        deferredUpdatesInterval: 3000,
+        deferredUpdatesDistance: 5,
         // Android: NO usamos foregroundService de expo-location (causa crash en Android 12+).
         // En su lugar, la notificación persistente de expo-notifications mantiene la app viva.
       });

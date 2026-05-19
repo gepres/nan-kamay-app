@@ -96,7 +96,7 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]); // load = useCallback([user?.id, isOffline]) → recarga al loguear / reconectar
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0D1B12' }}>

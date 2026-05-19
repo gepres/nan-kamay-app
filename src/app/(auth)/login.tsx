@@ -14,6 +14,8 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
+import { signInWithGoogle } from '@infrastructure/supabase/googleAuth';
+import { authErrorMessage } from '@shared/utils/authErrors';
 import { colors } from '@presentation/theme/colors';
 
 export default function LoginScreen() {
@@ -21,6 +23,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -31,15 +34,22 @@ export default function LoginScreen() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      Alert.alert('Error al iniciar sesión', error.message);
+      Alert.alert('No se pudo iniciar sesión', authErrorMessage(error));
     } else {
       router.replace('/(tabs)');
     }
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) Alert.alert('Error', error.message);
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (result === 'success') router.replace('/(tabs)');
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo iniciar con Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const inputStyle = {
@@ -176,6 +186,7 @@ export default function LoginScreen() {
           {/* Botón Google */}
           <TouchableOpacity
             onPress={handleGoogleLogin}
+            disabled={googleLoading}
             style={{
               backgroundColor: colors.bgCard,
               borderColor: colors.border,
@@ -187,10 +198,17 @@ export default function LoginScreen() {
               justifyContent: 'center',
               gap: 10,
               marginBottom: 32,
+              opacity: googleLoading ? 0.6 : 1,
             }}
           >
-            <Ionicons name="globe-outline" size={20} color={colors.textPrimary} />
-            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '500' }}>Google</Text>
+            {googleLoading ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <>
+                <Ionicons name="globe-outline" size={20} color={colors.textPrimary} />
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '500' }}>Google</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Ir a registro */}

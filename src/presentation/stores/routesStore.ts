@@ -3,6 +3,7 @@ import { Route } from '@core/entities/Route';
 import { getRoutesUseCase } from '@application/routes/GetRoutesUseCase';
 import { deleteRouteUseCase } from '@application/routes/DeleteRouteUseCase';
 import { syncOfflineRoutesUseCase } from '@application/routes/SyncOfflineRoutesUseCase';
+import { pullRemoteRoutesUseCase } from '@application/routes/PullRemoteRoutesUseCase';
 
 interface RoutesState {
   routes: Route[];
@@ -12,7 +13,7 @@ interface RoutesState {
 
   fetchRoutes: (userId: string) => Promise<void>;
   deleteRoute: (routeId: string) => Promise<void>;
-  syncRoutes: (userId: string) => Promise<{ synced: number; failed: number }>;
+  syncRoutes: (userId: string) => Promise<{ synced: number; failed: number; errors: string[] }>;
   addRoute: (route: Route) => void;
 }
 
@@ -42,11 +43,17 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
   syncRoutes: async (userId) => {
     set({ isSyncing: true });
     try {
+      // 1. Push: subir rutas locales no sincronizadas.
       const result = await syncOfflineRoutesUseCase(userId);
-      if (result.synced > 0) {
-        // Re-fetch para actualizar el estado isSynced en memoria
-        await get().fetchRoutes(userId);
+      // 2. Pull: descargar rutas remotas (multi-dispositivo / reinstalación).
+      //    Best-effort: un fallo de pull no invalida el push.
+      try {
+        await pullRemoteRoutesUseCase(userId);
+      } catch (e) {
+        console.error('[sync] pull falló', e);
       }
+      // 3. Refrescar la lista en memoria desde SQLite.
+      await get().fetchRoutes(userId);
       set({ lastSyncedAt: new Date() });
       return result;
     } finally {

@@ -10,16 +10,33 @@ import { User } from '@core/entities/User';
 import ToastContainer from '@presentation/components/ui/ToastContainer';
 
 async function handleAuthDeepLink(url: string) {
-  // El link de confirmación llega como: nan-kamay://#access_token=...&type=signup
+  // Con flowType 'pkce' los links (confirmación de email / OAuth) llegan como
+  // nan-kamay://...?code=...  → intercambiar por sesión.
+  const queryString = url.split('?')[1]?.split('#')[0];
+  if (queryString) {
+    const code = new URLSearchParams(queryString).get('code');
+    if (code) {
+      try {
+        await supabase.auth.exchangeCodeForSession(code);
+      } catch (e) {
+        console.error('[auth] exchangeCodeForSession falló', e);
+      }
+      return;
+    }
+  }
+
+  // Fallback flujo implícito: nan-kamay://#access_token=...&refresh_token=...
   const fragment = url.split('#')[1];
   if (!fragment) return;
-
   const params = new URLSearchParams(fragment);
   const access_token = params.get('access_token');
   const refresh_token = params.get('refresh_token');
-
   if (access_token && refresh_token) {
-    await supabase.auth.setSession({ access_token, refresh_token });
+    try {
+      await supabase.auth.setSession({ access_token, refresh_token });
+    } catch (e) {
+      console.error('[auth] setSession falló', e);
+    }
   }
 }
 
