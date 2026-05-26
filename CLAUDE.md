@@ -296,6 +296,45 @@ eas build --platform android --profile preview
 
 ---
 
+## Skills recomendadas para este proyecto
+
+> Skills que Claude debe **preferir** invocar cuando aplique al contexto. Lista curada al stack real (Expo SDK 55 + RN 0.83 + NativeWind 4 + Supabase + MapLibre).
+
+### 🔴 Críticas — usar proactivamente
+- **`react-doctor`** — correr tras cualquier cambio en React/RN para detectar deps de hooks, leaks de stores Zustand, re-renders en `TrackingMap`.
+- **`building-native-ui`** — referencia para Expo Router file-based (`(auth)`, `(tabs)`, `tracking/`, `routes/[id]`).
+- **`expo-dev-client`** — cambios en `app.json` (permisos, plugins, `expo-web-browser`) requieren rebuild del dev client.
+- **`expo-deployment`** — perfiles EAS `preview`/`production` ya definidos en `eas.json`.
+- **`expo-tailwind-setup`** — NativeWind v4 + Tailwind v4 (combinación específica del proyecto).
+- **`native-data-fetching`** — llamadas a Supabase, sync push/pull, offline, `useNetworkStatus`.
+- **`upgrading-expo`** — bumps de SDK; estamos en SDK 55 con RN 0.83 / React 19.
+- **`supabase-postgres-best-practices`** — esquema `nk_*`, RLS, índices, Storage `nk-waypoint-images`.
+- **`verify`** — validar cambios en dispositivo real (no hay tests automatizados; type-check no valida UI/GPS).
+- **`security-review`** / **`everything-claude-code:security-review`** — auth (Google OAuth + PKCE + deep links), RLS, tokens en `expo-secure-store`.
+
+### 🟡 Importantes — usar cuando aplique al cambio
+- **`design-mobile-apps`** — sólo si se trabaja sobre `pencil/trek-kamay.pen` vía MCP `pencil`.
+- **`composition-patterns`** — al extraer `Button/Input/Badge/Chip` (hoy duplicados inline en pantallas).
+- **`react-best-practices`** — performance en `TrackingMap` (cámara, `RasterSource` con key dinámica) y stores Zustand.
+- **`tailwind-css-patterns`** — patrones responsive/utilitarios en pantallas (`active`, `summary`, `pre-recording`).
+- **`typescript-advanced-types`** — tipos de dominio (`Coordinates`, `Difficulty`), mappers SQLite↔Supabase.
+- **`accessibility`** — pantallas de tracking y formularios de waypoint con TalkBack/VoiceOver (sin auditar).
+- **`everything-claude-code:database-migrations`** — `runMigrations()` SQLite + evolución de `supabase/schema.sql`.
+- **`everything-claude-code:postgres-patterns`** — índices, query plans, performance (complementa la de Supabase).
+- **`code-review`** — revisión de diff antes de PR (no hay CI con tests).
+- **`run`** — launcher para `expo run:android` con dev client.
+
+### 🟢 Futuro — cuando arranquen tests / CI
+- **`everything-claude-code:tdd-workflow`** — hoy no hay framework de tests; útil al instalar Jest/RNTL.
+- **`everything-claude-code:e2e-testing`** — para flujos críticos (login → grabar → guardar → ver) con Detox/Maestro.
+- **`expo-cicd-workflows`** — EAS Workflows YAML para CI/CD de builds.
+- **`everything-claude-code:coding-standards`** — refuerza las convenciones TS/React de este archivo.
+
+### ⚪ NO usar (fuera de dominio)
+SEO (app móvil, no web), Swift/SwiftUI/Liquid Glass/FoundationModels (Swift nativo), Django/Spring Boot/JPA/Go/C++/Python (otros stacks), frontend-slides/frontend-design (web), content/article/market/investor (no técnicas), ClickHouse/Nutrient/visa-doc-translate (fuera de dominio).
+
+---
+
 ## Pendiente real
 
 - [x] **P0**: UUID v4 reales, `schema.sql` con 5 dificultades + `activity_type` + `type` + tablas `nk_`, `PRAGMA foreign_keys = ON`, mappers + migración SQLite, RLS `UPDATE`, `stopTracking()` explícito (A2). **(hecho 2026-05-18)**
