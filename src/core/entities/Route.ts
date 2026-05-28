@@ -22,6 +22,13 @@ export interface RouteProps {
   isSynced: boolean;
   /** true mientras la grabación está en curso (no finalizada/guardada). */
   isDraft?: boolean;
+  /**
+   * Si esta ruta fue grabada mientras se "seguía" otra (feature Seguir Ruta),
+   * referencia a la ruta-padre que se estaba usando como guía. Solo
+   * informativo: no cascada, no FK enforced en SQLite. Puede ser una ruta
+   * del propio usuario o pública de otro.
+   */
+  parentRouteId?: string;
   createdAt: Date;
 }
 
@@ -60,6 +67,7 @@ export class Route {
   get isPublic() { return this.props.isPublic; }
   get isSynced() { return this.props.isSynced; }
   get isDraft() { return this.props.isDraft ?? false; }
+  get parentRouteId() { return this.props.parentRouteId; }
   get createdAt() { return this.props.createdAt; }
 
   toProps(): RouteProps {

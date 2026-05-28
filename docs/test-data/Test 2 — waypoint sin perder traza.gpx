@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Ñan Kamay"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <name>Waypoint sin perder traza</name>
+    <time>2026-05-26T20:34:46.346Z</time>
+  </metadata>
+  <wpt lat="-13.5181925" lon="-71.9797382">
+    <ele>3449.4</ele>
+    <time>2026-05-26T20:36:34.107Z</time>
+    <name>Aa</name>
+    
+    <sym>Flag</sym>
+  </wpt>
+  <trk>
+    <name>Waypoint sin perder traza</name>
+    <trkseg>
+      <trkpt lat="-13.5186325" lon="-71.9803783">
+        <ele>3454.1</ele>
+        <time>2026-05-26T20:34:47.109Z</time>
+        <extensions><speed>0.00</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.518625202688" lon="-71.980340961674">
+        <ele>3453.1</ele>
+        <time>2026-05-26T20:35:20.082Z</time>
+        <extensions><speed>0.02</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5186023236501" lon="-71.9803115204074">
+        <ele>3452.3</ele>
+        <time>2026-05-26T20:35:42.342Z</time>
+        <extensions><speed>0.06</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5185799243818" lon="-71.9802813136266">
+        <ele>3451.1</ele>
+        <time>2026-05-26T20:35:57.020Z</time>
+        <extensions><speed>0.51</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5185508327449" lon="-71.9802369562918">
+        <ele>3450.5</ele>
+        <time>2026-05-26T20:36:03.008Z</time>
+        <extensions><speed>1.12</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5185300890482" lon="-71.9802040729594">
+        <ele>3450.4</ele>
+        <time>2026-05-26T20:36:06.318Z</time>
+        <extensions><speed>1.11</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5185049022629" lon="-71.9801606021163">
+        <ele>3450.4</ele>
+        <time>2026-05-26T20:36:10.581Z</time>
+        <extensions><speed>1.16</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5184852246651" lon="-71.98012442458">
+        <ele>3449.4</ele>
+        <time>2026-05-26T20:36:18.704Z</time>
+        <extensions><speed>0.80</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5184606547644" lon="-71.9800862745837">
+        <ele>3449.4</ele>
+        <time>2026-05-26T20:36:25.338Z</time>
+        <extensions><speed>1.03</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5184359817527" lon="-71.9800543951762">
+        <ele>3449.1</ele>
+        <time>2026-05-26T20:36:42.019Z</time>
+        <extensions><speed>0.95</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5184104909341" lon="-71.9800239632767">
+        <ele>3448.9</ele>
+        <time>2026-05-26T20:36:44.984Z</time>
+        <extensions><speed>1.34</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5183828058059" lon="-71.9799907846107">
+        <ele>3448.8</ele>
+        <time>2026-05-26T20:36:50.957Z</time>
+        <extensions><speed>1.52</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5183596159158" lon="-71.9799617518809">
+        <ele>3448.8</ele>
+        <time>2026-05-26T20:36:57.020Z</time>
+        <extensions><speed>1.39</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.5183355495021" lon="-71.9799273345588">
+        <ele>3448.6</ele>
+        <time>2026-05-26T20:37:02.861Z</time>
+        <extensions><speed>1.43</speed></extensions>
+      </trkpt>
+      <trkpt lat="-13.518311030464" lon="-71.9798893580662">
+        <ele>3446.8</ele>
+        <time>2026-05-26T20:37:16.029Z</time>
+        <extensions><speed>0.26</speed></extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

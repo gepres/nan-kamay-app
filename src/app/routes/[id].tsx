@@ -151,6 +151,52 @@ export default function RouteDetailScreen() {
           </View>
         )}
 
+        {/* Acciones destacadas: Seguir ruta + Previsualizar */}
+        {gpsPoints.length > 1 && (
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+            <TouchableOpacity
+              onPress={() => router.push(`/tracking/pre-recording?followFrom=${route.id}`)}
+              style={{
+                flex: 1,
+                backgroundColor: colors.accent,
+                borderRadius: 12,
+                paddingVertical: 14,
+                paddingHorizontal: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+            >
+              <Ionicons name="navigate" size={18} color="#0D1B12" />
+              <Text style={{ color: '#0D1B12', fontWeight: '700', fontSize: 14 }}>
+                Seguir ruta
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push(`/routes/replay/${route.id}`)}
+              style={{
+                flex: 1,
+                backgroundColor: colors.bgCard,
+                borderRadius: 12,
+                paddingVertical: 14,
+                paddingHorizontal: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                borderWidth: 1,
+                borderColor: colors.accent + '60',
+              }}
+            >
+              <Ionicons name="film-outline" size={18} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>
+                Previsualizar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Perfil de elevación */}
         {gpsPoints.some((p) => p.altitude != null) && (
           <View style={{

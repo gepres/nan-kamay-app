@@ -23,7 +23,16 @@ export function useTracking() {
   } = useTrackingStore();
 
   const { showToast } = useUiStore();
-  const sequenceRef = useRef(gpsPoints.length);
+  // `sequenceRef` debe ser SIEMPRE > el sequence_index más alto persistido en
+  // la DB para esta ruta. Inicializarlo a 0 (o a gpsPoints.length) era el bug:
+  // al restaurar un borrador con N puntos cuyo último seq podía ser N-1 (o más
+  // si hubo gaps), reanudar emitía seq=0..k → colisiones con la DB y traza
+  // intercalada al volver a recuperar.
+  const sequenceRef = useRef(
+    gpsPoints.length > 0
+      ? Math.max(...gpsPoints.map((p) => p.sequenceIndex)) + 1
+      : 0
+  );
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const gpsFilterRef = useRef(new GpsFilter());
 
@@ -94,10 +103,26 @@ export function useTracking() {
     };
   }, [status]);
 
-  // Resetear filtro y secuencia cuando cambia la ruta
+  // Cuando cambia la ruta, sincronizar secuencia y filtro con el estado del
+  // store. Hay dos casos:
+  //   a) startRecording → gpsPoints está vacío → reset limpio, seq=0.
+  //   b) restoreSession → gpsPoints tiene N puntos → seq=max+1 y semilla el
+  //      filtro con el último punto para no perder/saltar al reanudar.
   useEffect(() => {
-    sequenceRef.current = 0;
-    gpsFilterRef.current.reset();
+    const pts = useTrackingStore.getState().gpsPoints;
+    if (pts.length === 0) {
+      sequenceRef.current = 0;
+      gpsFilterRef.current.reset();
+    } else {
+      sequenceRef.current = Math.max(...pts.map((p) => p.sequenceIndex)) + 1;
+      const last = pts[pts.length - 1];
+      gpsFilterRef.current.seed(
+        last.latitude,
+        last.longitude,
+        last.altitude ?? null,
+        last.recordedAt,
+      );
+    }
   }, [routeId]);
 
   // Manejar cambios de AppState (foreground ↔ background)

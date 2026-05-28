@@ -8,6 +8,17 @@ import { uuidv4 } from '@shared/utils/uuid';
 
 export type TrackingStatus = 'idle' | 'recording' | 'paused' | 'finished';
 
+export interface RouteGuide {
+  /** ID de la ruta-padre que se está siguiendo (se persiste con la grabación). */
+  parentRouteId: string;
+  /** Nombre de la ruta padre (informativo). */
+  parentName: string;
+  /** Trazado guía (coords [lon,lat] del padre, ya proyectadas). */
+  guidePoints: { latitude: number; longitude: number }[];
+  /** Waypoints del padre (informativos sobre el mapa). */
+  guideWaypoints: { latitude: number; longitude: number; title: string }[];
+}
+
 interface TrackingState {
   status: TrackingStatus;
   routeId: string | null;
@@ -22,11 +33,19 @@ interface TrackingState {
   pausedAt: Date | null;
   totalPausedSeconds: number;
   liveStats: RouteStats;
+  /** Si se está siguiendo una ruta-padre, sus datos quedan aquí. */
+  guide: RouteGuide | null;
   /** Acumulador incremental de stats (interno; evita recalcular O(n²)). */
   _statsAcc: StatsAccumulator;
 
   // Acciones
-  startRecording: (name: string, difficulty: Difficulty, description?: string, activityType?: string) => void;
+  startRecording: (
+    name: string,
+    difficulty: Difficulty,
+    description?: string,
+    activityType?: string,
+    guide?: RouteGuide | null,
+  ) => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
   addGpsPoint: (point: GpsPoint) => void;
@@ -71,9 +90,10 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   pausedAt: null,
   totalPausedSeconds: 0,
   liveStats: initialStats,
+  guide: null,
   _statsAcc: StatsCalculator.createAccumulator(),
 
-  startRecording: (name, difficulty, description = '', activityType = 'Senderismo') => {
+  startRecording: (name, difficulty, description = '', activityType = 'Senderismo', guide = null) => {
     const routeId = uuidv4();
     set({
       status: 'recording',
@@ -88,6 +108,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: null,
       totalPausedSeconds: 0,
       liveStats: initialStats,
+      guide,
       _statsAcc: StatsCalculator.createAccumulator(),
     });
   },
@@ -187,6 +208,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: null,
       totalPausedSeconds: 0,
       liveStats: initialStats,
+      guide: null,
       _statsAcc: StatsCalculator.createAccumulator(),
     });
   },

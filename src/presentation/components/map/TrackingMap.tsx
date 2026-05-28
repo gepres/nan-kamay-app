@@ -1,5 +1,6 @@
-import { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   MapView,
   Camera,
@@ -44,7 +45,7 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
   { followUser = true, mapLayer = 'outdoors', onRegionChange },
   ref,
 ) {
-  const { gpsPoints, waypoints, currentPosition } = useTrackingStore();
+  const { gpsPoints, waypoints, currentPosition, guide } = useTrackingStore();
   const cameraRef = useRef<CameraRef>(null);
   // `currentZoom` es la ÚNICA fuente de verdad del zoom: solo lo cambian los
   // botones. No lo sobrescribimos desde onRegionDidChange (reporta valores
@@ -55,6 +56,34 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
   // Mientras esté activo, el auto-follow NO recentra: deja al usuario hacer
   // zoom / mirar el mapa sin que la cámara lo arrastre de vuelta en cada fix.
   const suspendFollowUntil = useRef(0);
+
+  // ── Workaround MapLibre RN: el ShapeSource pierde la traza al volver de
+  // una pantalla pusheada (waypoint / waypoint-types). Al reganar foco
+  // incrementamos un tick que entra en el `key` de los ShapeSource → forzamos
+  // remount con la geometría actual del store. Skip primer focus (mount).
+  const [renderTick, setRenderTick] = useState(0);
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      setRenderTick((t) => t + 1);
+      // Tras volver, recentrar a la posición actual respetando el zoom guardado.
+      // El auto-follow normal está condicionado a cambios de currentPosition;
+      // si no cambia, no recentraría.
+      const pos = useTrackingStore.getState().currentPosition;
+      if (pos && cameraRef.current) {
+        cameraRef.current.setCamera({
+          centerCoordinate: [pos.longitude, pos.latitude],
+          zoomLevel: currentZoom.current,
+          heading: currentHeading.current,
+          animationDuration: 250,
+        });
+      }
+    }, [])
+  );
 
   useImperativeHandle(ref, () => ({
     zoomIn: () => {
@@ -124,6 +153,33 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     })),
   };
 
+  // ── Capa "guía" (feature Seguir Ruta): traza y waypoints de la ruta-padre.
+  // Se pinta por DEBAJO de la traza activa, en un color/estilo distinto, para
+  // que el usuario vea ambas líneas: la que sigue y la que está grabando.
+  const guideRouteGeoJson: GeoJSON.Feature<GeoJSON.LineString> | null =
+    guide && guide.guidePoints.length > 1
+      ? {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: guide.guidePoints.map((p) => [p.longitude, p.latitude]),
+          },
+          properties: {},
+        }
+      : null;
+
+  const guideWaypointsGeoJson: GeoJSON.FeatureCollection<GeoJSON.Point> | null =
+    guide && guide.guideWaypoints.length > 0
+      ? {
+          type: 'FeatureCollection',
+          features: guide.guideWaypoints.map((wp) => ({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [wp.longitude, wp.latitude] },
+            properties: { title: wp.title },
+          })),
+        }
+      : null;
+
   useEffect(() => {
     if (!followUser || !currentPosition || !cameraRef.current) return;
     // Tras un zoom manual no recentramos durante unos segundos: si no, el
@@ -186,41 +242,73 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
           }}
         />
 
-        {gpsPoints.length > 1 && (
-          <ShapeSource id="route" shape={routeGeoJson}>
+        {/* Capa guía (por debajo de la traza activa) */}
+        {guideRouteGeoJson && (
+          <ShapeSource id={`guide-${renderTick}`} key={`guide-${renderTick}`} shape={guideRouteGeoJson}>
             <LineLayer
-              id="route-line"
+              id={`guide-line-${renderTick}`}
+              style={{
+                lineColor: '#60A5FA',
+                lineWidth: 5,
+                lineOpacity: 0.6,
+                lineCap: 'round',
+                lineJoin: 'round',
+                lineDasharray: [2, 2],
+              }}
+            />
+          </ShapeSource>
+        )}
+
+        {guideWaypointsGeoJson && (
+          <ShapeSource id={`guide-wp-${renderTick}`} key={`guide-wp-${renderTick}`} shape={guideWaypointsGeoJson}>
+            <CircleLayer
+              id={`guide-wp-circles-${renderTick}`}
+              style={{
+                circleRadius: 5,
+                circleColor: '#60A5FA',
+                circleStrokeColor: colors.textPrimary,
+                circleStrokeWidth: 2,
+                circleOpacity: 0.85,
+              }}
+            />
+          </ShapeSource>
+        )}
+
+        {gpsPoints.length > 1 && (
+          <ShapeSource id={`route-${renderTick}`} key={`route-${renderTick}`} shape={routeGeoJson}>
+            <LineLayer
+              id={`route-line-${renderTick}`}
               style={{ lineColor: colors.accent, lineWidth: 4, lineCap: 'round', lineJoin: 'round' }}
             />
           </ShapeSource>
         )}
 
         {startGeoJson && (
-          <ShapeSource id="start-marker" shape={startGeoJson}>
+          <ShapeSource id={`start-marker-${renderTick}`} key={`start-${renderTick}`} shape={startGeoJson}>
             <CircleLayer
-              id="start-circle"
+              id={`start-circle-${renderTick}`}
               style={{ circleRadius: 8, circleColor: colors.success, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 2 }}
             />
           </ShapeSource>
         )}
 
         {currentGeoJson && (
-          <ShapeSource id="current-position" shape={currentGeoJson}>
+          <ShapeSource id={`current-position-${renderTick}`} key={`current-${renderTick}`} shape={currentGeoJson}>
             <CircleLayer
-              id="current-pulse"
+              id={`current-pulse-${renderTick}`}
               style={{ circleRadius: 16, circleColor: '#F59E0B20', circleStrokeColor: '#F59E0B40', circleStrokeWidth: 1 }}
             />
             <CircleLayer
-              id="current-dot"
+              id={`current-dot-${renderTick}`}
               style={{ circleRadius: 8, circleColor: colors.accent, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 3 }}
             />
           </ShapeSource>
         )}
 
         {waypointsGeoJson.features.length > 0 && (
-          <ShapeSource id="waypoints" shape={waypointsGeoJson}>
+          <ShapeSource id={`waypoints-${renderTick}`} key={`waypoints-${renderTick}`} shape={waypointsGeoJson}>
             <CircleLayer
-              id="waypoint-circles"
+              id={`waypoint-circles-${renderTick}`}
               style={{ circleRadius: 7, circleColor: colors.accent, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 2 }}
             />
           </ShapeSource>

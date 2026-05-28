@@ -12,6 +12,8 @@ export interface StartDraftInput {
   activityType?: string;
   difficulty: Difficulty;
   startedAt: Date;
+  /** Si se grabó "siguiendo" otra ruta, ID de la padre. */
+  parentRouteId?: string;
 }
 
 export interface RecoverableDraft {
@@ -46,6 +48,7 @@ export async function startDraftRoute(input: StartDraftInput): Promise<void> {
     isPublic: false,
     isSynced: false,
     isDraft: true,
+    parentRouteId: input.parentRouteId,
     createdAt: new Date(),
   });
   await routeRepository.createDraft(route);

@@ -13,6 +13,7 @@ async function runMigrations(): Promise<void> {
     `ALTER TABLE routes ADD COLUMN activity_type TEXT`,
     `ALTER TABLE routes ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE routes ADD COLUMN min_elevation_meters REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE routes ADD COLUMN parent_route_id TEXT`,
     `ALTER TABLE waypoints ADD COLUMN type TEXT`,
   ];
   for (const sql of alters) {
@@ -21,6 +22,38 @@ async function runMigrations(): Promise<void> {
     } catch {
       // columna ya existe → no-op
     }
+  }
+
+  // ── Dedupe + UNIQUE(route_id, sequence_index) ──
+  // Hasta 2026-05-26 el hook reiniciaba `sequenceRef` a 0 al reanudar un
+  // borrador, así que la DB acumulaba filas con (route_id, seq) repetidos.
+  // Sin UNIQUE constraint, `INSERT OR IGNORE` no los rechazaba y al recuperar
+  // (ORDER BY sequence_index) las dos cronologías se intercalaban → la traza
+  // se veía como un zigzag. Esta migración:
+  //   1) Borra duplicados conservando la fila más antigua por `recorded_at`.
+  //   2) Crea el UNIQUE INDEX como red de seguridad (junto con el fix del hook).
+  // Es idempotente: si no hay duplicados, no borra nada; si el índice ya
+  // existe, IF NOT EXISTS lo respeta.
+  try {
+    await db.execAsync(`
+      DELETE FROM gps_points WHERE id IN (
+        SELECT g1.id FROM gps_points g1
+        JOIN gps_points g2
+          ON g1.route_id = g2.route_id
+         AND g1.sequence_index = g2.sequence_index
+         AND g1.id <> g2.id
+         AND (
+           g1.recorded_at > g2.recorded_at
+           OR (g1.recorded_at = g2.recorded_at AND g1.id > g2.id)
+         )
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS uk_gps_points_route_seq
+        ON gps_points(route_id, sequence_index);
+    `);
+  } catch (e) {
+    // Si por alguna razón la unicidad sigue rota tras el DELETE, dejamos
+    // constancia pero no rompemos el arranque de la app.
+    console.warn('[sqlite] migración UNIQUE gps_points falló:', e);
   }
 }
 
@@ -50,6 +83,7 @@ export async function initDatabase(): Promise<void> {
       is_public INTEGER NOT NULL DEFAULT 0,
       is_synced INTEGER NOT NULL DEFAULT 0,
       is_draft INTEGER NOT NULL DEFAULT 0,
+      parent_route_id TEXT,
       created_at TEXT NOT NULL
     );
 

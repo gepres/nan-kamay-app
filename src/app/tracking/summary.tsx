@@ -19,7 +19,7 @@ import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@s
 import { colors } from '@presentation/theme/colors';
 
 export default function SummaryScreen() {
-  const { routeId, routeName, routeDescription, activityType, difficulty, liveStats, gpsPoints, waypoints, startedAt, reset } =
+  const { routeId, routeName, routeDescription, activityType, difficulty, liveStats, gpsPoints, waypoints, startedAt, guide, reset } =
     useTrackingStore();
   const { user } = useAuthStore();
   const { addRoute, fetchRoutes } = useRoutesStore();
@@ -46,6 +46,7 @@ export default function SummaryScreen() {
         startedAt,
         finishedAt: new Date(),
         isPublic,
+        parentRouteId: guide?.parentRouteId,
       });
 
       addRoute(route);

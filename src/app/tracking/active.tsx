@@ -18,7 +18,11 @@ import TrackingMap from '@presentation/components/map/TrackingMap';
 import GpsIndicator from '@presentation/components/tracking/GpsIndicator';
 import LayerSelectorModal from '@presentation/components/map/LayerSelectorModal';
 import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@shared/utils/formatters';
+import { distanceToPolylineMeters } from '@shared/utils/geometry';
 import { colors } from '@presentation/theme/colors';
+
+/** Umbral en metros para avisar al usuario que se desvió de la ruta guía. */
+const DEVIATION_THRESHOLD_M = 50;
 
 export default function ActiveTrackingScreen() {
   const insets = useSafeAreaInsets();
@@ -27,10 +31,24 @@ export default function ActiveTrackingScreen() {
     routeName,
     liveStats,
     gpsPoints,
+    currentPosition,
+    guide,
     pauseRecording,
     resumeRecording,
     finishRecording,
   } = useTrackingStore();
+
+  // Distancia a la traza guía (solo si estamos siguiendo una ruta).
+  // Se recalcula cada vez que cambia la posición o la guía — barato porque
+  // distanceToPolylineMeters es O(n) sobre los puntos guía (típicamente < 5k).
+  const deviationMeters = (guide && currentPosition)
+    ? distanceToPolylineMeters(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        guide.guidePoints,
+      )
+    : null;
+  const offRoute = deviationMeters !== null && deviationMeters > DEVIATION_THRESHOLD_M;
 
   const { requestPermissions } = useTracking();
   const elapsed = useElapsedTime();
@@ -170,6 +188,37 @@ export default function ActiveTrackingScreen() {
       <View style={{ position: 'absolute', top: insets.top + 92, left: 16 }}>
         <GpsIndicator accuracy={lastAccuracy} />
       </View>
+
+      {/* Banner de desvío (solo si estamos siguiendo una ruta y nos alejamos) */}
+      {guide && deviationMeters !== null && (
+        <View style={{
+          position: 'absolute',
+          top: insets.top + 150,
+          left: 16,
+          right: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          backgroundColor: offRoute ? '#EF4444E6' : '#60A5FAE6',
+          borderRadius: 12,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+        }}>
+          <Ionicons
+            name={offRoute ? 'warning-outline' : 'git-branch-outline'}
+            size={18}
+            color="#fff"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+              {offRoute ? 'Te desviaste de la ruta' : 'Siguiendo'}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 11, opacity: 0.9, marginTop: 1 }} numberOfLines={1}>
+              {guide.parentName} · {formatDistance(deviationMeters)} {offRoute ? 'fuera' : 'de la traza'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Brújula — rotates with map heading, press to reset north */}
       <TouchableOpacity

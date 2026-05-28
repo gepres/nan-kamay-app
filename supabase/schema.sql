@@ -30,8 +30,17 @@ CREATE TABLE IF NOT EXISTS public.nk_routes (
   started_at            TIMESTAMPTZ NOT NULL,
   finished_at           TIMESTAMPTZ,
   is_public             BOOLEAN NOT NULL DEFAULT false,
+  -- Si la ruta fue grabada "siguiendo" otra (feature Seguir Ruta), guarda
+  -- la referencia al padre. SET NULL al borrar el padre: la ruta nueva
+  -- conserva sus datos pero pierde la asociación.
+  parent_route_id       UUID REFERENCES public.nk_routes(id) ON DELETE SET NULL,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Migración idempotente para bases ya creadas
+ALTER TABLE public.nk_routes
+  ADD COLUMN IF NOT EXISTS parent_route_id UUID
+  REFERENCES public.nk_routes(id) ON DELETE SET NULL;
 
 -- ── Puntos GPS ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.nk_gps_points (
@@ -70,6 +79,7 @@ CREATE TABLE IF NOT EXISTS public.nk_waypoint_images (
 -- ── Índices (nombres prefijados para unicidad global) ─────────
 CREATE INDEX IF NOT EXISTS idx_nk_routes_user_id   ON public.nk_routes(user_id);
 CREATE INDEX IF NOT EXISTS idx_nk_routes_is_public ON public.nk_routes(is_public) WHERE is_public = true;
+CREATE INDEX IF NOT EXISTS idx_nk_routes_parent    ON public.nk_routes(parent_route_id) WHERE parent_route_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_nk_gps_points_route ON public.nk_gps_points(route_id, sequence_index);
 CREATE INDEX IF NOT EXISTS idx_nk_waypoints_route  ON public.nk_waypoints(route_id);
 CREATE INDEX IF NOT EXISTS idx_nk_wp_images_wp     ON public.nk_waypoint_images(waypoint_id);

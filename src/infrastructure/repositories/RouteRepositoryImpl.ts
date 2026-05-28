@@ -23,8 +23,8 @@ export class RouteRepositoryImpl implements IRouteRepository {
            distance_meters, duration_seconds,
            elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
            avg_speed_kmh, max_speed_kmh,
-           started_at, finished_at, is_public, is_synced, is_draft, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           started_at, finished_at, is_public, is_synced, is_draft, parent_route_id, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           routeRow.id, routeRow.user_id, routeRow.name, routeRow.description,
           routeRow.activity_type, routeRow.difficulty,
@@ -33,7 +33,8 @@ export class RouteRepositoryImpl implements IRouteRepository {
           routeRow.max_elevation_meters, routeRow.min_elevation_meters,
           routeRow.avg_speed_kmh, routeRow.max_speed_kmh,
           routeRow.started_at, routeRow.finished_at,
-          routeRow.is_public, routeRow.is_synced, routeRow.is_draft, routeRow.created_at,
+          routeRow.is_public, routeRow.is_synced, routeRow.is_draft,
+          routeRow.parent_route_id, routeRow.created_at,
         ] as (string | number | null)[]
       );
 
@@ -80,14 +81,15 @@ export class RouteRepositoryImpl implements IRouteRepository {
          distance_meters, duration_seconds,
          elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
          avg_speed_kmh, max_speed_kmh,
-         started_at, finished_at, is_public, is_synced, is_draft, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)`,
+         started_at, finished_at, is_public, is_synced, is_draft, parent_route_id, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
       [
         r.id, r.user_id, r.name, r.description, r.activity_type, r.difficulty,
         r.distance_meters, r.duration_seconds,
         r.elevation_gain_meters, r.elevation_loss_meters, r.max_elevation_meters,
         r.min_elevation_meters, r.avg_speed_kmh, r.max_speed_kmh,
-        r.started_at, r.finished_at, r.is_public, r.is_synced, r.created_at,
+        r.started_at, r.finished_at, r.is_public, r.is_synced,
+        r.parent_route_id, r.created_at,
       ] as (string | number | null)[]
     );
   }

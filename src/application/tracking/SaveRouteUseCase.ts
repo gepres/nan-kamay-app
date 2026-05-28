@@ -18,6 +18,8 @@ export interface SaveRouteInput {
   startedAt: Date;
   finishedAt: Date;
   isPublic?: boolean;
+  /** Si se grabó "siguiendo" otra ruta, ID de la padre. */
+  parentRouteId?: string;
 }
 
 export interface SaveRouteOutput {
@@ -28,7 +30,7 @@ export async function saveRouteUseCase(input: SaveRouteInput): Promise<SaveRoute
   const {
     routeId, userId, name, description, activityType, difficulty,
     gpsPoints, waypoints, stats, startedAt, finishedAt,
-    isPublic = false,
+    isPublic = false, parentRouteId,
   } = input;
 
   if (gpsPoints.length === 0) {
@@ -54,6 +56,7 @@ export async function saveRouteUseCase(input: SaveRouteInput): Promise<SaveRoute
     finishedAt,
     isPublic,
     isSynced: false,
+    parentRouteId,
     createdAt: new Date(),
   });
 

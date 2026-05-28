@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,15 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTrackingStore } from '@presentation/stores/trackingStore';
+import { useTrackingStore, RouteGuide } from '@presentation/stores/trackingStore';
 import { useAuthStore } from '@presentation/stores/authStore';
+import { useUiStore } from '@presentation/stores/uiStore';
 import { Difficulty, DifficultyLabel } from '@core/value-objects/Difficulty';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { startDraftRoute } from '@application/tracking/DraftRouteUseCase';
+import { loadRouteGuide } from '@application/tracking/FollowRouteUseCase';
 import { colors } from '@presentation/theme/colors';
 
 const DIFF_ROW_1: Difficulty[] = ['easy', 'moderate', 'hard'];
@@ -34,6 +36,7 @@ const difficultyColors: Record<Difficulty, string> = {
 const DEFAULT_ACTIVITIES = ['Senderismo', 'Ciclismo', 'Escalada'];
 
 export default function PreRecordingScreen() {
+  const { followFrom } = useLocalSearchParams<{ followFrom?: string }>();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
@@ -42,8 +45,29 @@ export default function PreRecordingScreen() {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customActivityName, setCustomActivityName] = useState('');
   const [checkingGps, setCheckingGps] = useState(false);
+  const [guide, setGuide] = useState<RouteGuide | null>(null);
+  const [loadingGuide, setLoadingGuide] = useState(false);
   const { startRecording } = useTrackingStore();
   const { user } = useAuthStore();
+  const { showToast } = useUiStore();
+
+  // Si llegamos con ?followFrom=X, cargar la ruta-padre como guía y prellenar
+  // el nombre para que sea obvio que es una grabación derivada.
+  useEffect(() => {
+    if (!followFrom) return;
+    setLoadingGuide(true);
+    loadRouteGuide(followFrom)
+      .then((g) => {
+        if (!g) {
+          showToast('No se pudo cargar la ruta a seguir', 'error');
+          return;
+        }
+        setGuide(g);
+        if (!name) setName(`Siguiendo: ${g.parentName}`);
+      })
+      .catch(() => showToast('Error al cargar la ruta a seguir', 'error'))
+      .finally(() => setLoadingGuide(false));
+  }, [followFrom]);
 
   const allActivities = [...DEFAULT_ACTIVITIES, ...customActivities];
 
@@ -76,7 +100,7 @@ export default function PreRecordingScreen() {
       return;
     }
 
-    startRecording(name.trim(), difficulty, description.trim(), activityType);
+    startRecording(name.trim(), difficulty, description.trim(), activityType, guide);
 
     // Crear el borrador en SQLite ANTES de navegar: a partir de aquí cada
     // punto se persiste incrementalmente y la ruta sobrevive a un kill.
@@ -91,6 +115,7 @@ export default function PreRecordingScreen() {
           activityType,
           difficulty,
           startedAt: st.startedAt,
+          parentRouteId: guide?.parentRouteId,
         });
       } catch (e) {
         console.error('[draft] no se pudo crear el borrador', e);
@@ -177,6 +202,39 @@ export default function PreRecordingScreen() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 24 }}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Banner "Siguiendo ruta" — solo si llegamos con ?followFrom */}
+          {(loadingGuide || guide) && (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              backgroundColor: '#60A5FA15',
+              borderRadius: 12,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: '#60A5FA40',
+            }}>
+              {loadingGuide ? (
+                <ActivityIndicator color="#60A5FA" />
+              ) : (
+                <Ionicons name="git-branch-outline" size={20} color="#60A5FA" />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#60A5FA', fontSize: 12, fontWeight: '600' }}>
+                  Siguiendo ruta
+                </Text>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, marginTop: 2 }} numberOfLines={1}>
+                  {guide ? guide.parentName : 'Cargando…'}
+                </Text>
+                {guide && (
+                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                    {guide.guidePoints.length} puntos · {guide.guideWaypoints.length} waypoints de referencia
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Título */}
           <View>
             <Text style={labelStyle}>Título de la Ruta</Text>
