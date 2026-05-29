@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  Dimensions, StyleSheet, ScrollView, StatusBar, Image, PanResponder,
+  Dimensions, StyleSheet, ScrollView, StatusBar, Image, PanResponder, Alert,
   type LayoutChangeEvent,
 } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAudioPlayer } from 'expo-audio';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +20,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useUiStore } from '@presentation/stores/uiStore';
 import {
   MapView, Camera, RasterSource, RasterLayer,
-  ShapeSource, LineLayer, CircleLayer,
+  ShapeSource, LineLayer, CircleLayer, MarkerView,
   setAccessToken, Logger,
   type CameraRef,
 } from '@maplibre/maplibre-react-native';
@@ -34,7 +36,7 @@ import { colors } from '@presentation/theme/colors';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import { getWaypointTypeInfo } from '@shared/constants/waypointTypes';
-import WaypointPhotoCarousel from '@presentation/components/routes/WaypointPhotoCarousel';
+import { getReplayMusic, pickReplayMusic, clearReplayMusic } from '@shared/utils/replayMusic';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
 Logger.setLogCallback((log) => {
@@ -54,6 +56,21 @@ const WAYPOINT_TRIGGER_RADIUS_M = 25;
 /** Inclinación de cámara (grados) para el efecto "flythrough" cinematográfico. */
 const CAMERA_PITCH = 55;
 
+/** Interpola dos colores hex #RRGGBB. */
+function lerpHex(a: string, b: string, t: number): string {
+  const c = Math.max(0, Math.min(1, t));
+  const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+  const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+  const ch = pa.map((v, i) => Math.round(v + (pb[i] - v) * c));
+  return `#${ch.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Rampa de elevación: verde (bajo) → ámbar → rojo (alto). v en 0..1. */
+function elevColorRamp(v: number): string {
+  const t = Math.max(0, Math.min(1, v));
+  return t < 0.5 ? lerpHex('#22C55E', '#F59E0B', t / 0.5) : lerpHex('#F59E0B', '#EF4444', (t - 0.5) / 0.5);
+}
+
 /** Rumbo (grados, 0=N) de a → b. Para alinear la cámara al avance. */
 function bearing(aLat: number, aLon: number, bLat: number, bLon: number): number {
   const toRad = Math.PI / 180;
@@ -62,6 +79,41 @@ function bearing(aLat: number, aLon: number, bLat: number, bLon: number): number
   const y = Math.sin(Δλ) * Math.cos(φ2);
   const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
   return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+/** Pin de waypoint en el mapa: círculo con el ICONO de su tipo + puntero.
+ *  Contenedor de tamaño FIJO: MarkerView (Android) recorta el círculo si el
+ *  contenedor no tiene dimensiones medibles (se veía solo el triángulo). */
+function WaypointMapPin({ waypoint, active }: { waypoint: Waypoint; active: boolean }) {
+  const info = waypoint.type ? getWaypointTypeInfo(waypoint.type) : undefined;
+  const iconName = info?.icon ?? 'MapPin';
+  const bg = info?.iconColor ?? colors.accent;
+  const size = active ? 40 : 30;
+  return (
+    <View collapsable={false} style={{ width: 60, height: 64, alignItems: 'center', justifyContent: 'flex-end' }}>
+      <View
+        collapsable={false}
+        renderToHardwareTextureAndroid
+        style={{
+          width: size, height: size, borderRadius: size / 2,
+          backgroundColor: bg, borderWidth: active ? 3 : 2, borderColor: '#FFFFFF',
+          alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <WaypointIcon name={iconName} size={active ? 20 : 15} color="#0D1B12" />
+      </View>
+      {/* Puntero (la base apunta a la coordenada con anchor y:1) */}
+      <View
+        collapsable={false}
+        style={{
+          width: 0, height: 0,
+          borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7,
+          borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#FFFFFF',
+          marginTop: -1,
+        }}
+      />
+    </View>
+  );
 }
 
 type Phase = 'loading' | 'intro' | 'playing' | 'paused' | 'waypoint' | 'ended';
@@ -126,6 +178,72 @@ export default function ReplayScreen() {
       }),
     [seekTo],
   );
+
+  // ── Música de fondo + ducking (pista elegida por el usuario) ──
+  const musicPlayer = useAudioPlayer(undefined);
+  const [musicUri, setMusicUri] = useState<string | null>(null);
+  const [musicName, setMusicName] = useState<string | null>(null);
+  const [musicOn, setMusicOn] = useState(true);
+
+  // Carga la pista guardada al abrir el replay.
+  useEffect(() => {
+    getReplayMusic().then((p) => {
+      if (p) { setMusicUri(p.uri); setMusicName(p.name); }
+    });
+  }, []);
+
+  // Aplica la fuente de audio cuando cambia la pista elegida.
+  useEffect(() => {
+    if (!musicUri) return;
+    try { musicPlayer.replace(musicUri); musicPlayer.loop = true; } catch { /* noop */ }
+  }, [musicUri, musicPlayer]);
+
+  useEffect(() => {
+    if (!musicUri) return;
+    const active = phase === 'playing' || phase === 'paused' || phase === 'waypoint';
+    try { if (musicOn && active) musicPlayer.play(); else musicPlayer.pause(); } catch { /* noop */ }
+  }, [phase, musicOn, musicUri, musicPlayer]);
+
+  useEffect(() => {
+    if (!musicUri) return;
+    // Ducking: baja el volumen mientras suena una nota de voz en un waypoint.
+    const ducking = phase === 'waypoint' && (activeWaypoint?.audios.length ?? 0) > 0;
+    try { musicPlayer.volume = ducking ? 0.1 : 0.5; } catch { /* noop */ }
+  }, [phase, activeWaypoint, musicUri, musicPlayer]);
+
+  // Elige una pista nueva del dispositivo y la activa.
+  const chooseMusic = useCallback(async () => {
+    try {
+      const p = await pickReplayMusic();
+      if (p) { setMusicUri(p.uri); setMusicName(p.name); setMusicOn(true); showToast(`Música: ${p.name}`, 'success'); }
+    } catch {
+      showToast('No se pudo cargar la música.', 'error');
+    }
+  }, [showToast]);
+
+  // Botón de música: sin pista → elegir; con pista → activar/silenciar.
+  const handleMusicPress = useCallback(() => {
+    if (!musicUri) { chooseMusic(); return; }
+    setMusicOn((v) => !v);
+  }, [musicUri, chooseMusic]);
+
+  // Mantener pulsado (con pista) → cambiar o quitar.
+  const handleMusicLongPress = useCallback(() => {
+    if (!musicUri) return;
+    Alert.alert(musicName ?? 'Música de fondo', undefined, [
+      { text: 'Cambiar pista', onPress: () => { chooseMusic(); } },
+      {
+        text: 'Quitar música',
+        style: 'destructive',
+        onPress: async () => {
+          try { musicPlayer.pause(); } catch { /* noop */ }
+          await clearReplayMusic();
+          setMusicUri(null); setMusicName(null);
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }, [musicUri, musicName, musicPlayer, chooseMusic]);
 
   // ── Carga inicial ──────────────────────────────────────────────
   useEffect(() => {
@@ -398,6 +516,37 @@ export default function ReplayScreen() {
   // Pulso del cursor (respira). Se recalcula en cada tick durante la reproducción.
   const pulse = (Math.sin(Date.now() / 450) + 1) / 2; // 0..1
 
+  // Capítulos: posición (fracción 0..1) de cada waypoint en el track, para
+  // marcarlos en la línea de tiempo y poder saltar a ellos.
+  const chapters = useMemo(() => {
+    const N = gpsPoints.length - 1;
+    if (N < 1) return [] as { id: string; frac: number }[];
+    return waypoints.map((wp) => {
+      let best = 0;
+      let bestD = Infinity;
+      for (let i = 0; i < gpsPoints.length; i++) {
+        const d = fastDistanceMeters(gpsPoints[i].latitude, gpsPoints[i].longitude, wp.latitude, wp.longitude);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return { id: wp.id, frac: best / N };
+    });
+  }, [gpsPoints, waypoints]);
+
+  // Degradado de la traza por elevación (verde→ámbar→rojo). Requiere lineMetrics.
+  const lineGradient = useMemo(() => {
+    if (!elevation.hasAlt || elevation.filled.length < 2) return null;
+    const { filled, min, max } = elevation;
+    const span = max - min || 1;
+    const N = 16;
+    const stops: (number | string)[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const idx = Math.round(t * (filled.length - 1));
+      stops.push(t, elevColorRamp((filled[idx] - min) / span));
+    }
+    return ['interpolate', ['linear'], ['line-progress'], ...stops];
+  }, [elevation]);
+
   const traveledGeoJson: GeoJSON.Feature<GeoJSON.LineString> | null =
     traveledCoords.length > 1
       ? { type: 'Feature', geometry: { type: 'LineString', coordinates: traveledCoords }, properties: {} }
@@ -407,15 +556,6 @@ export default function ReplayScreen() {
     fullCoords.length > 1
       ? { type: 'Feature', geometry: { type: 'LineString', coordinates: fullCoords }, properties: {} }
       : null;
-
-  const waypointsGeoJson: GeoJSON.FeatureCollection<GeoJSON.Point> = {
-    type: 'FeatureCollection',
-    features: waypoints.map((wp) => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [wp.longitude, wp.latitude] },
-      properties: { title: wp.title, id: wp.id },
-    })),
-  };
 
   if (phase === 'loading' || !route) {
     return (
@@ -463,18 +603,17 @@ export default function ReplayScreen() {
           }}
         />
 
-        {/* Traza completa (gris debajo) */}
+        {/* Traza completa: coloreada por ELEVACIÓN (verde→ámbar→rojo) si hay
+            altitud; si no, gris tenue. El tramo recorrido (ámbar) va encima. */}
         {fullGeoJson && (
-          <ShapeSource id="replay-full" shape={fullGeoJson}>
+          <ShapeSource id="replay-full" shape={fullGeoJson} lineMetrics={!!lineGradient}>
             <LineLayer
               id="replay-full-line"
-              style={{
-                lineColor: '#FFFFFF',
-                lineOpacity: 0.25,
-                lineWidth: 4,
-                lineCap: 'round',
-                lineJoin: 'round',
-              }}
+              style={
+                lineGradient
+                  ? { lineGradient: lineGradient as any, lineWidth: 5, lineCap: 'round', lineJoin: 'round' }
+                  : { lineColor: '#FFFFFF', lineOpacity: 0.25, lineWidth: 4, lineCap: 'round', lineJoin: 'round' }
+              }
             />
           </ShapeSource>
         )}
@@ -579,20 +718,17 @@ export default function ReplayScreen() {
           </ShapeSource>
         )}
 
-        {/* Waypoints */}
-        {waypointsGeoJson.features.length > 0 && (
-          <ShapeSource id="replay-waypoints" shape={waypointsGeoJson}>
-            <CircleLayer
-              id="replay-wp-circles"
-              style={{
-                circleRadius: 6,
-                circleColor: colors.accent,
-                circleStrokeColor: '#fff',
-                circleStrokeWidth: 2,
-              }}
-            />
-          </ShapeSource>
-        )}
+        {/* Waypoints: pin con el ICONO de su tipo (se agranda + glow en su escena) */}
+        {waypoints.map((wp) => (
+          <MarkerView
+            key={wp.id}
+            coordinate={[wp.longitude, wp.latitude]}
+            anchor={{ x: 0.5, y: 1 }}
+            allowOverlap
+          >
+            <WaypointMapPin waypoint={wp} active={activeWaypoint?.id === wp.id} />
+          </MarkerView>
+        ))}
       </MapView>
 
       {/* ── Vignette cinematográfico (arriba/abajo) ── */}
@@ -643,6 +779,22 @@ export default function ReplayScreen() {
             {route.name}
           </Text>
         </View>
+        <TouchableOpacity
+          onPress={handleMusicPress}
+          onLongPress={handleMusicLongPress}
+          style={{
+            width: 40, height: 40, borderRadius: 20,
+            backgroundColor: '#0D1B12CC',
+            alignItems: 'center', justifyContent: 'center',
+            borderWidth: 1, borderColor: '#2D6A4F80',
+          }}
+        >
+          <Ionicons
+            name={musicUri && musicOn ? 'musical-notes' : 'musical-notes-outline'}
+            size={20}
+            color={musicUri && musicOn ? colors.accent : colors.textMuted}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* ── Intro overlay ───────────────────────────────────── */}
@@ -721,6 +873,22 @@ export default function ReplayScreen() {
                 })}
               </View>
             </>
+          )}
+
+          {/* Capítulos: banderas de waypoint sobre la línea de tiempo (tap para saltar) */}
+          {chapters.length > 0 && (
+            <View style={{ height: 14, marginBottom: -6 }}>
+              {chapters.map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => { setPhase('paused'); seekTo(c.frac); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ position: 'absolute', left: `${c.frac * 100}%`, marginLeft: -6 }}
+                >
+                  <Ionicons name="flag" size={12} color={colors.accent} />
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
 
           {/* Scrubber arrastrable (arrastra para mover el replay) */}
@@ -961,6 +1129,8 @@ function IntroOverlay({ name, insetsTop }: { name: string; insetsTop: number }) 
   );
 }
 
+const AnimatedImage = Animated.createAnimatedComponent(Image);
+
 function WaypointOverlay({
   waypoint, index, total, onContinue, insetsBottom,
 }: {
@@ -970,74 +1140,13 @@ function WaypointOverlay({
   onContinue: () => void;
   insetsBottom: number;
 }) {
-  // Entrada de la card (slide + fade).
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(40);
+  // Media de la escena: hero = video (si hay) o fotos (slideshow); narración = nota de voz.
+  const heroVideo = waypoint.videos[0];
+  const narration = waypoint.audios[0];
+  const photos = waypoint.imageUris;
 
-  // Backdrop con duración mayor para sensación más teatral.
-  const backdropOpacity = useSharedValue(0);
-
-  // Ken Burns en la imagen: zoom-in suave + pan horizontal lento.
-  // ~9 s alcanza para una lectura completa de la descripción.
-  const imgScale = useSharedValue(1);
-  const imgTx = useSharedValue(0);
-
-  // Entrada escalonada de título y descripción.
-  const titleOpacity = useSharedValue(0);
-  const titleY = useSharedValue(10);
-  const descOpacity = useSharedValue(0);
-
-  useEffect(() => {
-    // Reset (vital cuando se reusa el componente con otro waypoint, aunque
-    // hoy se desmonta entre uno y otro; futureproof).
-    opacity.value = 0;
-    translateY.value = 40;
-    backdropOpacity.value = 0;
-    imgScale.value = 1;
-    imgTx.value = 0;
-    titleOpacity.value = 0;
-    titleY.value = 10;
-    descOpacity.value = 0;
-
-    backdropOpacity.value = withTiming(0.6, { duration: 700 });
-    opacity.value = withTiming(1, { duration: 450 });
-    translateY.value = withSpring(0, { damping: 16, stiffness: 130 });
-
-    // Ken Burns: lineal y largo. translateX puede ir negativo OR positivo;
-    // alternamos por id para que no siempre vaya al mismo lado.
-    const drift = waypoint.id.charCodeAt(0) % 2 === 0 ? -14 : 14;
-    imgScale.value = withTiming(1.18, { duration: 9000, easing: Easing.linear });
-    imgTx.value = withTiming(drift, { duration: 9000, easing: Easing.linear });
-
-    titleOpacity.value = withDelay(250, withTiming(1, { duration: 500 }));
-    titleY.value = withDelay(250, withSpring(0, { damping: 18, stiffness: 160 }));
-    descOpacity.value = withDelay(550, withTiming(1, { duration: 600 }));
-  }, [waypoint.id]);
-
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
-  const imgStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: imgScale.value }, { translateX: imgTx.value }],
-  }));
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleY.value }],
-  }));
-  const descStyle = useAnimatedStyle(() => ({ opacity: descOpacity.value }));
-
-  const handleContinue = () => {
-    // Salida elegante: fade-out + slide hacia abajo, luego callback al padre.
-    backdropOpacity.value = withTiming(0, { duration: 300 });
-    translateY.value = withTiming(40, { duration: 280 });
-    opacity.value = withTiming(0, { duration: 280 }, (finished) => {
-      if (finished) runOnJS(onContinue)();
-    });
-  };
-
-  const hasImage = waypoint.imageUris.length > 0;
+  const HERO_W = SCREEN_W - 32;
+  const HERO_H = Math.round(SCREEN_W * 0.62);
 
   // Datos enriquecidos: tipo (con su icono), altitud y coordenadas.
   const typeInfo = waypoint.type ? getWaypointTypeInfo(waypoint.type) : undefined;
@@ -1045,6 +1154,103 @@ function WaypointOverlay({
   const typeIconName = typeInfo?.icon ?? 'MapPin';
   const typeColor = typeInfo?.iconColor ?? colors.accent;
   const coords = `${waypoint.latitude.toFixed(5)}, ${waypoint.longitude.toFixed(5)}`;
+
+  // Duración de la escena: alcanza para ver el video / oír la voz / pasar fotos.
+  const sceneMs = Math.min(
+    60000,
+    Math.max(7000, heroVideo?.durationMs ?? 0, narration?.durationMs ?? 0, photos.length * 4200),
+  );
+
+  // Players (hooks siempre llamados; source nulo si no hay media).
+  const videoPlayer = useVideoPlayer(heroVideo ? heroVideo.uri : null, (p) => {
+    p.loop = false;
+    p.muted = !!narration; // si hay nota de voz, el video va mudo para oír la narración
+  });
+  const audioPlayer = useAudioPlayer(narration ? narration.uri : undefined);
+
+  // Animaciones.
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(40);
+  const backdropOpacity = useSharedValue(0);
+  const progress = useSharedValue(0);     // progreso de escena (auto-avance)
+  const imgScale = useSharedValue(1);     // Ken Burns
+  const imgOpacity = useSharedValue(1);   // crossfade entre fotos
+  const titleOpacity = useSharedValue(0);
+  const titleY = useSharedValue(10);
+  const descOpacity = useSharedValue(0);
+
+  const [slideIdx, setSlideIdx] = useState(0);
+  const finishedRef = useRef(false);
+
+  const handleContinue = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    try { videoPlayer.pause(); } catch { /* noop */ }
+    try { audioPlayer.pause(); } catch { /* noop */ }
+    backdropOpacity.value = withTiming(0, { duration: 300 });
+    translateY.value = withTiming(40, { duration: 280 });
+    opacity.value = withTiming(0, { duration: 280 }, (finished) => {
+      if (finished) runOnJS(onContinue)();
+    });
+  }, [onContinue, videoPlayer, audioPlayer]);
+
+  useEffect(() => {
+    finishedRef.current = false;
+    opacity.value = 0; translateY.value = 40; backdropOpacity.value = 0;
+    progress.value = 0; imgScale.value = 1; imgOpacity.value = 1;
+    titleOpacity.value = 0; titleY.value = 10; descOpacity.value = 0;
+    setSlideIdx(0);
+
+    backdropOpacity.value = withTiming(0.72, { duration: 700 });
+    opacity.value = withTiming(1, { duration: 450 });
+    translateY.value = withSpring(0, { damping: 16, stiffness: 130 });
+    titleOpacity.value = withDelay(250, withTiming(1, { duration: 500 }));
+    titleY.value = withDelay(250, withSpring(0, { damping: 18, stiffness: 160 }));
+    descOpacity.value = withDelay(550, withTiming(1, { duration: 600 }));
+
+    // Ken Burns durante toda la escena.
+    imgScale.value = withTiming(1.18, { duration: sceneMs, easing: Easing.linear });
+
+    // Reproducir media (video + narración).
+    if (heroVideo) { try { videoPlayer.play(); } catch { /* noop */ } }
+    if (narration) { try { audioPlayer.play(); } catch { /* noop */ } }
+
+    // Progreso de escena → auto-continuar al terminar (como una película).
+    progress.value = withTiming(1, { duration: sceneMs, easing: Easing.linear }, (fin) => {
+      if (fin) runOnJS(handleContinue)();
+    });
+  }, [waypoint.id]);
+
+  // Slideshow de fotos (solo si no hay video y hay >1 foto).
+  useEffect(() => {
+    if (heroVideo || photos.length <= 1) return;
+    const each = sceneMs / photos.length;
+    const t = setInterval(() => setSlideIdx((i) => (i + 1) % photos.length), each);
+    return () => clearInterval(t);
+  }, [heroVideo, photos.length, sceneMs]);
+
+  // Crossfade al cambiar de foto.
+  useEffect(() => {
+    if (heroVideo) return;
+    imgOpacity.value = 0;
+    imgOpacity.value = withTiming(1, { duration: 600 });
+  }, [slideIdx, heroVideo]);
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
+  const heroImgStyle = useAnimatedStyle(() => ({
+    opacity: imgOpacity.value,
+    transform: [{ scale: imgScale.value }],
+  }));
+  const progressStyle = useAnimatedStyle(() => ({ width: progress.value * HERO_W }));
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateY: titleY.value }],
+  }));
+  const descStyle = useAnimatedStyle(() => ({ opacity: descOpacity.value }));
 
   return (
     <>
@@ -1070,14 +1276,63 @@ function WaypointOverlay({
           borderWidth: 1,
           borderColor: '#F59E0B40',
         }}>
-          {hasImage && (
-            <WaypointPhotoCarousel
-              uris={waypoint.imageUris}
-              width={SCREEN_W - 32}
-              height={SCREEN_W * 0.55}
-              animatedStyle={imgStyle}
+          {/* Hero media: video (autoplay) o slideshow de fotos (Ken Burns).
+              overflow:'hidden' recorta el zoom Ken Burns a esta caja para que la
+              imagen ampliada NO se desborde sobre el texto de abajo. */}
+          <View style={{ width: '100%', height: HERO_H, backgroundColor: '#000', overflow: 'hidden' }}>
+            {heroVideo ? (
+              <VideoView
+                player={videoPlayer}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            ) : photos.length > 0 ? (
+              <AnimatedImage
+                source={{ uri: photos[slideIdx] }}
+                style={[{ width: '100%', height: '100%' }, heroImgStyle]}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <WaypointIcon name={typeIconName} size={48} color={typeColor} />
+              </View>
+            )}
+
+            {/* Degradado inferior (legibilidad) */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={['#0D1B1200', '#0D1B12E6']}
+              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 90 }}
             />
-          )}
+
+            {/* Barra de progreso de la escena (auto-avance) */}
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#FFFFFF22' }}>
+              <Animated.View style={[{ height: 3, backgroundColor: colors.accent }, progressStyle]} />
+            </View>
+
+            {/* Indicador de narración (nota de voz sonando) */}
+            {narration ? (
+              <View style={{
+                position: 'absolute', top: 12, left: 12,
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: '#0D1B12CC', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
+              }}>
+                <Ionicons name="mic" size={13} color={colors.accent} />
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>Narrando…</Text>
+              </View>
+            ) : null}
+
+            {/* Dots del slideshow */}
+            {!heroVideo && photos.length > 1 && (
+              <View style={{ position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
+                {photos.map((_, i) => (
+                  <View key={i} style={{ width: i === slideIdx ? 16 : 5, height: 5, borderRadius: 3, backgroundColor: i === slideIdx ? colors.accent : '#FFFFFF66' }} />
+                ))}
+              </View>
+            )}
+          </View>
+
           <View style={{ padding: 18, gap: 8 }}>
             {/* Tipo (icono real) + contador de waypoints */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

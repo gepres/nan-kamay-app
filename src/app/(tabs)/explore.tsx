@@ -10,7 +10,7 @@ import { useAuthStore } from '@presentation/stores/authStore';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { getPublicRoutesUseCase, PublicRoute } from '@application/routes/GetPublicRoutesUseCase';
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
-import { formatDistance, formatDuration, formatElevation, formatDate } from '@shared/utils/formatters';
+import { formatDistance, formatDuration, formatElevation } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
 
 const DIFF_COLORS: Record<string, string> = { easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert };
@@ -57,7 +57,6 @@ function PublicRouteCard({ route, isOwn }: { route: PublicRoute; isOwn?: boolean
               <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700' }}>Tuya</Text>
             </View>
           )}
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDate(route.startedAt)}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
