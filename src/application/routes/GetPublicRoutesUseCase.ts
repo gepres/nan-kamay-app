@@ -24,14 +24,17 @@ export interface PublicRoute {
 }
 
 export async function getPublicRoutesUseCase(
-  currentUserId: string,
+  _currentUserId: string,
   limit = 50,
 ): Promise<PublicRoute[]> {
+  // Muestra TODAS las rutas públicas (incluidas las del propio usuario, que se
+  // marcan como "Tuya" en la UI). Antes se excluían las propias con
+  // `.neq('user_id', currentUserId)`, lo que dejaba Explorar vacío al probar
+  // con una sola cuenta.
   const { data, error } = await supabase
     .from(NK_TABLES.routes)
     .select('*')
     .eq('is_public', true)
-    .neq('user_id', currentUserId)
     .order('created_at', { ascending: false })
     .limit(limit);
 

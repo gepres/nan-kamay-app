@@ -30,6 +30,8 @@ export default function ProfileScreen() {
     { icon: 'trending-up-outline', label: 'Desnivel acumulado', value: formatElevation(totals.gain, false) },
   ];
 
+  const unsyncedCount = routes.filter((r) => !r.isSynced).length;
+
   const handleLogout = async () => {
     Alert.alert('Cerrar sesión', '¿Estás seguro?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -93,6 +95,39 @@ export default function ProfileScreen() {
               <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>{s.label}</Text>
             </View>
           ))}
+        </View>
+
+        {/* Indicador de sincronización */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            backgroundColor: colors.bgCard,
+            borderRadius: 12,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: unsyncedCount > 0 ? '#F59E0B60' : '#22C55E40',
+            marginBottom: 32,
+          }}
+        >
+          <Ionicons
+            name={unsyncedCount > 0 ? 'cloud-upload-outline' : 'cloud-done-outline'}
+            size={22}
+            color={unsyncedCount > 0 ? colors.accent : colors.success}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
+              {unsyncedCount > 0
+                ? `${unsyncedCount} ruta${unsyncedCount > 1 ? 's' : ''} sin sincronizar`
+                : 'Todo sincronizado'}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
+              {unsyncedCount > 0
+                ? 'Sincroniza desde Inicio antes de borrar la app.'
+                : 'Tus rutas están respaldadas en la nube.'}
+            </Text>
+          </View>
         </View>
 
         <TouchableOpacity

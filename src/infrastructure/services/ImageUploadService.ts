@@ -1,4 +1,7 @@
-import { readAsStringAsync } from 'expo-file-system';
+// SDK 55: la API basada en funciones (readAsStringAsync) vive en /legacy.
+// Importarla del módulo raíz lanza "method readAsStringAsync ... undefined"
+// y aborta toda la sincronización de la ruta (imágenes + waypoints).
+import { readAsStringAsync } from 'expo-file-system/legacy';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { NK_BUCKET } from '@infrastructure/supabase/tables';
 

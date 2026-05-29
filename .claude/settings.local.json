@@ -28,7 +28,9 @@
       "WebFetch(domain:maddevs.io)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:codeberg.org)",
-      "Bash(eas *)"
+      "Bash(eas *)",
+      "Bash(python3 -c ' *)",
+      "Bash(claude mcp *)"
     ]
   }
 }

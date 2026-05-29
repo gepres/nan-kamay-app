@@ -25,11 +25,10 @@ const difficultyColors: Record<string, string> = {
 interface Props {
   route: Route;
   onPress?: () => void;
-  onDelete?: () => void;
   index?: number;
 }
 
-export default function RouteCard({ route, onPress, onDelete, index = 0 }: Props) {
+export default function RouteCard({ route, onPress, index = 0 }: Props) {
   const diffColor = difficultyColors[route.difficulty];
 
   // Entrada staggered por index
@@ -94,12 +93,6 @@ export default function RouteCard({ route, onPress, onDelete, index = 0 }: Props
 
           {!route.isSynced && (
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
-          )}
-
-          {onDelete && (
-            <Pressable onPress={onDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
-            </Pressable>
           )}
         </View>
 

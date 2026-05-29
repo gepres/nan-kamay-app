@@ -15,32 +15,51 @@ import { colors } from '@presentation/theme/colors';
 
 const DIFF_COLORS: Record<string, string> = { easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert };
 
-function PublicRouteCard({ route }: { route: PublicRoute }) {
+function PublicRouteCard({ route, isOwn }: { route: PublicRoute; isOwn?: boolean }) {
   const diffColor = DIFF_COLORS[route.difficulty];
   return (
-    <View style={{
-      backgroundColor: colors.bgCard,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: '#2D6A4F',
-    }}>
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => router.push(`/routes/public/${route.id}`)}
+      style={{
+        backgroundColor: colors.bgCard,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#2D6A4F',
+      }}
+    >
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <View style={{
-          backgroundColor: diffColor + '20',
-          borderRadius: 6,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-          borderWidth: 1,
-          borderColor: diffColor + '60',
-        }}>
-          <Text style={{ color: diffColor, fontSize: 11, fontWeight: '700' }}>
-            {DifficultyLabel[route.difficulty]}
-          </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+          <View style={{
+            backgroundColor: diffColor + '20',
+            borderRadius: 6,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderWidth: 1,
+            borderColor: diffColor + '60',
+          }}>
+            <Text style={{ color: diffColor, fontSize: 11, fontWeight: '700' }}>
+              {DifficultyLabel[route.difficulty]}
+            </Text>
+          </View>
+          {isOwn && (
+            <View style={{
+              backgroundColor: colors.accent + '20',
+              borderRadius: 6,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderWidth: 1,
+              borderColor: colors.accent + '60',
+            }}>
+              <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700' }}>Tuya</Text>
+            </View>
+          )}
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDate(route.startedAt)}</Text>
         </View>
-        <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDate(route.startedAt)}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </View>
 
       <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>
@@ -71,7 +90,7 @@ function PublicRouteCard({ route }: { route: PublicRoute }) {
           <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatElevation(route.maxElevationMeters, false)} máx.</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -188,7 +207,7 @@ export default function ExploreScreen() {
             </View>
           )
         }
-        renderItem={({ item }) => <PublicRouteCard route={item} />}
+        renderItem={({ item }) => <PublicRouteCard route={item} isOwn={item.userId === user?.id} />}
       />
     </SafeAreaView>
   );

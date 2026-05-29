@@ -1,5 +1,5 @@
 {
-  "version": "2.9",
+  "version": "2.11",
   "children": [
     {
       "type": "frame",
@@ -1547,7 +1547,7 @@
           "fill": {
             "type": "image",
             "enabled": true,
-            "url": "./images/generated-1772578695745.png",
+            "url": "images/generated-1772578695745.png",
             "mode": "fill"
           }
         },
@@ -2593,7 +2593,7 @@
               "fill": {
                 "type": "image",
                 "enabled": true,
-                "url": "./images/generated-1772578797232.png",
+                "url": "images/generated-1772578797232.png",
                 "mode": "fill"
               },
               "cornerRadius": 14
@@ -6386,6 +6386,1081 @@
                               "fontWeight": "normal"
                             }
                           ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "y6DfEi",
+                  "name": "catLabelCiudad",
+                  "fill": "$text-muted",
+                  "content": "CIUDAD Y URBANO",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "700",
+                  "letterSpacing": 2
+                },
+                {
+                  "type": "frame",
+                  "id": "NQ7WI",
+                  "name": "ciudadGrid",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "h4CDJ",
+                      "name": "cRow1",
+                      "width": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "w2RVR",
+                          "name": "cell-Plaza",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "FfCb2",
+                              "name": "PlazaCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "c132K",
+                                  "name": "PlazaIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "square",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "ljMLT",
+                              "name": "PlazaLabel",
+                              "fill": "$text-secondary",
+                              "content": "Plaza",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "RkJAZ",
+                          "name": "cell-Iglesia",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "p9Xu6",
+                              "name": "IglesiaCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "estoX",
+                                  "name": "IglesiaIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "church",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "vRfSm",
+                              "name": "IglesiaLabel",
+                              "fill": "$text-secondary",
+                              "content": "Iglesia",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "CYicU",
+                          "name": "cell-Mirador",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "p5ylF",
+                              "name": "MiradorCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "ot1PM",
+                                  "name": "MiradorIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "eye",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "lTgU3",
+                              "name": "MiradorLabel",
+                              "fill": "$text-secondary",
+                              "content": "Mirador",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "m3AR51",
+                          "name": "cell-Fuente",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "qSbPS",
+                              "name": "FuenteCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "C91Oe",
+                                  "name": "FuenteIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "droplets",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "TXUSi",
+                              "name": "FuenteLabel",
+                              "fill": "$text-secondary",
+                              "content": "Fuente",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y2o02",
+                      "name": "cRow2",
+                      "width": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "M0tzY",
+                          "name": "cell-Escaleras",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "o0NdCw",
+                              "name": "EscalerasCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "py9si",
+                                  "name": "EscalerasIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "chevrons-up",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "fefKH",
+                              "name": "EscalerasLabel",
+                              "fill": "$text-secondary",
+                              "content": "Escaleras",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XHiEo",
+                          "name": "cell-Subida",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hA4a9",
+                              "name": "SubidaCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "vVmc8",
+                                  "name": "SubidaIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "trending-up",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "g9Lo1A",
+                              "name": "SubidaLabel",
+                              "fill": "$text-secondary",
+                              "content": "Subida",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Z4lEJ",
+                          "name": "cell-Cruce",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "B4Qxi",
+                              "name": "CruceCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "GP6zz",
+                                  "name": "CruceIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "git-fork",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "OpHID",
+                              "name": "CruceLabel",
+                              "fill": "$text-secondary",
+                              "content": "Cruce",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f5Sp4",
+                          "name": "cell-Glorieta",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "eD6HB",
+                              "name": "GlorietaCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "xyt8b",
+                                  "name": "GlorietaIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "rotate-cw",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "qi1VO",
+                              "name": "GlorietaLabel",
+                              "fill": "$text-secondary",
+                              "content": "Glorieta",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V623w",
+                      "name": "cRow3",
+                      "width": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WEAOV",
+                          "name": "cell-Semáforo",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lfb8b",
+                              "name": "SemáforoCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "dLuFh",
+                                  "name": "SemáforoIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "traffic-cone",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Yw65H",
+                              "name": "SemáforoLabel",
+                              "fill": "$text-secondary",
+                              "content": "Semáforo",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jJzvR",
+                          "name": "cell-Banco",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "kJ6xx",
+                              "name": "BancoCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "o3DcQH",
+                                  "name": "BancoIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "armchair",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "H00drt",
+                              "name": "BancoLabel",
+                              "fill": "$text-secondary",
+                              "content": "Banco",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Pyfev",
+                          "name": "cell-Carretera",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "UnVUZ",
+                              "name": "CarreteraCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "c2Jon",
+                                  "name": "CarreteraIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "signpost",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "JiA4Q",
+                              "name": "CarreteraLabel",
+                              "fill": "$text-secondary",
+                              "content": "Carretera",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IzvIe",
+                          "name": "cell-Cafetería",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "qmiAW",
+                              "name": "CafeteríaCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "P3zDLa",
+                                  "name": "CafeteríaIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "coffee",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "NFdOy",
+                              "name": "CafeteríaLabel",
+                              "fill": "$text-secondary",
+                              "content": "Cafetería",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sZzHj",
+                      "name": "cRow4",
+                      "width": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Rcw1m",
+                          "name": "cell-Mercado",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Bqemt",
+                              "name": "MercadoCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "P4DZ1",
+                                  "name": "MercadoIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "shopping-basket",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "bzAXt",
+                              "name": "MercadoLabel",
+                              "fill": "$text-secondary",
+                              "content": "Mercado",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "c4z5e",
+                          "name": "cell-Farmacia",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Tol3K",
+                              "name": "FarmaciaCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "j1057C",
+                                  "name": "FarmaciaIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "pill",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "x5mbOA",
+                              "name": "FarmaciaLabel",
+                              "fill": "$text-secondary",
+                              "content": "Farmacia",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "PKF1J",
+                          "name": "cell-Hospital",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "O6JM2u",
+                              "name": "HospitalCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "ZvfLU",
+                                  "name": "HospitalIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "bandage",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "ISDD3",
+                              "name": "HospitalLabel",
+                              "fill": "$text-secondary",
+                              "content": "Hospital",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pLYZ6",
+                          "name": "cell-Baños",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e44Wg",
+                              "name": "BañosCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "QnKYP",
+                                  "name": "BañosIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "bath",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "g7aUhu",
+                              "name": "BañosLabel",
+                              "fill": "$text-secondary",
+                              "content": "Baños",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R763BQ",
+                      "name": "cRow5",
+                      "width": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WdRgQ",
+                          "name": "cell-Evento Social",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "LAyl9",
+                              "name": "Evento SocialCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "C3kMTR",
+                                  "name": "Evento SocialIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "party-popper",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Hi3nK",
+                              "name": "Evento SocialLabel",
+                              "fill": "$text-secondary",
+                              "content": "Evento Social",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pP4Bl",
+                          "name": "cell-Puesto Calle",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "KRKPN",
+                              "name": "Puesto CalleCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "MqIlR",
+                                  "name": "Puesto CalleIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "store",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "nUzDB",
+                              "name": "Puesto CalleLabel",
+                              "fill": "$text-secondary",
+                              "content": "Puesto Calle",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "f4G9pa",
+                          "name": "cell-Restaurante",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            0
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "mVJzG",
+                              "name": "RestauranteCircle",
+                              "width": 44,
+                              "height": 44,
+                              "fill": "$bg-card",
+                              "cornerRadius": 22,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$border"
+                              },
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "a5Xjx",
+                                  "name": "RestauranteIcon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "iconFontName": "utensils-crossed",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "H0ibn9",
+                              "name": "RestauranteLabel",
+                              "fill": "$text-secondary",
+                              "content": "Restaurante",
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "g5BGW",
+                          "name": "cRow5sp",
+                          "width": "fill_container",
+                          "height": "fit_content(0)"
                         }
                       ]
                     }

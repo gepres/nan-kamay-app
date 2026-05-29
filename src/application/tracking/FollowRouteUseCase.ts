@@ -1,4 +1,5 @@
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
+import { getPublicRouteDetailUseCase } from '@application/routes/GetPublicRouteDetailUseCase';
 import { RouteGuide } from '@presentation/stores/trackingStore';
 
 /**
@@ -6,17 +7,26 @@ import { RouteGuide } from '@presentation/stores/trackingStore';
  * "guía" que consume el trackingStore para pintar la traza de referencia en
  * el mapa mientras el usuario graba su propio recorrido.
  *
- * Devuelve null si la ruta no existe o no tiene puntos suficientes para
- * pintar una línea (n < 2).
+ * Busca primero en SQLite local (ruta propia); si no existe, la trae de
+ * Supabase como ruta pública (seguir una ruta de otro usuario). Devuelve null
+ * si no existe o no tiene puntos suficientes para pintar una línea (n < 2).
  */
 export async function loadRouteGuide(parentRouteId: string): Promise<RouteGuide | null> {
-  const route = await routeRepository.getById(parentRouteId);
-  if (!route) return null;
+  let route = await routeRepository.getById(parentRouteId);
+  let gpsPoints, waypoints;
 
-  const [gpsPoints, waypoints] = await Promise.all([
-    routeRepository.getGpsPoints(parentRouteId),
-    routeRepository.getWaypoints(parentRouteId),
-  ]);
+  if (route) {
+    [gpsPoints, waypoints] = await Promise.all([
+      routeRepository.getGpsPoints(parentRouteId),
+      routeRepository.getWaypoints(parentRouteId),
+    ]);
+  } else {
+    const remote = await getPublicRouteDetailUseCase(parentRouteId);
+    if (!remote) return null;
+    route = remote.route;
+    gpsPoints = remote.gpsPoints;
+    waypoints = remote.waypoints;
+  }
 
   if (gpsPoints.length < 2) return null;
 

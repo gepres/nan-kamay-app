@@ -15,7 +15,15 @@ export interface RouteStats {
 const MIN_SEGMENT = 2;       // metros — micro-jitter
 const MAX_SPEED_KMH = 15;    // km/h — teleport para trekking
 const EMA_ALPHA = 0.15;
-const DEAD_BAND = 4;         // metros
+const DEAD_BAND = 3;         // metros (bajado de 4: la mediana ya mata spikes)
+const MEDIAN_WINDOW = 5;     // ventana de mediana móvil (anti-spike) sobre altitud
+
+/** Mediana de un array corto (≤ MEDIAN_WINDOW). No muta el original. */
+function median(values: number[]): number {
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+}
 
 /**
  * Acumulador incremental. Procesa los puntos en orden produciendo el MISMO
@@ -37,6 +45,8 @@ export interface StatsAccumulator {
   loss: number;
   maxAlt: number;
   minAlt: number;
+  /** Ventana móvil de altitudes crudas para la mediana anti-spike. */
+  altBuffer: number[];
 }
 
 /**
@@ -63,6 +73,7 @@ export class StatsCalculator {
       loss: 0,
       maxAlt: 0,
       minAlt: 0,
+      altBuffer: [],
     };
   }
 
@@ -98,15 +109,19 @@ export class StatsCalculator {
 
     if (curr.altitude !== null) {
       acc.altCount++;
+      // Mediana móvil (trailing) anti-spike sobre la altitud cruda antes del EMA.
+      acc.altBuffer.push(curr.altitude);
+      if (acc.altBuffer.length > MEDIAN_WINDOW) acc.altBuffer.shift();
+      const med = median(acc.altBuffer);
       if (!acc.emaInit) {
         acc.emaInit = true;
-        acc.firstAlt = curr.altitude;
-        acc.ema = curr.altitude;
-        acc.lastSignificant = curr.altitude;
-        acc.maxAlt = curr.altitude;
-        acc.minAlt = curr.altitude;
+        acc.firstAlt = med;
+        acc.ema = med;
+        acc.lastSignificant = med;
+        acc.maxAlt = med;
+        acc.minAlt = med;
       } else {
-        acc.ema = EMA_ALPHA * curr.altitude + (1 - EMA_ALPHA) * acc.ema;
+        acc.ema = EMA_ALPHA * med + (1 - EMA_ALPHA) * acc.ema;
         acc.maxAlt = Math.max(acc.maxAlt, acc.ema);
         acc.minAlt = Math.min(acc.minAlt, acc.ema);
         const diff = acc.ema - acc.lastSignificant;
@@ -238,10 +253,7 @@ export class StatsCalculator {
     max: number;
     min: number;
   } {
-    const EMA_ALPHA = 0.15;
-    const DEAD_BAND = 4; // metros
-
-    // Extraer altitudes no nulas con su índice
+    // Extraer altitudes no nulas
     const altitudes: number[] = [];
     for (const p of points) {
       if (p.altitude !== null) {
@@ -254,10 +266,19 @@ export class StatsCalculator {
       return { gain: 0, loss: 0, max: single, min: single };
     }
 
-    // Paso 1: EMA smoothing
-    const smoothed: number[] = [altitudes[0]];
-    for (let i = 1; i < altitudes.length; i++) {
-      smoothed.push(EMA_ALPHA * altitudes[i] + (1 - EMA_ALPHA) * smoothed[i - 1]);
+    // Paso 0: mediana móvil (trailing) anti-spike sobre la altitud cruda.
+    const buf: number[] = [];
+    const denoised: number[] = [];
+    for (const a of altitudes) {
+      buf.push(a);
+      if (buf.length > MEDIAN_WINDOW) buf.shift();
+      denoised.push(median(buf));
+    }
+
+    // Paso 1: EMA smoothing sobre la serie ya sin spikes
+    const smoothed: number[] = [denoised[0]];
+    for (let i = 1; i < denoised.length; i++) {
+      smoothed.push(EMA_ALPHA * denoised[i] + (1 - EMA_ALPHA) * smoothed[i - 1]);
     }
 
     // Paso 2: Dead-band — solo contar cambios significativos

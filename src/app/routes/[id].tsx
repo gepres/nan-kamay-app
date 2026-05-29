@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -17,19 +17,67 @@ import ElevationChart from '@presentation/components/routes/ElevationChart';
 import RouteMap from '@presentation/components/map/RouteMap';
 import { useRoutesStore } from '@presentation/stores/routesStore';
 import { useAuthStore } from '@presentation/stores/authStore';
+import { useUiStore } from '@presentation/stores/uiStore';
+import { syncRouteUseCase } from '@application/routes/SyncRouteUseCase';
+import { setRoutePublicUseCase } from '@application/routes/SetRoutePublicUseCase';
+import { refineElevationUseCase } from '@application/routes/RefineElevationUseCase';
 
 import { colors } from '@presentation/theme/colors';
 const difficultyColors: Record<string, string> = { easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert };
 
 export default function RouteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { deleteRoute } = useRoutesStore();
+  const { deleteRoute, fetchRoutes } = useRoutesStore();
   const { user } = useAuthStore();
+  const { showToast, isOffline } = useUiStore();
 
   const [route, setRoute] = useState<Route | null>(null);
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Estado de nube: visibilidad pública + sincronización por-ruta.
+  const [isPublic, setIsPublic] = useState(false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
+  type SyncState = 'idle' | 'syncing' | 'synced' | 'error';
+  const [syncState, setSyncState] = useState<SyncState>('idle');
+  const [refining, setRefining] = useState(false);
+
+  const reloadRoute = async () => {
+    if (!id) return;
+    const [rt, gps, wps] = await Promise.all([
+      routeRepository.getById(id),
+      routeRepository.getGpsPoints(id),
+      routeRepository.getWaypoints(id),
+    ]);
+    setRoute(rt);
+    setGpsPoints(gps);
+    setWaypoints(wps);
+    if (rt) {
+      setIsPublic(rt.isPublic);
+      setSyncState(rt.isSynced ? 'synced' : 'idle');
+    }
+  };
+
+  const handleRefineElevation = async () => {
+    if (!id || refining) return;
+    if (isOffline) {
+      showToast('Sin conexión. El ajuste por terreno necesita internet.', 'info');
+      return;
+    }
+    setRefining(true);
+    showToast('Ajustando elevación con el terreno… puede tardar unos segundos.', 'info');
+    try {
+      const r = await refineElevationUseCase(id);
+      await reloadRoute();
+      if (user) fetchRoutes(user.id);
+      showToast(`Elevación ajustada con el terreno (${r.updatedPoints} puntos).`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo ajustar la elevación.', 'error');
+    } finally {
+      setRefining(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -41,8 +89,46 @@ export default function RouteDetailScreen() {
       setRoute(r);
       setGpsPoints(gps);
       setWaypoints(wps);
+      if (r) {
+        setIsPublic(r.isPublic);
+        setSyncState(r.isSynced ? 'synced' : 'idle');
+      }
     }).finally(() => setIsLoading(false));
   }, [id]);
+
+  const handleSync = async () => {
+    if (!id || !user || syncState === 'syncing') return;
+    if (isOffline) {
+      showToast('Sin conexión. Conéctate para subir la ruta.', 'info');
+      return;
+    }
+    setSyncState('syncing');
+    try {
+      await syncRouteUseCase(id, user.id);
+      setSyncState('synced');
+      fetchRoutes(user.id);
+      showToast('Ruta, waypoints e imágenes subidos a la nube.', 'success');
+    } catch (err) {
+      setSyncState('error');
+      showToast(err instanceof Error ? err.message : 'Error al subir la ruta.', 'error');
+    }
+  };
+
+  const handleTogglePublic = async (value: boolean) => {
+    if (!id || togglingPublic) return;
+    setTogglingPublic(true);
+    setIsPublic(value); // optimista
+    try {
+      await setRoutePublicUseCase(id, value);
+      if (user) fetchRoutes(user.id);
+      showToast(value ? 'Ruta ahora es pública.' : 'Ruta ahora es privada.', 'success');
+    } catch (err) {
+      setIsPublic(!value); // revertir
+      showToast(err instanceof Error ? err.message : 'No se pudo cambiar la visibilidad.', 'error');
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
 
   const handleDelete = () => {
     Alert.alert('Eliminar ruta', `¿Eliminar "${route?.name}"?`, [
@@ -98,9 +184,6 @@ export default function RouteDetailScreen() {
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700', flex: 1 }} numberOfLines={1}>
           {route.name}
         </Text>
-        <TouchableOpacity onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
@@ -116,7 +199,7 @@ export default function RouteDetailScreen() {
             </Text>
           </View>
           <Text style={{ color: colors.textMuted, fontSize: 13 }}>{formatDate(route.startedAt)}</Text>
-          {!route.isSynced && (
+          {syncState !== 'synced' && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#F59E0B' }} />
               <Text style={{ color: '#F59E0B', fontSize: 12 }}>Sin sincronizar</Text>
@@ -207,6 +290,41 @@ export default function RouteDetailScreen() {
           </View>
         )}
 
+        {/* Ajustar elevación con el terreno (DEM) */}
+        {gpsPoints.length > 1 && (
+          <TouchableOpacity
+            onPress={handleRefineElevation}
+            disabled={refining || isOffline}
+            style={{
+              backgroundColor: colors.bgCard,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: '#2D6A4F',
+              paddingVertical: 12,
+              paddingHorizontal: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              marginBottom: 16,
+              opacity: isOffline ? 0.6 : 1,
+            }}
+          >
+            {refining ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Ionicons name="trail-sign-outline" size={18} color={colors.accent} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>
+                Ajustar elevación con el terreno
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 1 }}>
+                Usa el modelo de terreno (DEM) para una elevación más precisa
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* GPS points info */}
         <View style={{
           backgroundColor: colors.bgCard, borderRadius: 10, padding: 14,
@@ -252,6 +370,89 @@ export default function RouteDetailScreen() {
           </View>
         )}
 
+        {/* Nube: visibilidad pública + sincronización */}
+        <View style={{
+          backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+          borderWidth: 1,
+          borderColor: syncState === 'synced' ? colors.success + '40'
+            : syncState === 'error' ? colors.danger + '60' : '#2D6A4F',
+          marginBottom: 16, gap: 14,
+        }}>
+          {/* Switch ruta pública */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Ionicons name="globe-outline" size={20} color={isPublic ? colors.accent : colors.textMuted} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
+                Ruta pública
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
+                Visible para otros usuarios en Explorar
+              </Text>
+            </View>
+            <Switch
+              value={isPublic}
+              onValueChange={handleTogglePublic}
+              disabled={togglingPublic}
+              trackColor={{ false: '#2D6A4F', true: colors.accent }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={{ height: 1, backgroundColor: '#2D6A4F' }} />
+
+          {/* Estado + botón de sync */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Ionicons
+              name={syncState === 'synced' ? 'cloud-done-outline' : 'cloud-upload-outline'}
+              size={20}
+              color={syncState === 'synced' ? colors.success : colors.accent}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
+                {syncState === 'synced' ? 'Sincronizada' : 'Pendiente de subir'}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>
+                {syncState === 'synced'
+                  ? 'Ruta, waypoints e imágenes respaldados.'
+                  : 'Sube la ruta con sus waypoints e imágenes.'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleSync}
+              disabled={syncState === 'syncing'}
+              style={{
+                backgroundColor: syncState === 'synced' ? colors.bgElevated : colors.accent,
+                borderRadius: 10,
+                paddingVertical: 9,
+                paddingHorizontal: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                minWidth: 96,
+                justifyContent: 'center',
+              }}
+            >
+              {syncState === 'syncing' ? (
+                <ActivityIndicator color="#0D1B12" size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name={syncState === 'synced' ? 'refresh' : 'cloud-upload-outline'}
+                    size={15}
+                    color={syncState === 'synced' ? colors.accent : '#0D1B12'}
+                  />
+                  <Text style={{
+                    color: syncState === 'synced' ? colors.accent : '#0D1B12',
+                    fontSize: 13, fontWeight: '700',
+                  }}>
+                    {syncState === 'synced' ? 'Re-subir' : syncState === 'error' ? 'Reintentar' : 'Subir'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Exportar */}
         <View style={{
           backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
@@ -259,6 +460,28 @@ export default function RouteDetailScreen() {
         }}>
           <ExportButtons routeId={route.id} />
         </View>
+
+        {/* Eliminar ruta */}
+        <TouchableOpacity
+          onPress={handleDelete}
+          style={{
+            marginTop: 16,
+            backgroundColor: colors.bgCard,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.danger,
+            paddingVertical: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
+        >
+          <Ionicons name="trash-outline" size={18} color={colors.danger} />
+          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>
+            Eliminar Ruta
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, TouchableOpacity,
@@ -14,12 +14,11 @@ import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { getRecoverableDraft, discardDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import RouteCard from '@presentation/components/routes/RouteCard';
 import OfflineBanner from '@presentation/components/ui/OfflineBanner';
-import { Route } from '@core/entities/Route';
 import { colors } from '@presentation/theme/colors';
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
-  const { routes, isLoading, isSyncing, fetchRoutes, deleteRoute, syncRoutes } = useRoutesStore();
+  const { routes, isLoading, isSyncing, fetchRoutes, syncRoutes } = useRoutesStore();
   const { isOffline } = useUiStore();
   const { showToast } = useUiStore();
 
@@ -107,24 +106,6 @@ export default function HomeScreen() {
         );
       });
   }, [isOffline, user?.id]);
-
-  const handleDelete = useCallback((route: Route) => {
-    Alert.alert(
-      'Eliminar ruta',
-      `¿Eliminar "${route.name}"? Esta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteRoute(route.id);
-            showToast('Ruta eliminada', 'info');
-          },
-        },
-      ]
-    );
-  }, []);
 
   const handleManualSync = async () => {
     if (!user || isOffline) {
@@ -259,7 +240,6 @@ export default function HomeScreen() {
             route={item}
             index={index}
             onPress={() => router.push(`/routes/${item.id}`)}
-            onDelete={() => handleDelete(item)}
           />
         )}
       />

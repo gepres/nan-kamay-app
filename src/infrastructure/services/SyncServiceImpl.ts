@@ -6,11 +6,74 @@ import { waypointToSupabase, supabaseToWaypoint } from '@infrastructure/mappers/
 import { uploadWaypointImages } from './ImageUploadService';
 import { NK_TABLES, NK_BUCKET } from '@infrastructure/supabase/tables';
 import { uuidv4 } from '@shared/utils/uuid';
+import { Route } from '@core/entities/Route';
 
 export interface SyncResult {
   synced: number;
   failed: number;
   errors: string[];
+}
+
+/**
+ * Empuja UNA ruta completa a Supabase: route → GPS points → waypoints (con
+ * imágenes). NO marca is_synced (eso lo decide quien llama). Lanza si algo
+ * falla, para que el caller cuente el fallo / muestre el error.
+ *
+ * Es idempotente: las imágenes ya subidas (URLs http) no se re-suben, y las
+ * filas de imágenes se borran+reinsertan para no acumular duplicados.
+ */
+async function pushRoute(route: Route, userId: string): Promise<void> {
+  // 1. Upsert ruta
+  const { error: routeErr } = await supabase
+    .from(NK_TABLES.routes)
+    .upsert(routeToSupabase(route), { onConflict: 'id' });
+  if (routeErr) throw new Error(`Route: ${routeErr.message}`);
+
+  // 2. GPS points (en lotes de 500 para no superar el límite de Supabase)
+  const gpsPoints = await routeRepository.getGpsPoints(route.id);
+  const BATCH = 500;
+  for (let i = 0; i < gpsPoints.length; i += BATCH) {
+    const batch = gpsPoints.slice(i, i + BATCH).map(gpsPointToSupabase);
+    const { error: gpsErr } = await supabase
+      .from(NK_TABLES.gpsPoints)
+      .upsert(batch, { onConflict: 'id' });
+    if (gpsErr) throw new Error(`GPS points: ${gpsErr.message}`);
+  }
+
+  // 3. Waypoints + imágenes
+  const waypoints = await routeRepository.getWaypoints(route.id);
+  for (const wp of waypoints) {
+    // Subir solo imágenes locales (las que ya son http se devuelven igual).
+    const remoteUris = await uploadWaypointImages(wp.imageUris, userId, wp.id);
+
+    // A8: persistir las URLs remotas en SQLite → un re-sync ya no
+    // las vuelve a subir (uploadWaypointImages las salta por ser http).
+    if (remoteUris.some((u, i) => u !== wp.imageUris[i])) {
+      await routeRepository.updateWaypointImageUris(wp.id, remoteUris);
+    }
+
+    const wpSupabase = waypointToSupabase(wp);
+    const { error: wpErr } = await supabase
+      .from(NK_TABLES.waypoints)
+      .upsert(wpSupabase, { onConflict: 'id' });
+    if (wpErr) throw new Error(`Waypoint: ${wpErr.message}`);
+
+    // A8: idempotente — borrar las filas previas de este waypoint y
+    // reinsertar el set actual (evita acumular duplicados en reintentos).
+    await supabase.from(NK_TABLES.waypointImages).delete().eq('waypoint_id', wp.id);
+    if (remoteUris.length > 0) {
+      const images = remoteUris.map((url) => ({
+        id: uuidv4(),
+        waypoint_id: wp.id,
+        storage_path: url,
+        created_at: new Date().toISOString(),
+      }));
+      const { error: imgErr } = await supabase
+        .from(NK_TABLES.waypointImages)
+        .insert(images);
+      if (imgErr) throw new Error(`Waypoint images: ${imgErr.message}`);
+    }
+  }
 }
 
 /**
@@ -25,59 +88,7 @@ export async function syncOfflineRoutes(userId: string): Promise<SyncResult> {
 
   for (const route of unsynced) {
     try {
-      // 1. Upsert ruta
-      const { error: routeErr } = await supabase
-        .from(NK_TABLES.routes)
-        .upsert(routeToSupabase(route), { onConflict: 'id' });
-      if (routeErr) throw new Error(`Route: ${routeErr.message}`);
-
-      // 2. GPS points (en lotes de 500 para no superar el límite de Supabase)
-      const gpsPoints = await routeRepository.getGpsPoints(route.id);
-      const BATCH = 500;
-      for (let i = 0; i < gpsPoints.length; i += BATCH) {
-        const batch = gpsPoints.slice(i, i + BATCH).map(gpsPointToSupabase);
-        const { error: gpsErr } = await supabase
-          .from(NK_TABLES.gpsPoints)
-          .upsert(batch, { onConflict: 'id' });
-        if (gpsErr) throw new Error(`GPS points: ${gpsErr.message}`);
-      }
-
-      // 3. Waypoints + imágenes
-      const waypoints = await routeRepository.getWaypoints(route.id);
-      for (const wp of waypoints) {
-        // Subir solo imágenes locales (las que ya son http se devuelven igual).
-        const remoteUris = await uploadWaypointImages(wp.imageUris, userId, wp.id);
-
-        // A8: persistir las URLs remotas en SQLite → un re-sync ya no
-        // las vuelve a subir (uploadWaypointImages las salta por ser http).
-        if (remoteUris.some((u, i) => u !== wp.imageUris[i])) {
-          await routeRepository.updateWaypointImageUris(wp.id, remoteUris);
-        }
-
-        const wpSupabase = waypointToSupabase(wp);
-        const { error: wpErr } = await supabase
-          .from(NK_TABLES.waypoints)
-          .upsert(wpSupabase, { onConflict: 'id' });
-        if (wpErr) throw new Error(`Waypoint: ${wpErr.message}`);
-
-        // A8: idempotente — borrar las filas previas de este waypoint y
-        // reinsertar el set actual (evita acumular duplicados en reintentos).
-        await supabase.from(NK_TABLES.waypointImages).delete().eq('waypoint_id', wp.id);
-        if (remoteUris.length > 0) {
-          const images = remoteUris.map((url) => ({
-            id: uuidv4(),
-            waypoint_id: wp.id,
-            storage_path: url,
-            created_at: new Date().toISOString(),
-          }));
-          const { error: imgErr } = await supabase
-            .from(NK_TABLES.waypointImages)
-            .insert(images);
-          if (imgErr) throw new Error(`Waypoint images: ${imgErr.message}`);
-        }
-      }
-
-      // 4. Marcar como sincronizada en SQLite
+      await pushRoute(route, userId);
       await routeRepository.markAsSynced(route.id);
       result.synced++;
     } catch (err) {
@@ -89,6 +100,18 @@ export async function syncOfflineRoutes(userId: string): Promise<SyncResult> {
   }
 
   return result;
+}
+
+/**
+ * Fuerza la subida de UNA ruta concreta, esté o no marcada como sincronizada.
+ * Útil para re-subir waypoints/imágenes de una ruta que ya se había
+ * sincronizado a nivel de ruta pero cuyas fotos no llegaron a la nube.
+ */
+export async function syncRouteById(routeId: string, userId: string): Promise<void> {
+  const route = await routeRepository.getById(routeId);
+  if (!route) throw new Error('Ruta no encontrada');
+  await pushRoute(route, userId);
+  await routeRepository.markAsSynced(route.id);
 }
 
 export interface PullResult {

@@ -179,6 +179,48 @@ export class RouteRepositoryImpl implements IRouteRepository {
     );
   }
 
+  /** Marca una ruta como pendiente de subir (forzar re-sync). */
+  async markUnsynced(routeId: string): Promise<void> {
+    await db.runAsync(
+      'UPDATE routes SET is_synced = 0 WHERE id = ?',
+      [routeId]
+    );
+  }
+
+  /** Cambia el flag is_public de una ruta en SQLite. */
+  async setPublic(routeId: string, isPublic: boolean): Promise<void> {
+    await db.runAsync(
+      'UPDATE routes SET is_public = ? WHERE id = ?',
+      [isPublic ? 1 : 0, routeId]
+    );
+  }
+
+  /** Actualiza la altitud de varios puntos GPS (P1 — ajuste por DEM). */
+  async updateGpsAltitudes(updates: { id: string; altitude: number | null }[]): Promise<void> {
+    await db.withTransactionAsync(async () => {
+      for (const u of updates) {
+        await db.runAsync('UPDATE gps_points SET altitude = ? WHERE id = ?', [
+          u.altitude,
+          u.id,
+        ]);
+      }
+    });
+  }
+
+  /** Reescribe las stats de elevación de una ruta (tras recalcular con DEM). */
+  async updateRouteElevation(
+    routeId: string,
+    e: { gain: number; loss: number; max: number; min: number },
+  ): Promise<void> {
+    await db.runAsync(
+      `UPDATE routes SET
+         elevation_gain_meters = ?, elevation_loss_meters = ?,
+         max_elevation_meters = ?, min_elevation_meters = ?
+       WHERE id = ?`,
+      [e.gain, e.loss, e.max, e.min, routeId]
+    );
+  }
+
   /**
    * Reemplaza las URIs de imágenes de un waypoint por las URLs remotas tras
    * subirlas. Así un re-sync ve URLs `http` y no las vuelve a subir (A8).

@@ -18,6 +18,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
+import { getPublicRouteDetailUseCase } from '@application/routes/GetPublicRouteDetailUseCase';
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
@@ -25,6 +26,8 @@ import { fastDistanceMeters } from '@shared/utils/geometry';
 import { formatDistance, formatDuration, formatElevation } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
+import WaypointIcon from '@presentation/components/ui/WaypointIcon';
+import { getWaypointTypeInfo } from '@shared/constants/waypointTypes';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
 Logger.setLogCallback((log) => {
@@ -45,7 +48,8 @@ const WAYPOINT_TRIGGER_RADIUS_M = 25;
 type Phase = 'loading' | 'intro' | 'playing' | 'paused' | 'waypoint' | 'ended';
 
 export default function ReplayScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, public: publicParam } = useLocalSearchParams<{ id: string; public?: string }>();
+  const isPublic = publicParam === '1';
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraRef>(null);
 
@@ -67,11 +71,17 @@ export default function ReplayScreen() {
   // ── Carga inicial ──────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      routeRepository.getById(id),
-      routeRepository.getGpsPoints(id),
-      routeRepository.getWaypoints(id),
-    ]).then(([r, gps, wps]) => {
+    const loader: Promise<[Route | null, GpsPoint[], Waypoint[]]> = isPublic
+      ? getPublicRouteDetailUseCase(id).then((d) =>
+          (d ? [d.route, d.gpsPoints, d.waypoints] : [null, [], []]) as [Route | null, GpsPoint[], Waypoint[]],
+        )
+      : Promise.all([
+          routeRepository.getById(id),
+          routeRepository.getGpsPoints(id),
+          routeRepository.getWaypoints(id),
+        ]);
+
+    loader.then(([r, gps, wps]) => {
       setRoute(r);
       setGpsPoints(gps);
       setWaypoints(wps);
@@ -79,7 +89,7 @@ export default function ReplayScreen() {
     }).catch(() => {
       setPhase('ended');
     });
-  }, [id]);
+  }, [id, isPublic]);
 
   // ── Intro: zoom al punto de inicio, después arrancar ──────────
   useEffect(() => {
@@ -437,6 +447,8 @@ export default function ReplayScreen() {
       {activeWaypoint && (
         <WaypointOverlay
           waypoint={activeWaypoint}
+          index={waypoints.findIndex((w) => w.id === activeWaypoint.id)}
+          total={waypoints.length}
           onContinue={handleWaypointContinue}
           insetsBottom={insets.bottom}
         />
@@ -602,9 +614,11 @@ function IntroOverlay({ name, insetsTop }: { name: string; insetsTop: number }) 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 function WaypointOverlay({
-  waypoint, onContinue, insetsBottom,
+  waypoint, index, total, onContinue, insetsBottom,
 }: {
   waypoint: Waypoint;
+  index: number;
+  total: number;
   onContinue: () => void;
   insetsBottom: number;
 }) {
@@ -677,6 +691,13 @@ function WaypointOverlay({
 
   const hasImage = waypoint.imageUris.length > 0;
 
+  // Datos enriquecidos: tipo (con su icono), altitud y coordenadas.
+  const typeInfo = waypoint.type ? getWaypointTypeInfo(waypoint.type) : undefined;
+  const typeLabel = (waypoint.type ?? 'Waypoint').toUpperCase();
+  const typeIconName = typeInfo?.icon ?? 'MapPin';
+  const typeColor = typeInfo?.iconColor ?? colors.accent;
+  const coords = `${waypoint.latitude.toFixed(5)}, ${waypoint.longitude.toFixed(5)}`;
+
   return (
     <>
       <Animated.View
@@ -711,15 +732,40 @@ function WaypointOverlay({
             </View>
           )}
           <View style={{ padding: 18, gap: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="flag" size={18} color={colors.accent} />
-              <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
-                WAYPOINT
-              </Text>
+            {/* Tipo (icono real) + contador de waypoints */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <WaypointIcon name={typeIconName} size={18} color={typeColor} />
+                <Text style={{ color: typeColor, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
+                  {typeLabel}
+                </Text>
+              </View>
+              {total > 1 && (
+                <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>
+                  {index + 1} / {total}
+                </Text>
+              )}
             </View>
             <Animated.Text style={[{ color: '#fff', fontSize: 22, fontWeight: '700' }, titleStyle]}>
               {waypoint.title}
             </Animated.Text>
+
+            {/* Meta: altitud + coordenadas */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
+              {waypoint.altitude != null && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="trending-up-outline" size={13} color={colors.textMuted} />
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    {Math.round(waypoint.altitude)} m
+                  </Text>
+                </View>
+              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="location-outline" size={13} color={colors.textMuted} />
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{coords}</Text>
+              </View>
+            </View>
+
             {waypoint.description ? (
               <Animated.View style={descStyle}>
                 <ScrollView style={{ maxHeight: 120 }}>

@@ -7,6 +7,7 @@ import { Coordinates } from '@core/value-objects/Coordinates';
 import { GpsError } from '@core/errors/GpsError';
 import { db } from '@infrastructure/database/sqliteDb';
 import { uuidv4 } from '@shared/utils/uuid';
+import { BarometerService } from './BarometerService';
 
 export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 const TRACKING_NOTIFICATION_ID = 'tracking-active';
@@ -60,6 +61,15 @@ async function persistBackgroundLocation(loc: Location.LocationObject): Promise<
       if (d < 4) return; // desplazamiento mínimo (igual que el filtro foreground)
     }
 
+    // Gate de altitud vertical: si la precisión vertical es mala (> 50 m),
+    // guardar altitud null en vez de un valor ruidoso (alineado con GpsFilter
+    // foreground). Evita meter elevación basura a la BD en tramos headless.
+    const altAcc = loc.coords.altitudeAccuracy;
+    const altitude =
+      loc.coords.altitude != null && (altAcc == null || altAcc <= 50)
+        ? loc.coords.altitude
+        : null;
+
     await db.runAsync(
       `INSERT OR IGNORE INTO gps_points
         (id, route_id, latitude, longitude, altitude, accuracy, speed, recorded_at, sequence_index)
@@ -67,7 +77,7 @@ async function persistBackgroundLocation(loc: Location.LocationObject): Promise<
       [
         uuidv4(), draft.id,
         loc.coords.latitude, loc.coords.longitude,
-        loc.coords.altitude ?? null, acc,
+        altitude, acc,
         loc.coords.speed ?? null,
         new Date(loc.timestamp).toISOString(), seq,
       ] as (string | number | null)[]
@@ -140,6 +150,29 @@ export class GpsServiceImpl implements IGpsService {
   private _backgroundStarted = false;
   private notificationInterval: ReturnType<typeof setInterval> | null = null;
 
+  // ── Fusión barométrica (P0) ──
+  // El barómetro da altitud RELATIVA suave; la anclamos a la altitud GPS
+  // absoluta y corregimos su deriva lentamente. Si no hay barómetro, se usa
+  // la altitud GPS tal cual (fallback transparente).
+  private baro = new BarometerService();
+  private absBaseline: number | null = null; // altitud absoluta para relAlt = 0
+  private static readonly BARO_DRIFT_ALPHA = 0.01;
+
+  /** Fusiona la altitud GPS con la relativa del barómetro (si disponible). */
+  private fuseAltitude(gpsAlt: number | null): number | null {
+    if (!this.baro.isAvailable() || !this.baro.hasFix()) return gpsAlt;
+    const rel = this.baro.getRelativeAltitude();
+    if (this.absBaseline == null) {
+      if (gpsAlt == null) return null; // necesitamos un ancla GPS inicial
+      this.absBaseline = gpsAlt - rel;
+    } else if (gpsAlt != null) {
+      // Corrección lenta de deriva del barómetro hacia el GPS.
+      this.absBaseline +=
+        GpsServiceImpl.BARO_DRIFT_ALPHA * ((gpsAlt - rel) - this.absBaseline);
+    }
+    return this.absBaseline + rel;
+  }
+
   async requestPermissions(): Promise<boolean> {
     const { status: fg } = await Location.requestForegroundPermissionsAsync();
     if (fg !== 'granted') return false;
@@ -184,6 +217,10 @@ export class GpsServiceImpl implements IGpsService {
     this._isTracking = true;
     _backgroundCallback = onUpdate;
 
+    // Iniciar barómetro (P0). Best-effort: si el equipo no tiene, fallback a GPS.
+    this.absBaseline = null;
+    this.baro.start().catch(() => {});
+
     // Foreground: alta precisión, filtrado por distancia para evitar ruido GPS
     this.foregroundSubscription = await Location.watchPositionAsync(
       {
@@ -194,11 +231,12 @@ export class GpsServiceImpl implements IGpsService {
         timeInterval: 3000,
       },
       (loc) => {
+        const fusedAlt = this.fuseAltitude(loc.coords.altitude ?? null);
         onUpdate({
           coordinates: {
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
-            altitude: loc.coords.altitude ?? undefined,
+            altitude: fusedAlt ?? undefined,
           },
           speed: loc.coords.speed,
           accuracy: loc.coords.accuracy,
@@ -310,6 +348,9 @@ export class GpsServiceImpl implements IGpsService {
       this.foregroundSubscription.remove();
       this.foregroundSubscription = null;
     }
+
+    this.baro.stop();
+    this.absBaseline = null;
 
     await this.stopBackgroundTracking();
     await this.dismissTrackingNotification();

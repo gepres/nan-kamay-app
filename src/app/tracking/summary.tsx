@@ -29,6 +29,11 @@ export default function SummaryScreen() {
   const [savedRouteId, setSavedRouteId] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
 
+  // Estado del flujo de subida a la nube (explícito, controlado por el usuario).
+  type SyncState = 'idle' | 'syncing' | 'synced' | 'error';
+  const [syncState, setSyncState] = useState<SyncState>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!routeId || !user || !startedAt) return;
     setIsSaving(true);
@@ -51,35 +56,38 @@ export default function SummaryScreen() {
 
       addRoute(route);
       setSavedRouteId(route.id);
-
-      // Intentar sincronizar si hay conexión
-      if (!isOffline) {
-        syncOfflineRoutesUseCase(user.id)
-          .then((result) => {
-            if (result.synced > 0) fetchRoutes(user.id);
-            if (result.failed > 0) {
-              showToast(
-                `No se pudo sincronizar: ${result.errors[0] ?? 'error del servidor'}`,
-                'error'
-              );
-            }
-          })
-          .catch((err) => {
-            showToast(
-              err instanceof Error ? err.message : 'Error al sincronizar con el servidor.',
-              'error'
-            );
-          });
-      } else {
-        showToast('Ruta guardada localmente. Se sincronizará cuando haya conexión.', 'info');
-      }
-
-      showToast('¡Ruta guardada! Puedes exportarla antes de salir.', 'success');
+      showToast('¡Ruta guardada! Súbela a la nube o expórtala antes de salir.', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al guardar la ruta.';
       showToast(msg, 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Subida explícita a la nube (waypoints + imágenes + GPS). El usuario decide
+  // cuándo, y ve el estado en todo momento (mejor flujo que el sync silencioso).
+  const handleUpload = async () => {
+    if (!user || syncState === 'syncing') return;
+    setSyncState('syncing');
+    setSyncError(null);
+    try {
+      const result = await syncOfflineRoutesUseCase(user.id);
+      if (result.failed > 0) {
+        const msg = result.errors[0] ?? 'No se pudo subir la ruta al servidor.';
+        setSyncError(msg);
+        setSyncState('error');
+        showToast(msg, 'error');
+        return;
+      }
+      fetchRoutes(user.id);
+      setSyncState('synced');
+      showToast('Ruta subida a la nube correctamente.', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al subir la ruta.';
+      setSyncError(msg);
+      setSyncState('error');
+      showToast(msg, 'error');
     }
   };
 
@@ -207,6 +215,79 @@ export default function SummaryScreen() {
                 </View>
               </View>
             ))}
+          </View>
+        )}
+
+        {/* Subir a la nube — opción explícita tras guardar */}
+        {savedRouteId && (
+          <View style={{
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1,
+            borderColor: syncState === 'synced' ? colors.success + '60'
+              : syncState === 'error' ? colors.danger + '60' : '#2D6A4F',
+            marginBottom: 16,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <Ionicons
+                name={
+                  syncState === 'synced' ? 'cloud-done-outline'
+                    : isOffline ? 'cloud-offline-outline' : 'cloud-upload-outline'
+                }
+                size={20}
+                color={syncState === 'synced' ? colors.success : colors.accent}
+              />
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '600' }}>
+                {syncState === 'synced' ? 'Subida a la nube' : 'Guardar en la nube'}
+              </Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 14 }}>
+              {syncState === 'synced'
+                ? 'Tu ruta, waypoints e imágenes están respaldados.'
+                : isOffline
+                  ? 'Sin conexión. Conéctate para subir la ruta y sus fotos.'
+                  : 'Sube la ruta con sus waypoints e imágenes para respaldarla y compartirla.'}
+            </Text>
+
+            {syncState === 'error' && syncError && (
+              <Text style={{ color: colors.danger, fontSize: 12, marginBottom: 12 }}>
+                {syncError}
+              </Text>
+            )}
+
+            {syncState !== 'synced' && (
+              <TouchableOpacity
+                onPress={handleUpload}
+                disabled={isOffline || syncState === 'syncing'}
+                style={{
+                  backgroundColor: isOffline ? colors.bgElevated : colors.accent,
+                  borderRadius: 10,
+                  paddingVertical: 13,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 8,
+                  opacity: isOffline ? 0.6 : 1,
+                }}
+              >
+                {syncState === 'syncing' ? (
+                  <ActivityIndicator color="#0D1B12" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={syncState === 'error' ? 'refresh' : 'cloud-upload-outline'}
+                      size={18}
+                      color={isOffline ? colors.textMuted : '#0D1B12'}
+                    />
+                    <Text style={{
+                      color: isOffline ? colors.textMuted : '#0D1B12',
+                      fontSize: 15, fontWeight: '700',
+                    }}>
+                      {syncState === 'error' ? 'Reintentar subida' : 'Subir a la nube'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         )}
 

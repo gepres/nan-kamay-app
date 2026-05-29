@@ -8,6 +8,10 @@ import {
   Car, Tent, Moon, Utensils, Trees, Bus, TrainFront, TrainTrack, Ship,
   MapPin, Camera, TriangleAlert, Info, Package, Compass,
   Search, X, Vault,
+  // CIUDAD Y URBANO
+  Square, ChevronsUp, TrendingUp, GitFork, RotateCw, TrafficCone, Armchair,
+  Signpost, Coffee, ShoppingBasket, Pill, Bandage, Bath, PartyPopper, Store,
+  UtensilsCrossed,
 } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 
@@ -22,6 +26,9 @@ const ICON_MAP: Record<string, IconComponent> = {
   Car, Tent, Moon, Utensils, Trees, Bus, TrainFront, TrainTrack, Ship,
   MapPin, Camera, TriangleAlert, Info, Package, Compass,
   Search, X, Vault,
+  Square, ChevronsUp, TrendingUp, GitFork, RotateCw, TrafficCone, Armchair,
+  Signpost, Coffee, ShoppingBasket, Pill, Bandage, Bath, PartyPopper, Store,
+  UtensilsCrossed,
 };
 
 interface Props {
