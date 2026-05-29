@@ -41,6 +41,10 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
   },
 
   syncRoutes: async (userId) => {
+    // Evita corridas concurrentes (en dev los effects pueden dispararse 2×):
+    // dos pull simultáneos abren transacciones SQLite solapadas →
+    // "cannot start a transaction within a transaction".
+    if (get().isSyncing) return { synced: 0, failed: 0, errors: [] };
     set({ isSyncing: true });
     try {
       // 1. Push: subir rutas locales no sincronizadas.

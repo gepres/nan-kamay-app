@@ -85,6 +85,9 @@ export const WAYPOINT_CATEGORIES: WaypointCategory[] = [
       { label: 'Evento Social', icon: 'PartyPopper' },
       { label: 'Puesto Calle', icon: 'Store' },
       { label: 'Restaurante', icon: 'UtensilsCrossed' },
+      { label: 'Callejón', icon: 'Footprints' },
+      { label: 'Pasadizo', icon: 'Milestone' },
+      { label: 'Barrio', icon: 'Building' },
     ],
   },
   {

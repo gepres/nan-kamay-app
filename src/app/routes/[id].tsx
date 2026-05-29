@@ -14,6 +14,7 @@ import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatSpeed, formatElevation, formatDate } from '@shared/utils/formatters';
 import ExportButtons from '@presentation/components/routes/ExportButtons';
 import ElevationChart from '@presentation/components/routes/ElevationChart';
+import WaypointDetailCard from '@presentation/components/routes/WaypointDetailCard';
 import RouteMap from '@presentation/components/map/RouteMap';
 import { useRoutesStore } from '@presentation/stores/routesStore';
 import { useAuthStore } from '@presentation/stores/authStore';
@@ -345,27 +346,7 @@ export default function RouteDetailScreen() {
               Waypoints ({waypoints.length})
             </Text>
             {waypoints.map((wp) => (
-              <View key={wp.id} style={{
-                backgroundColor: colors.bgCard, borderRadius: 10, padding: 14,
-                marginBottom: 8, borderWidth: 1, borderColor: '#2D6A4F',
-                flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-              }}>
-                <Ionicons name="flag" size={16} color="#F59E0B" style={{ marginTop: 2 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{wp.title}</Text>
-                  {wp.description ? (
-                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{wp.description}</Text>
-                  ) : null}
-                  {wp.imageUris.length > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <Ionicons name="image-outline" size={12} color={colors.textMuted} />
-                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                        {wp.imageUris.length} foto{wp.imageUris.length > 1 ? 's' : ''}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
+              <WaypointDetailCard key={wp.id} wp={wp} />
             ))}
           </View>
         )}

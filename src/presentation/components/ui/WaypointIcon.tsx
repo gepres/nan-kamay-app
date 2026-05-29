@@ -11,7 +11,7 @@ import {
   // CIUDAD Y URBANO
   Square, ChevronsUp, TrendingUp, GitFork, RotateCw, TrafficCone, Armchair,
   Signpost, Coffee, ShoppingBasket, Pill, Bandage, Bath, PartyPopper, Store,
-  UtensilsCrossed,
+  UtensilsCrossed, Footprints, Milestone, Building,
 } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 
@@ -28,7 +28,7 @@ const ICON_MAP: Record<string, IconComponent> = {
   Search, X, Vault,
   Square, ChevronsUp, TrendingUp, GitFork, RotateCw, TrafficCone, Armchair,
   Signpost, Coffee, ShoppingBasket, Pill, Bandage, Bath, PartyPopper, Store,
-  UtensilsCrossed,
+  UtensilsCrossed, Footprints, Milestone, Building,
 };
 
 interface Props {

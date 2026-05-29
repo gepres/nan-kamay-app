@@ -5,7 +5,7 @@ import { supabaseToGpsPoint } from '@infrastructure/mappers/GpsPointMapper';
 import { supabaseToWaypoint } from '@infrastructure/mappers/WaypointMapper';
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
-import { Waypoint } from '@core/entities/Waypoint';
+import { Waypoint, WaypointMedia } from '@core/entities/Waypoint';
 
 export interface PublicRouteDetail {
   route: Route;
@@ -45,12 +45,29 @@ export async function getPublicRouteDetailUseCase(
 
   const waypoints = await Promise.all(
     (wpRes.data ?? []).map(async (w) => {
+      const media: WaypointMedia[] = [];
+      const { data: mediaRows } = await supabase
+        .from(NK_TABLES.waypointMedia)
+        .select('type, storage_path, thumbnail_path, duration_ms')
+        .eq('waypoint_id', w.id);
+      for (const m of mediaRows ?? []) {
+        media.push({
+          type: (m.type as WaypointMedia['type']) ?? 'image',
+          uri: m.storage_path as string,
+          thumbnailUri: (m.thumbnail_path as string | null) ?? undefined,
+          durationMs: (m.duration_ms as number | null) ?? undefined,
+        });
+      }
       const { data: imgs } = await supabase
         .from(NK_TABLES.waypointImages)
         .select('storage_path')
         .eq('waypoint_id', w.id);
-      const uris = (imgs ?? []).map((i) => i.storage_path as string);
-      return supabaseToWaypoint(w, uris);
+      const seen = new Set(media.map((m) => m.uri));
+      for (const img of imgs ?? []) {
+        const uri = img.storage_path as string;
+        if (!seen.has(uri)) media.push({ type: 'image', uri });
+      }
+      return supabaseToWaypoint(w, media);
     }),
   );
 

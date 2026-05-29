@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  Dimensions, StyleSheet, Image, ScrollView, StatusBar,
+  Dimensions, StyleSheet, ScrollView, StatusBar, Image, PanResponder,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -10,6 +11,11 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSpring, withDelay,
   runOnJS, Easing,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import { useUiStore } from '@presentation/stores/uiStore';
 import {
   MapView, Camera, RasterSource, RasterLayer,
   ShapeSource, LineLayer, CircleLayer,
@@ -28,6 +34,7 @@ import { colors } from '@presentation/theme/colors';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import { getWaypointTypeInfo } from '@shared/constants/waypointTypes';
+import WaypointPhotoCarousel from '@presentation/components/routes/WaypointPhotoCarousel';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
 Logger.setLogCallback((log) => {
@@ -44,6 +51,18 @@ const TARGET_DURATION_SEC_1X = 30;
 const TICK_MS = 80;
 /** Radio (m) bajo el cual se considera que cruzamos un waypoint y debe pausar. */
 const WAYPOINT_TRIGGER_RADIUS_M = 25;
+/** Inclinación de cámara (grados) para el efecto "flythrough" cinematográfico. */
+const CAMERA_PITCH = 55;
+
+/** Rumbo (grados, 0=N) de a → b. Para alinear la cámara al avance. */
+function bearing(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const toRad = Math.PI / 180;
+  const φ1 = aLat * toRad, φ2 = bLat * toRad;
+  const Δλ = (bLon - aLon) * toRad;
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
 
 type Phase = 'loading' | 'intro' | 'playing' | 'paused' | 'waypoint' | 'ended';
 
@@ -67,6 +86,46 @@ export default function ReplayScreen() {
   // Waypoints ya mostrados (no se vuelven a abrir si pasamos por encima otra vez).
   const shownWaypointIdsRef = useRef<Set<string>>(new Set());
   const [activeWaypoint, setActiveWaypoint] = useState<Waypoint | null>(null);
+
+  const { showToast } = useUiStore();
+  const mapRef = useRef<any>(null);
+  const postalRef = useRef<View>(null);
+  const barWidthRef = useRef(0);
+  const [postalMapUri, setPostalMapUri] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
+
+  // ── Scrubbing: arrastrar la barra de progreso para mover el replay ──
+  const seekTo = useCallback((fraction: number) => {
+    const N = gpsPoints.length - 1;
+    if (N < 1) return;
+    const idx = Math.max(0, Math.min(N, fraction * N));
+    progressIdxRef.current = idx;
+    setProgressIdx(idx);
+    const p = gpsPoints[Math.floor(idx)];
+    if (p) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: [p.longitude, p.latitude],
+        zoomLevel: 17,
+        animationDuration: 0,
+      });
+    }
+  }, [gpsPoints]);
+
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (e) => {
+          setPhase('paused');
+          if (barWidthRef.current > 0) seekTo(e.nativeEvent.locationX / barWidthRef.current);
+        },
+        onPanResponderMove: (e) => {
+          if (barWidthRef.current > 0) seekTo(e.nativeEvent.locationX / barWidthRef.current);
+        },
+      }),
+    [seekTo],
+  );
 
   // ── Carga inicial ──────────────────────────────────────────────
   useEffect(() => {
@@ -98,6 +157,8 @@ export default function ReplayScreen() {
     cameraRef.current?.setCamera({
       centerCoordinate: [start.longitude, start.latitude],
       zoomLevel: 17,
+      pitch: 0,
+      heading: 0,
       animationDuration: 1800,
       animationMode: 'flyTo',
     });
@@ -111,40 +172,65 @@ export default function ReplayScreen() {
 
     const N = gpsPoints.length - 1; // índice máximo
     const ptsPerSecond = N / TARGET_DURATION_SEC_1X;
-    const advancePerTick = (ptsPerSecond * speed * TICK_MS) / 1000;
+    const baseAdvance = (ptsPerSecond * speed * TICK_MS) / 1000;
 
     tickRef.current = setInterval(() => {
-      const next = Math.min(progressIdxRef.current + advancePerTick, N);
+      const cur = progressIdxRef.current;
+      const frac = N > 0 ? cur / N : 0;
+
+      // Easing: arranque y cierre más lentos (sensación cinematográfica).
+      let factor = 1;
+      if (frac < 0.08) factor = 0.4 + (frac / 0.08) * 0.6;
+      else if (frac > 0.92) factor = 0.4 + ((1 - frac) / 0.08) * 0.6;
+
+      // Ralentizar al acercarse a un waypoint aún no mostrado (anticipación).
+      const pc = gpsPoints[Math.floor(cur)];
+      if (pc) {
+        const near = waypoints.some((wp) =>
+          !shownWaypointIdsRef.current.has(wp.id) &&
+          fastDistanceMeters(pc.latitude, pc.longitude, wp.latitude, wp.longitude) <
+            WAYPOINT_TRIGGER_RADIUS_M * 3,
+        );
+        if (near) factor = Math.min(factor, 0.45);
+      }
+
+      const next = Math.min(cur + baseAdvance * factor, N);
       progressIdxRef.current = next;
       setProgressIdx(next);
 
       const i = Math.floor(next);
       const p = gpsPoints[i];
 
-      // Cámara: solo recentramos cada ~3 índices para no saturar
-      // (setCamera anima ~250ms; spam crea jank).
-      if (i % 3 === 0 && cameraRef.current) {
+      // Cámara cinematográfica: tilt + heading alineado al avance.
+      // Recentramos cada ~3 índices para no saturar (setCamera anima ~350ms).
+      if (i % 3 === 0 && cameraRef.current && p) {
+        const ahead = gpsPoints[Math.min(N, i + 4)] ?? p;
+        const hdg = bearing(p.latitude, p.longitude, ahead.latitude, ahead.longitude);
         cameraRef.current.setCamera({
           centerCoordinate: [p.longitude, p.latitude],
           zoomLevel: 17,
+          pitch: CAMERA_PITCH,
+          heading: hdg,
           animationDuration: 350,
         });
       }
 
       // ¿Cruzamos un waypoint no mostrado?
-      const hit = waypoints.find((wp) =>
+      const hit = p && waypoints.find((wp) =>
         !shownWaypointIdsRef.current.has(wp.id) &&
         fastDistanceMeters(p.latitude, p.longitude, wp.latitude, wp.longitude) <
           WAYPOINT_TRIGGER_RADIUS_M
       );
       if (hit) {
         shownWaypointIdsRef.current.add(hit.id);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
         setActiveWaypoint(hit);
         setPhase('waypoint');
         return;
       }
 
       if (next >= N) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         setPhase('ended');
       }
     }, TICK_MS);
@@ -159,6 +245,9 @@ export default function ReplayScreen() {
     if (phase !== 'ended' || gpsPoints.length < 2) return;
     const lons = gpsPoints.map((p) => p.longitude);
     const lats = gpsPoints.map((p) => p.latitude);
+    // Reset de la cámara cinematográfica (tilt/heading) para un encuadre
+    // limpio de toda la ruta — también mejora la postal capturada.
+    cameraRef.current?.setCamera({ pitch: 0, heading: 0, animationDuration: 300 });
     cameraRef.current?.fitBounds(
       [Math.max(...lons), Math.max(...lats)],
       [Math.min(...lons), Math.min(...lats)],
@@ -190,6 +279,81 @@ export default function ReplayScreen() {
     setPhase('intro');
   }, []);
 
+  // ── Descargar "postal" de la ruta (imagen compartible) ──
+  const handleDownloadPostal = useCallback(async () => {
+    if (capturing) return;
+    // Carga diferida de react-native-view-shot: es un módulo NATIVO; si el
+    // binario instalado no lo incluye, importarlo arriba tumbaba toda la
+    // pantalla. Aquí degradamos con un mensaje en vez de romper el preview.
+    let captureRefFn: ((ref: unknown, opts: unknown) => Promise<string>) | null = null;
+    try {
+      captureRefFn = require('react-native-view-shot').captureRef;
+    } catch {
+      captureRefFn = null;
+    }
+    if (!captureRefFn) {
+      showToast('Reinstala la app para descargar la postal (módulo de captura no incluido en este build).', 'error');
+      return;
+    }
+    setCapturing(true);
+    const lons = gpsPoints.map((p) => p.longitude);
+    const lats = gpsPoints.map((p) => p.latitude);
+    const hasBounds = gpsPoints.length >= 2;
+    try {
+      // 1. Encuadre TIGHT y centrado para la postal (el del fin queda muy lejos
+      //    por el padding inferior que deja sitio a la tarjeta). Padding
+      //    simétrico y pequeño → la ruta llena el cuadro.
+      let mapUri: string | null = null;
+      try {
+        if (hasBounds && cameraRef.current) {
+          cameraRef.current.fitBounds(
+            [Math.max(...lons), Math.max(...lats)],
+            [Math.min(...lons), Math.min(...lats)],
+            [70, 50, 70, 50],
+            0,
+          );
+          await new Promise((r) => setTimeout(r, 900)); // esperar carga de tiles
+        }
+        mapUri = (await mapRef.current?.takeSnap?.(false)) ?? null;
+      } catch { /* sin mapa en la postal */ }
+      setPostalMapUri(mapUri);
+
+      // 2. Esperar a que la postal (oculta) renderice con la imagen del mapa.
+      await new Promise((r) => setTimeout(r, 400));
+
+      // 3. Permiso de galería.
+      const perm = await MediaLibrary.requestPermissionsAsync();
+      if (!perm.granted) {
+        showToast('Permiso de galería denegado.', 'error');
+        return;
+      }
+
+      // 4. Capturar la postal compuesta (Image + overlays → captura fiable).
+      const uri = await captureRefFn(postalRef, { format: 'png', quality: 1 });
+      await MediaLibrary.saveToLibraryAsync(uri);
+
+      // 5. Ofrecer compartir.
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Compartir ruta' });
+      }
+      showToast('Postal guardada en tu galería.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'No se pudo generar la postal.', 'error');
+    } finally {
+      // Restaurar el encuadre del fin (deja sitio a la tarjeta de stats).
+      if (hasBounds && cameraRef.current) {
+        cameraRef.current.fitBounds(
+          [Math.max(...lons), Math.max(...lats)],
+          [Math.min(...lons), Math.min(...lats)],
+          [120, 60, 240, 60],
+          500,
+        );
+      }
+      setCapturing(false);
+      setPostalMapUri(null);
+    }
+  }, [capturing, showToast, gpsPoints]);
+
   // ── Datos derivados para el render ───────────────────────────
   const traveledCoords = useMemo(() => {
     const i = Math.floor(progressIdx);
@@ -205,6 +369,34 @@ export default function ReplayScreen() {
   const currentPoint = gpsPoints[Math.floor(progressIdx)];
   const startPoint = gpsPoints[0];
   const endPoint = gpsPoints[gpsPoints.length - 1];
+
+  // ── Perfil de elevación dinámico (HUD cinematográfico) ──
+  const elevation = useMemo(() => {
+    const raw = gpsPoints.map((p) => p.altitude);
+    const hasAlt = raw.some((a) => a != null);
+    if (!hasAlt) return { hasAlt: false, bars: [] as number[], min: 0, max: 0, filled: [] as number[] };
+    // Carry-forward para tapar huecos de altitud nula.
+    let last = raw.find((a) => a != null) as number;
+    const filled = raw.map((a) => { if (a != null) last = a; return last; });
+    const min = Math.min(...filled);
+    const max = Math.max(...filled);
+    const N = 40;
+    const span = max - min;
+    const bars: number[] = [];
+    for (let i = 0; i < N; i++) {
+      const idx = Math.round((i / (N - 1)) * (filled.length - 1));
+      const v = span > 0 ? (filled[idx] - min) / span : 0;
+      bars.push(6 + v * 30); // 6..36 px
+    }
+    return { hasAlt: true, bars, min, max, filled };
+  }, [gpsPoints]);
+
+  const currentAlt = elevation.hasAlt
+    ? Math.round(elevation.filled[Math.floor(progressIdx)] ?? elevation.filled[0])
+    : null;
+
+  // Pulso del cursor (respira). Se recalcula en cada tick durante la reproducción.
+  const pulse = (Math.sin(Date.now() / 450) + 1) / 2; // 0..1
 
   const traveledGeoJson: GeoJSON.Feature<GeoJSON.LineString> | null =
     traveledCoords.length > 1
@@ -242,12 +434,14 @@ export default function ReplayScreen() {
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         logoEnabled={false}
         attributionEnabled={false}
         scrollEnabled={false}
         zoomEnabled={false}
         rotateEnabled={false}
+        pitchEnabled={false}
       >
         <RasterSource
           id="replay-tiles"
@@ -357,16 +551,17 @@ export default function ReplayScreen() {
             <CircleLayer
               id="replay-cursor-halo-outer"
               style={{
-                circleRadius: 28,
+                circleRadius: 24 + pulse * 14,
                 circleColor: '#F59E0B15',
                 circleStrokeColor: '#F59E0B25',
                 circleStrokeWidth: 1,
+                circleOpacity: 1 - pulse * 0.5,
               }}
             />
             <CircleLayer
               id="replay-cursor-halo-inner"
               style={{
-                circleRadius: 17,
+                circleRadius: 15 + pulse * 5,
                 circleColor: '#F59E0B30',
                 circleStrokeColor: '#F59E0B55',
                 circleStrokeWidth: 1,
@@ -399,6 +594,18 @@ export default function ReplayScreen() {
           </ShapeSource>
         )}
       </MapView>
+
+      {/* ── Vignette cinematográfico (arriba/abajo) ── */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#0D1B12E6', '#0D1B1200']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 170 }}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#0D1B1200', '#0D1B12F2']}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 280 }}
+      />
 
       <MissingTileKeyBanner />
 
@@ -462,6 +669,8 @@ export default function ReplayScreen() {
           waypointsCount={waypoints.length}
           onRestart={handleRestart}
           onClose={handleClose}
+          onDownload={handleDownloadPostal}
+          capturing={capturing}
           insetsBottom={insets.bottom}
         />
       )}
@@ -482,12 +691,59 @@ export default function ReplayScreen() {
           paddingBottom: 16,
           gap: 12,
         }}>
-          {/* Progress bar */}
-          <View style={{ height: 4, backgroundColor: '#FFFFFF20', borderRadius: 2, overflow: 'hidden' }}>
+          {/* HUD de altitud + mini-perfil de elevación dinámico */}
+          {elevation.hasAlt && (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <View>
+                  <Text style={{ color: colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5 }}>
+                    ALTITUD
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700' }}>
+                    {currentAlt} m
+                  </Text>
+                </View>
+                <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                  máx {Math.round(elevation.max)} m
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 36, gap: 2 }}>
+                {elevation.bars.map((h, i) => {
+                  const frac = i / (elevation.bars.length - 1);
+                  return (
+                    <View key={i} style={{
+                      flex: 1,
+                      height: h,
+                      borderRadius: 1,
+                      backgroundColor: frac <= progressPct ? colors.accent : '#2D6A4F',
+                    }} />
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {/* Scrubber arrastrable (arrastra para mover el replay) */}
+          <View
+            {...pan.panHandlers}
+            onLayout={(e: LayoutChangeEvent) => { barWidthRef.current = e.nativeEvent.layout.width; }}
+            style={{ paddingVertical: 8, justifyContent: 'center' }}
+          >
+            <View style={{ height: 4, backgroundColor: '#FFFFFF20', borderRadius: 2 }}>
+              <View style={{
+                width: `${progressPct * 100}%`,
+                height: '100%',
+                backgroundColor: colors.accent,
+                borderRadius: 2,
+              }} />
+            </View>
             <View style={{
-              width: `${progressPct * 100}%`,
-              height: '100%',
-              backgroundColor: colors.accent,
+              position: 'absolute',
+              left: `${progressPct * 100}%`,
+              marginLeft: -7,
+              width: 14, height: 14, borderRadius: 7,
+              backgroundColor: '#fff',
+              borderWidth: 2, borderColor: colors.accent,
             }} />
           </View>
 
@@ -537,6 +793,23 @@ export default function ReplayScreen() {
           </View>
         </View>
       )}
+
+      {/* ── Postal oculta (fuera de pantalla) para capturar y compartir ── */}
+      {capturing && (
+        <View
+          ref={postalRef}
+          collapsable={false}
+          style={{ position: 'absolute', left: -9999, top: 0, width: SCREEN_W }}
+        >
+          <RoutePostalContent
+            route={route}
+            mapUri={postalMapUri}
+            bars={elevation.bars}
+            waypointsCount={waypoints.length}
+            gpsCount={gpsPoints.length}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -544,6 +817,83 @@ export default function ReplayScreen() {
 // ─────────────────────────────────────────────────────────────────
 // Overlays
 // ─────────────────────────────────────────────────────────────────
+
+/** Tarjeta "postal" compartible: mapa + stats + perfil de elevación. */
+function RoutePostalContent({
+  route, mapUri, bars, waypointsCount, gpsCount,
+}: {
+  route: Route;
+  mapUri: string | null;
+  bars: number[];
+  waypointsCount: number;
+  gpsCount: number;
+}) {
+  const chips = [
+    { label: 'Distancia', value: formatDistance(route.distanceMeters) },
+    { label: 'Duración', value: formatDuration(route.durationSeconds) },
+    { label: 'Subida', value: formatElevation(route.elevationGainMeters) },
+    { label: 'Elev. máx.', value: formatElevation(route.maxElevationMeters, false) },
+  ];
+  return (
+    <View style={{ width: SCREEN_W, backgroundColor: colors.bgPrimary }}>
+      {/* Mapa */}
+      <View style={{ width: SCREEN_W, height: SCREEN_W * 0.66, backgroundColor: '#0D1B12' }}>
+        {mapUri ? (
+          <Image source={{ uri: mapUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="map-outline" size={48} color="#2D6A4F" />
+          </View>
+        )}
+        <LinearGradient
+          colors={['#0D1B1200', '#0D1B12F2']}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 }}
+        />
+        <View style={{ position: 'absolute', left: 20, bottom: 16, right: 20 }}>
+          <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700', letterSpacing: 2 }}>
+            ÑAN KAMAY
+          </Text>
+          <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800' }} numberOfLines={1}>
+            {route.name}
+          </Text>
+        </View>
+      </View>
+
+      {/* Stats */}
+      <View style={{ padding: 20, gap: 16 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          {chips.map((c) => (
+            <View key={c.label} style={{
+              width: (SCREEN_W - 40 - 12) / 2,
+              backgroundColor: colors.bgCard,
+              borderRadius: 12, padding: 14,
+              borderWidth: 1, borderColor: colors.border,
+            }}>
+              <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }}>{c.value}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{c.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Perfil de elevación */}
+        {bars.length > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 44, gap: 2 }}>
+            {bars.map((h, i) => (
+              <View key={i} style={{ flex: 1, height: h + 4, borderRadius: 1, backgroundColor: colors.accent }} />
+            ))}
+          </View>
+        )}
+
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{gpsCount} puntos GPS</Text>
+          {waypointsCount > 0 && (
+            <Text style={{ color: colors.textMuted, fontSize: 12 }}>{waypointsCount} waypoints</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function IntroOverlay({ name, insetsTop }: { name: string; insetsTop: number }) {
   // Contenedor entra desde abajo con fade.
@@ -610,8 +960,6 @@ function IntroOverlay({ name, insetsTop }: { name: string; insetsTop: number }) 
     </Animated.View>
   );
 }
-
-const AnimatedImage = Animated.createAnimatedComponent(Image);
 
 function WaypointOverlay({
   waypoint, index, total, onContinue, insetsBottom,
@@ -723,13 +1071,12 @@ function WaypointOverlay({
           borderColor: '#F59E0B40',
         }}>
           {hasImage && (
-            <View style={{ width: '100%', height: SCREEN_W * 0.55, backgroundColor: '#000', overflow: 'hidden' }}>
-              <AnimatedImage
-                source={{ uri: waypoint.imageUris[0] }}
-                style={[{ width: '100%', height: '100%' }, imgStyle]}
-                resizeMode="cover"
-              />
-            </View>
+            <WaypointPhotoCarousel
+              uris={waypoint.imageUris}
+              width={SCREEN_W - 32}
+              height={SCREEN_W * 0.55}
+              animatedStyle={imgStyle}
+            />
           )}
           <View style={{ padding: 18, gap: 8 }}>
             {/* Tipo (icono real) + contador de waypoints */}
@@ -776,11 +1123,6 @@ function WaypointOverlay({
               </Animated.View>
             ) : null}
 
-            {waypoint.imageUris.length > 1 && (
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
-                +{waypoint.imageUris.length - 1} foto{waypoint.imageUris.length > 2 ? 's' : ''} más
-              </Text>
-            )}
 
             <TouchableOpacity
               onPress={handleContinue}
@@ -808,13 +1150,15 @@ function WaypointOverlay({
 }
 
 function EndOverlay({
-  route, gpsPointsCount, waypointsCount, onRestart, onClose, insetsBottom,
+  route, gpsPointsCount, waypointsCount, onRestart, onClose, onDownload, capturing, insetsBottom,
 }: {
   route: Route;
   gpsPointsCount: number;
   waypointsCount: number;
   onRestart: () => void;
   onClose: () => void;
+  onDownload: () => void;
+  capturing: boolean;
   insetsBottom: number;
 }) {
   const opacity = useSharedValue(0);
@@ -873,6 +1217,31 @@ function EndOverlay({
           <Stat key={s.label} label={s.label} value={s.value} delay={400 + i * 90} />
         ))}
       </View>
+
+      {/* Descargar postal compartible */}
+      <TouchableOpacity
+        onPress={onDownload}
+        disabled={capturing}
+        style={{
+          backgroundColor: colors.bgCard,
+          borderRadius: 12,
+          paddingVertical: 13,
+          alignItems: 'center',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: 8,
+          borderWidth: 1, borderColor: colors.accent + '60',
+        }}
+      >
+        {capturing ? (
+          <ActivityIndicator size="small" color={colors.accent} />
+        ) : (
+          <Ionicons name="download-outline" size={18} color={colors.accent} />
+        )}
+        <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>
+          {capturing ? 'Generando…' : 'Descargar postal'}
+        </Text>
+      </TouchableOpacity>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <TouchableOpacity

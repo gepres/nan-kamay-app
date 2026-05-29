@@ -14,7 +14,11 @@ export const NK_TABLES = {
   gpsPoints: 'nk_gps_points',
   waypoints: 'nk_waypoints',
   waypointImages: 'nk_waypoint_images',
+  /** Media unificada de waypoints (fotos, videos, notas de voz). */
+  waypointMedia: 'nk_waypoint_media',
 } as const;
 
 /** Bucket de Storage para imágenes de waypoints (prefijo para no colisionar). */
 export const NK_BUCKET = 'nk-waypoint-images';
+/** Bucket de Storage para media de waypoints (fotos, video, audio). */
+export const NK_MEDIA_BUCKET = 'nk-waypoint-media';

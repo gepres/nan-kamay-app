@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  ActionSheetIOS,
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -17,9 +16,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
-import { Waypoint } from '@core/entities/Waypoint';
+import { Waypoint, WaypointMedia } from '@core/entities/Waypoint';
 import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
 import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
 import { appendDraftWaypoint } from '@application/tracking/DraftRouteUseCase';
@@ -27,14 +28,50 @@ import { colors } from '@presentation/theme/colors';
 
 const DEFAULT_ICON_COLOR = '#F59E0B';
 const RECENTS_KEY = 'nk:recentWaypointTypes';
+const MAX_PER_TYPE = 3;       // máx 3 fotos, 3 videos, 3 notas de voz (por waypoint)
+const MAX_VIDEO_SEC = 15;
+const MAX_AUDIO_SEC = 45;
+
+const addTileStyle = {
+  width: 96, height: 96, borderRadius: 10,
+  backgroundColor: colors.bgInput, borderWidth: 1.5, borderColor: colors.border,
+  borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4,
+} as const;
+const addTileText = { color: colors.textMuted, fontSize: 11, fontWeight: '500' } as const;
+
+function RemoveBtn({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{
+        position: 'absolute', top: -8, right: -8,
+        backgroundColor: colors.danger, borderRadius: 12,
+        width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <Ionicons name="close" size={14} color="#fff" />
+    </TouchableOpacity>
+  );
+}
 
 export default function WaypointScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [waypointType, setWaypointType] = useState('Mirador');
-  const [imageUris, setImageUris] = useState<string[]>([]);
+  const [media, setMedia] = useState<WaypointMedia[]>([]);
   const [recentTypes, setRecentTypes] = useState<WaypointTypeInfo[]>([]);
   const { addWaypoint, routeId, currentPosition } = useTrackingStore();
+
+  // Grabador de notas de voz (expo-audio).
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recSec, setRecSec] = useState(0);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const photos = media.filter((m) => m.type === 'image');
+  const videos = media.filter((m) => m.type === 'video');
+  const audios = media.filter((m) => m.type === 'audio');
 
   // Check for pending type selection when screen regains focus (returning from selector)
   useFocusEffect(
@@ -81,56 +118,133 @@ export default function WaypointScreen() {
     addToRecents(label);
   };
 
-  const pickFromGallery = async () => {
+  const addMedia = (item: WaypointMedia) => setMedia((prev) => [...prev, item]);
+  const removeMedia = (uri: string) => setMedia((prev) => prev.filter((m) => m.uri !== uri));
+
+  // ── Fotos (cámara/galería) ──
+  const pickPhotoFromGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
       allowsMultipleSelection: true,
-      selectionLimit: 5 - imageUris.length,
+      selectionLimit: MAX_PER_TYPE - photos.length,
     });
     if (!result.canceled) {
-      const uris = result.assets.map((a) => a.uri);
-      setImageUris((prev) => [...prev, ...uris].slice(0, 5));
+      const items = result.assets.slice(0, MAX_PER_TYPE - photos.length)
+        .map((a): WaypointMedia => ({ type: 'image', uri: a.uri }));
+      items.forEach(addMedia);
     }
   };
-
-  const pickFromCamera = async () => {
+  const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permiso requerido', 'Activa el acceso a la cámara en Configuración.');
       return;
     }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (!result.canceled && result.assets[0]) {
+      addMedia({ type: 'image', uri: result.assets[0].uri });
+    }
+  };
+  const handleAddPhoto = () => {
+    if (photos.length >= MAX_PER_TYPE) return;
+    Alert.alert('Agregar foto', '', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Tomar foto', onPress: takePhoto },
+      { text: 'Elegir de galería', onPress: pickPhotoFromGallery },
+    ]);
+  };
+
+  // ── Videos (≤15s) ──
+  const makeThumb = async (uri: string): Promise<string | undefined> => {
+    try {
+      const { uri: thumb } = await VideoThumbnails.getThumbnailAsync(uri, { time: 500, quality: 0.6 });
+      return thumb;
+    } catch {
+      return undefined;
+    }
+  };
+  const recordVideo = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permiso requerido', 'Activa la cámara en Configuración.');
+      return;
+    }
     const result = await ImagePicker.launchCameraAsync({
-      quality: 0.8,
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      videoMaxDuration: MAX_VIDEO_SEC,
+      quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      setImageUris((prev) => [...prev, result.assets[0].uri].slice(0, 5));
+      const a = result.assets[0];
+      addMedia({ type: 'video', uri: a.uri, durationMs: a.duration ?? undefined, thumbnailUri: await makeThumb(a.uri) });
+    }
+  };
+  const pickVideoFromGallery = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      videoMaxDuration: MAX_VIDEO_SEC,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const a = result.assets[0];
+      if (a.duration && a.duration > (MAX_VIDEO_SEC + 1) * 1000) {
+        Alert.alert('Video muy largo', `El video debe durar máximo ${MAX_VIDEO_SEC} s.`);
+        return;
+      }
+      addMedia({ type: 'video', uri: a.uri, durationMs: a.duration ?? undefined, thumbnailUri: await makeThumb(a.uri) });
+    }
+  };
+  const handleAddVideo = () => {
+    if (videos.length >= MAX_PER_TYPE) return;
+    Alert.alert('Agregar video', `Máximo ${MAX_VIDEO_SEC} segundos.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Grabar', onPress: recordVideo },
+      { text: 'Elegir de galería', onPress: pickVideoFromGallery },
+    ]);
+  };
+
+  // ── Notas de voz (≤45s) ──
+  const stopRecording = useCallback(async () => {
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    try {
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      if (uri) addMedia({ type: 'audio', uri, durationMs: recSec * 1000 });
+    } catch (e) {
+      console.error('[audio] stop falló', e);
+    } finally {
+      setIsRecording(false);
+      setRecSec(0);
+    }
+  }, [audioRecorder, recSec]);
+
+  const startRecording = async () => {
+    if (audios.length >= MAX_PER_TYPE) return;
+    const perm = await AudioModule.requestRecordingPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permiso requerido', 'Activa el micrófono en Configuración.');
+      return;
+    }
+    try {
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      setIsRecording(true);
+      setRecSec(0);
+      recTimerRef.current = setInterval(() => {
+        setRecSec((s) => {
+          if (s + 1 >= MAX_AUDIO_SEC) { stopRecording(); return MAX_AUDIO_SEC; }
+          return s + 1;
+        });
+      }, 1000);
+    } catch (e) {
+      console.error('[audio] record falló', e);
+      setIsRecording(false);
     }
   };
 
-  const handleAddImage = () => {
-    if (imageUris.length >= 5) return;
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: ['Cancelar', 'Tomar foto', 'Elegir de galería'], cancelButtonIndex: 0 },
-        (index) => {
-          if (index === 1) pickFromCamera();
-          if (index === 2) pickFromGallery();
-        }
-      );
-    } else {
-      Alert.alert('Agregar foto', '', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Tomar foto', onPress: pickFromCamera },
-        { text: 'Elegir de galería', onPress: pickFromGallery },
-      ]);
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setImageUris((prev) => prev.filter((_, i) => i !== index));
-  };
+  // Limpieza del timer al desmontar.
+  useEffect(() => () => { if (recTimerRef.current) clearInterval(recTimerRef.current); }, []);
 
   const handleSave = () => {
     if (!title.trim() || !routeId) return;
@@ -143,7 +257,7 @@ export default function WaypointScreen() {
       title: title.trim(),
       description: description.trim() || undefined,
       type: waypointType,
-      imageUris,
+      media,
     });
 
     addWaypoint(waypoint);
@@ -327,75 +441,109 @@ export default function WaypointScreen() {
             </View>
           </View>
 
-          {/* Foto */}
+          {/* ── Fotos ── */}
           <View>
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 10 }}>
-              Foto
+              Fotos ({photos.length}/{MAX_PER_TYPE})
             </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {photos.map((m) => (
+                <View key={m.uri} style={{ position: 'relative' }}>
+                  <Image source={{ uri: m.uri }} style={{ width: 96, height: 96, borderRadius: 10, borderWidth: 1, borderColor: colors.border }} />
+                  <RemoveBtn onPress={() => removeMedia(m.uri)} />
+                </View>
+              ))}
+              {photos.length < MAX_PER_TYPE && (
+                <TouchableOpacity onPress={handleAddPhoto} style={addTileStyle}>
+                  <Ionicons name="camera-outline" size={26} color={colors.textMuted} />
+                  <Text style={addTileText}>Foto</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
 
-            {/* Previsualizaciones */}
-            {imageUris.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 12 }}
-                contentContainerStyle={{ gap: 10 }}
-              >
-                {imageUris.map((uri, index) => (
-                  <View key={index} style={{ position: 'relative' }}>
-                    <Image
-                      source={{ uri }}
-                      style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      }}
-                    />
-                    {/* Botón eliminar */}
-                    <TouchableOpacity
-                      onPress={() => handleRemoveImage(index)}
-                      style={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        backgroundColor: colors.danger,
-                        borderRadius: 12,
-                        width: 24,
-                        height: 24,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Ionicons name="close" size={14} color="#fff" />
-                    </TouchableOpacity>
+          {/* ── Videos (≤15s) ── */}
+          <View>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 10 }}>
+              Videos ({videos.length}/{MAX_PER_TYPE}) · máx {MAX_VIDEO_SEC}s
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {videos.map((m) => (
+                <View key={m.uri} style={{ position: 'relative' }}>
+                  <View style={{ width: 96, height: 96, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }}>
+                    {m.thumbnailUri ? (
+                      <Image source={{ uri: m.thumbnailUri }} style={{ width: '100%', height: '100%' }} />
+                    ) : (
+                      <Ionicons name="videocam" size={26} color={colors.textMuted} />
+                    )}
+                    <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="play-circle" size={30} color="#FFFFFFDD" />
+                    </View>
                   </View>
-                ))}
-              </ScrollView>
-            )}
+                  <RemoveBtn onPress={() => removeMedia(m.uri)} />
+                </View>
+              ))}
+              {videos.length < MAX_PER_TYPE && (
+                <TouchableOpacity onPress={handleAddVideo} style={addTileStyle}>
+                  <Ionicons name="videocam-outline" size={26} color={colors.textMuted} />
+                  <Text style={addTileText}>Video</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
 
-            {/* Botón agregar foto — vertical, solid border (matches Pencil) */}
-            {imageUris.length < 5 && (
-              <TouchableOpacity
-                onPress={handleAddImage}
-                style={{
-                  backgroundColor: colors.bgInput,
-                  borderColor: colors.border,
-                  borderWidth: 1.5,
-                  borderRadius: 12,
-                  height: 120,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
-                <Text style={{ color: colors.textMuted, fontSize: 13, fontWeight: '500' }}>
-                  Toca para subir foto
-                </Text>
-              </TouchableOpacity>
-            )}
+          {/* ── Notas de voz (≤45s) ── */}
+          <View>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', marginBottom: 10 }}>
+              Notas de voz ({audios.length}/{MAX_PER_TYPE}) · máx {MAX_AUDIO_SEC}s
+            </Text>
+            <View style={{ gap: 8 }}>
+              {audios.map((m, i) => (
+                <View key={m.uri} style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  backgroundColor: colors.bgCard, borderRadius: 10, padding: 12,
+                  borderWidth: 1, borderColor: colors.border,
+                }}>
+                  <Ionicons name="mic" size={18} color={colors.accent} />
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, flex: 1 }}>
+                    Nota {i + 1}{m.durationMs ? ` · ${Math.round(m.durationMs / 1000)}s` : ''}
+                  </Text>
+                  <TouchableOpacity onPress={() => removeMedia(m.uri)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {isRecording ? (
+                <TouchableOpacity
+                  onPress={stopRecording}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    backgroundColor: colors.danger + '22', borderRadius: 10, paddingVertical: 14,
+                    borderWidth: 1, borderColor: colors.danger,
+                  }}
+                >
+                  <View style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: colors.danger }} />
+                  <Text style={{ color: colors.danger, fontSize: 14, fontWeight: '700' }}>
+                    Grabando {recSec}s · Detener
+                  </Text>
+                </TouchableOpacity>
+              ) : audios.length < MAX_PER_TYPE ? (
+                <TouchableOpacity
+                  onPress={startRecording}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    backgroundColor: colors.bgInput, borderRadius: 10, paddingVertical: 14,
+                    borderWidth: 1.5, borderColor: colors.border,
+                  }}
+                >
+                  <Ionicons name="mic-outline" size={20} color={colors.accent} />
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '500' }}>
+                    Grabar nota de voz
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
 
           {/* Guardar */}

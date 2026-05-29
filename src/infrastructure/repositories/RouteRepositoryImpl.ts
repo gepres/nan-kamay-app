@@ -59,10 +59,10 @@ export class RouteRepositoryImpl implements IRouteRepository {
         const r = waypointToRow(wp);
         await db.runAsync(
           `INSERT OR REPLACE INTO waypoints
-            (id, route_id, latitude, longitude, altitude, title, description, type, image_uris, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            (id, route_id, latitude, longitude, altitude, title, description, type, image_uris, media, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
           [r.id, r.route_id, r.latitude, r.longitude,
-           r.altitude, r.title, r.description, r.type, r.image_uris, r.created_at] as (string | number | null)[]
+           r.altitude, r.title, r.description, r.type, r.image_uris, r.media, r.created_at] as (string | number | null)[]
         );
       }
     });
@@ -222,13 +222,18 @@ export class RouteRepositoryImpl implements IRouteRepository {
   }
 
   /**
-   * Reemplaza las URIs de imágenes de un waypoint por las URLs remotas tras
-   * subirlas. Así un re-sync ve URLs `http` y no las vuelve a subir (A8).
+   * Reemplaza la media de un waypoint por la versión con URLs remotas tras
+   * subirlas. Así un re-sync ve URLs `http` y no las vuelve a subir.
+   * Actualiza también `image_uris` (derivado) por compatibilidad.
    */
-  async updateWaypointImageUris(waypointId: string, uris: string[]): Promise<void> {
+  async updateWaypointMedia(
+    waypointId: string,
+    media: { type: string; uri: string; durationMs?: number; thumbnailUri?: string }[],
+  ): Promise<void> {
+    const imageUris = media.filter((m) => m.type === 'image').map((m) => m.uri);
     await db.runAsync(
-      'UPDATE waypoints SET image_uris = ? WHERE id = ?',
-      [JSON.stringify(uris), waypointId]
+      'UPDATE waypoints SET media = ?, image_uris = ? WHERE id = ?',
+      [JSON.stringify(media), JSON.stringify(imageUris), waypointId]
     );
   }
 }

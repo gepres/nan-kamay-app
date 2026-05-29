@@ -1,6 +1,6 @@
 import { Route } from '../../entities/Route';
 import { GpsPoint } from '../../entities/GpsPoint';
-import { Waypoint } from '../../entities/Waypoint';
+import { Waypoint, WaypointMedia } from '../../entities/Waypoint';
 
 export interface IRouteRepository {
   save(route: Route, gpsPoints: GpsPoint[], waypoints: Waypoint[]): Promise<void>;
@@ -15,5 +15,5 @@ export interface IRouteRepository {
   delete(id: string): Promise<void>;
   getUnsyncedRoutes(userId: string): Promise<Route[]>;
   markAsSynced(routeId: string): Promise<void>;
-  updateWaypointImageUris(waypointId: string, uris: string[]): Promise<void>;
+  updateWaypointMedia(waypointId: string, media: WaypointMedia[]): Promise<void>;
 }

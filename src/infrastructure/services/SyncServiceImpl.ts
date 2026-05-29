@@ -3,10 +3,11 @@ import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImp
 import { routeToSupabase, supabaseToRoute } from '@infrastructure/mappers/RouteMapper';
 import { gpsPointToSupabase, supabaseToGpsPoint } from '@infrastructure/mappers/GpsPointMapper';
 import { waypointToSupabase, supabaseToWaypoint } from '@infrastructure/mappers/WaypointMapper';
-import { uploadWaypointImages } from './ImageUploadService';
-import { NK_TABLES, NK_BUCKET } from '@infrastructure/supabase/tables';
+import { uploadWaypointMedia } from './MediaUploadService';
+import { NK_TABLES, NK_BUCKET, NK_MEDIA_BUCKET } from '@infrastructure/supabase/tables';
 import { uuidv4 } from '@shared/utils/uuid';
 import { Route } from '@core/entities/Route';
+import { WaypointMedia } from '@core/entities/Waypoint';
 
 export interface SyncResult {
   synced: number;
@@ -40,16 +41,18 @@ async function pushRoute(route: Route, userId: string): Promise<void> {
     if (gpsErr) throw new Error(`GPS points: ${gpsErr.message}`);
   }
 
-  // 3. Waypoints + imágenes
+  // 3. Waypoints + media (fotos, videos, notas de voz)
   const waypoints = await routeRepository.getWaypoints(route.id);
   for (const wp of waypoints) {
-    // Subir solo imágenes locales (las que ya son http se devuelven igual).
-    const remoteUris = await uploadWaypointImages(wp.imageUris, userId, wp.id);
+    // Subir solo media local (la que ya es http se devuelve igual).
+    const remoteMedia = await uploadWaypointMedia(wp.media, userId, wp.id);
 
-    // A8: persistir las URLs remotas en SQLite → un re-sync ya no
-    // las vuelve a subir (uploadWaypointImages las salta por ser http).
-    if (remoteUris.some((u, i) => u !== wp.imageUris[i])) {
-      await routeRepository.updateWaypointImageUris(wp.id, remoteUris);
+    // Persistir las URLs remotas en SQLite → un re-sync no las re-sube.
+    const changed = remoteMedia.some(
+      (m, i) => m.uri !== wp.media[i]?.uri || m.thumbnailUri !== wp.media[i]?.thumbnailUri,
+    );
+    if (changed) {
+      await routeRepository.updateWaypointMedia(wp.id, remoteMedia);
     }
 
     const wpSupabase = waypointToSupabase(wp);
@@ -58,20 +61,22 @@ async function pushRoute(route: Route, userId: string): Promise<void> {
       .upsert(wpSupabase, { onConflict: 'id' });
     if (wpErr) throw new Error(`Waypoint: ${wpErr.message}`);
 
-    // A8: idempotente — borrar las filas previas de este waypoint y
-    // reinsertar el set actual (evita acumular duplicados en reintentos).
+    // Idempotente: borrar filas previas (media nueva + imágenes legacy) y
+    // reinsertar el set actual en nk_waypoint_media.
+    await supabase.from(NK_TABLES.waypointMedia).delete().eq('waypoint_id', wp.id);
     await supabase.from(NK_TABLES.waypointImages).delete().eq('waypoint_id', wp.id);
-    if (remoteUris.length > 0) {
-      const images = remoteUris.map((url) => ({
+    if (remoteMedia.length > 0) {
+      const rows = remoteMedia.map((m) => ({
         id: uuidv4(),
         waypoint_id: wp.id,
-        storage_path: url,
+        type: m.type,
+        storage_path: m.uri,
+        thumbnail_path: m.thumbnailUri ?? null,
+        duration_ms: m.durationMs ?? null,
         created_at: new Date().toISOString(),
       }));
-      const { error: imgErr } = await supabase
-        .from(NK_TABLES.waypointImages)
-        .insert(images);
-      if (imgErr) throw new Error(`Waypoint images: ${imgErr.message}`);
+      const { error: mErr } = await supabase.from(NK_TABLES.waypointMedia).insert(rows);
+      if (mErr) throw new Error(`Waypoint media: ${mErr.message}`);
     }
   }
 }
@@ -173,12 +178,31 @@ export async function pullRemoteRoutes(userId: string): Promise<PullResult> {
     const gpsPoints = (gp ?? []).map(supabaseToGpsPoint);
     const waypoints = await Promise.all(
       (wp ?? []).map(async (w) => {
+        const media: WaypointMedia[] = [];
+        // Media nueva (foto/video/audio).
+        const { data: mediaRows } = await supabase
+          .from(NK_TABLES.waypointMedia)
+          .select('type, storage_path, thumbnail_path, duration_ms')
+          .eq('waypoint_id', w.id);
+        for (const m of mediaRows ?? []) {
+          media.push({
+            type: (m.type as WaypointMedia['type']) ?? 'image',
+            uri: m.storage_path as string,
+            thumbnailUri: (m.thumbnail_path as string | null) ?? undefined,
+            durationMs: (m.duration_ms as number | null) ?? undefined,
+          });
+        }
+        // Legacy: imágenes en nk_waypoint_images (rutas antiguas).
         const { data: imgs } = await supabase
           .from(NK_TABLES.waypointImages)
           .select('storage_path')
           .eq('waypoint_id', w.id);
-        const uris = (imgs ?? []).map((i) => i.storage_path as string);
-        return supabaseToWaypoint(w, uris);
+        const seen = new Set(media.map((m) => m.uri));
+        for (const img of imgs ?? []) {
+          const uri = img.storage_path as string;
+          if (!seen.has(uri)) media.push({ type: 'image', uri });
+        }
+        return supabaseToWaypoint(w, media);
       })
     );
 
@@ -200,16 +224,27 @@ export async function deleteRemoteRoute(routeId: string): Promise<void> {
       .eq('route_id', routeId);
     const wpIds = (wps ?? []).map((w) => w.id as string);
     if (wpIds.length > 0) {
+      // Legacy: bucket de imágenes.
       const { data: imgs } = await supabase
         .from(NK_TABLES.waypointImages)
         .select('storage_path')
         .in('waypoint_id', wpIds);
-      const keys = (imgs ?? [])
+      const imgKeys = (imgs ?? [])
         .map((i) => String(i.storage_path).split(`/${NK_BUCKET}/`)[1])
         .filter((k): k is string => !!k);
-      if (keys.length > 0) {
-        await supabase.storage.from(NK_BUCKET).remove(keys);
-      }
+      if (imgKeys.length > 0) await supabase.storage.from(NK_BUCKET).remove(imgKeys);
+
+      // Media nueva (bucket de media): incluye archivo + miniatura.
+      const { data: mediaRows } = await supabase
+        .from(NK_TABLES.waypointMedia)
+        .select('storage_path, thumbnail_path')
+        .in('waypoint_id', wpIds);
+      const mediaKeys = (mediaRows ?? [])
+        .flatMap((m) => [m.storage_path, m.thumbnail_path])
+        .filter((p): p is string => !!p)
+        .map((p) => String(p).split(`/${NK_MEDIA_BUCKET}/`)[1])
+        .filter((k): k is string => !!k);
+      if (mediaKeys.length > 0) await supabase.storage.from(NK_MEDIA_BUCKET).remove(mediaKeys);
     }
   } catch (e) {
     console.warn('[sync] no se pudieron limpiar imágenes de Storage', e);

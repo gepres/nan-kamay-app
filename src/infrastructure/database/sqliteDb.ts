@@ -15,6 +15,7 @@ async function runMigrations(): Promise<void> {
     `ALTER TABLE routes ADD COLUMN min_elevation_meters REAL NOT NULL DEFAULT 0`,
     `ALTER TABLE routes ADD COLUMN parent_route_id TEXT`,
     `ALTER TABLE waypoints ADD COLUMN type TEXT`,
+    `ALTER TABLE waypoints ADD COLUMN media TEXT NOT NULL DEFAULT '[]'`,
   ];
   for (const sql of alters) {
     try {
@@ -110,6 +111,7 @@ export async function initDatabase(): Promise<void> {
       description TEXT,
       type TEXT,
       image_uris TEXT NOT NULL DEFAULT '[]',
+      media TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL,
       FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE CASCADE
     );

@@ -30,7 +30,18 @@
       "WebFetch(domain:codeberg.org)",
       "Bash(eas *)",
       "Bash(python3 -c ' *)",
-      "Bash(claude mcp *)"
+      "Bash(claude mcp *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell($emu = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe\"; Start-Process -FilePath $emu -ArgumentList \"-avd\",\"Pixel_8\",\"-netdelay\",\"none\",\"-netspeed\",\"full\"; \"Emulador Pixel_8 arrancando...\")",
+      "PowerShell($adb = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\"; & $adb wait-for-device; $ok=$false; for \\($i=0; $i -lt 60; $i++\\){ $b = \\(& $adb shell getprop sys.boot_completed 2>$null\\); if \\($b -match \"1\"\\) { $ok=$true; break }; Start-Sleep -Seconds 3 }; if \\($ok\\) { \"BOOT OK\"; & $adb devices } else { \"TIMEOUT esperando boot\" })",
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; npx expo run:android --device emulator-5554)",
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; npx expo run:android)",
+      "PowerShell($adb = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\"; & $adb logcat -d -t 800 2>$null | Select-String -Pattern \"ReactNativeJS|ExpoModules|getEnforcing|Invariant|TurboModule|Unable to|Exception|FATAL|could not|is not a function|Error:\" | Select-Object -Last 60)",
+      "PowerShell($adb = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\"; & $adb logcat -d 2>$null | Select-String -Pattern \"ReactNativeJS|DevLauncher|ExpoModulesCore|AppLoader\" | Select-Object -Last 50)",
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --console=plain 2>&1 | Select-Object -Last 5)",
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --console=plain 2>&1 | Select-String -Pattern \"FAILURE|What went wrong|Execution failed|FAILED|error:|Caused by|^e: |A problem occurred|> \" | Select-Object -First 40)",
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --console=plain 2>&1 | Select-Object -Last 45)",
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --dry-run --console=plain 2>&1 | Select-Object -Last 12})"
     ]
   }
 }

@@ -68,12 +68,23 @@ CREATE TABLE IF NOT EXISTS public.nk_waypoints (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- ── Imágenes de waypoints ─────────────────────────────────────
+-- ── Imágenes de waypoints (LEGACY: fotos antiguas) ────────────
 CREATE TABLE IF NOT EXISTS public.nk_waypoint_images (
   id           UUID PRIMARY KEY,
   waypoint_id  UUID NOT NULL REFERENCES public.nk_waypoints(id) ON DELETE CASCADE,
   storage_path TEXT NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── Media de waypoints (fotos, videos, notas de voz) ──────────
+CREATE TABLE IF NOT EXISTS public.nk_waypoint_media (
+  id             UUID PRIMARY KEY,
+  waypoint_id    UUID NOT NULL REFERENCES public.nk_waypoints(id) ON DELETE CASCADE,
+  type           TEXT NOT NULL CHECK (type IN ('image','video','audio')),
+  storage_path   TEXT NOT NULL,
+  thumbnail_path TEXT,
+  duration_ms    INTEGER,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ── Índices (nombres prefijados para unicidad global) ─────────
@@ -83,12 +94,14 @@ CREATE INDEX IF NOT EXISTS idx_nk_routes_parent    ON public.nk_routes(parent_ro
 CREATE INDEX IF NOT EXISTS idx_nk_gps_points_route ON public.nk_gps_points(route_id, sequence_index);
 CREATE INDEX IF NOT EXISTS idx_nk_waypoints_route  ON public.nk_waypoints(route_id);
 CREATE INDEX IF NOT EXISTS idx_nk_wp_images_wp     ON public.nk_waypoint_images(waypoint_id);
+CREATE INDEX IF NOT EXISTS idx_nk_wp_media_wp      ON public.nk_waypoint_media(waypoint_id);
 
 -- ── Row Level Security (RLS) ──────────────────────────────────
 ALTER TABLE public.nk_routes          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nk_gps_points      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nk_waypoints       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nk_waypoint_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.nk_waypoint_media  ENABLE ROW LEVEL SECURITY;
 
 -- nk_routes: el usuario ve/edita sus rutas (+ rutas públicas de otros)
 DROP POLICY IF EXISTS "nk_routes_select" ON public.nk_routes;
@@ -192,7 +205,40 @@ CREATE POLICY "nk_wp_images_delete" ON public.nk_waypoint_images FOR DELETE
     WHERE wp.id = waypoint_id AND r.user_id = auth.uid()
   ));
 
--- ── Storage bucket para imágenes (nombre prefijado) ───────────
+-- nk_waypoint_media (mismo patrón vía ownership de la ruta del waypoint)
+DROP POLICY IF EXISTS "nk_wp_media_select" ON public.nk_waypoint_media;
+CREATE POLICY "nk_wp_media_select" ON public.nk_waypoint_media FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM public.nk_waypoints wp
+    JOIN public.nk_routes r ON r.id = wp.route_id
+    WHERE wp.id = waypoint_id AND (r.user_id = auth.uid() OR r.is_public = true)
+  ));
+
+DROP POLICY IF EXISTS "nk_wp_media_insert" ON public.nk_waypoint_media;
+CREATE POLICY "nk_wp_media_insert" ON public.nk_waypoint_media FOR INSERT
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.nk_waypoints wp
+    JOIN public.nk_routes r ON r.id = wp.route_id
+    WHERE wp.id = waypoint_id AND r.user_id = auth.uid()
+  ));
+
+DROP POLICY IF EXISTS "nk_wp_media_update" ON public.nk_waypoint_media;
+CREATE POLICY "nk_wp_media_update" ON public.nk_waypoint_media FOR UPDATE
+  USING (EXISTS (
+    SELECT 1 FROM public.nk_waypoints wp
+    JOIN public.nk_routes r ON r.id = wp.route_id
+    WHERE wp.id = waypoint_id AND r.user_id = auth.uid()
+  ));
+
+DROP POLICY IF EXISTS "nk_wp_media_delete" ON public.nk_waypoint_media;
+CREATE POLICY "nk_wp_media_delete" ON public.nk_waypoint_media FOR DELETE
+  USING (EXISTS (
+    SELECT 1 FROM public.nk_waypoints wp
+    JOIN public.nk_routes r ON r.id = wp.route_id
+    WHERE wp.id = waypoint_id AND r.user_id = auth.uid()
+  ));
+
+-- ── Storage bucket para imágenes (LEGACY) ─────────────────────
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('nk-waypoint-images', 'nk-waypoint-images', true)
 ON CONFLICT (id) DO NOTHING;
@@ -208,3 +254,24 @@ CREATE POLICY "nk_storage_insert" ON storage.objects FOR INSERT
 DROP POLICY IF EXISTS "nk_storage_delete" ON storage.objects;
 CREATE POLICY "nk_storage_delete" ON storage.objects FOR DELETE
   USING (bucket_id = 'nk-waypoint-images' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ── Storage bucket para media (fotos, video, audio) ───────────
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('nk-waypoint-media', 'nk-waypoint-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "nk_media_storage_select" ON storage.objects;
+CREATE POLICY "nk_media_storage_select" ON storage.objects FOR SELECT
+  USING (bucket_id = 'nk-waypoint-media');
+
+DROP POLICY IF EXISTS "nk_media_storage_insert" ON storage.objects;
+CREATE POLICY "nk_media_storage_insert" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'nk-waypoint-media' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "nk_media_storage_update" ON storage.objects;
+CREATE POLICY "nk_media_storage_update" ON storage.objects FOR UPDATE
+  USING (bucket_id = 'nk-waypoint-media' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "nk_media_storage_delete" ON storage.objects;
+CREATE POLICY "nk_media_storage_delete" ON storage.objects FOR DELETE
+  USING (bucket_id = 'nk-waypoint-media' AND (storage.foldername(name))[1] = auth.uid()::text);
