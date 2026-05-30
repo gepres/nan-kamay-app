@@ -2,7 +2,7 @@ import { IRouteRepository } from '@core/ports/repositories/IRouteRepository';
 import { Route } from '@core/entities/Route';
 import { Difficulty } from '@core/value-objects/Difficulty';
 import { GpsPoint } from '@core/entities/GpsPoint';
-import { Waypoint } from '@core/entities/Waypoint';
+import { Waypoint, WaypointMedia } from '@core/entities/Waypoint';
 import { db } from '@infrastructure/database/sqliteDb';
 import { rowToRoute, routeToRow } from '@infrastructure/mappers/RouteMapper';
 import { rowToGpsPoint, gpsPointToRow } from '@infrastructure/mappers/GpsPointMapper';
@@ -184,6 +184,26 @@ export class RouteRepositoryImpl implements IRouteRepository {
       [routeId]
     );
     return rows.map(rowToWaypoint);
+  }
+
+  async getWaypointById(id: string): Promise<Waypoint | null> {
+    const row = await db.getFirstAsync<Record<string, unknown>>(
+      'SELECT * FROM waypoints WHERE id = ?',
+      [id]
+    );
+    return row ? rowToWaypoint(row) : null;
+  }
+
+  /** Actualiza los campos editables de un waypoint (título, descripción, tipo, media). */
+  async updateWaypoint(
+    id: string,
+    fields: { title: string; description: string | null; type: string | null; media: WaypointMedia[] },
+  ): Promise<void> {
+    const imageUris = fields.media.filter((m) => m.type === 'image').map((m) => m.uri);
+    await db.runAsync(
+      'UPDATE waypoints SET title = ?, description = ?, type = ?, media = ?, image_uris = ? WHERE id = ?',
+      [fields.title, fields.description, fields.type, JSON.stringify(fields.media), JSON.stringify(imageUris), id]
+    );
   }
 
   async delete(id: string): Promise<void> {

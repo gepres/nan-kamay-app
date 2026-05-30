@@ -367,7 +367,11 @@ export default function RouteDetailScreen() {
               Waypoints ({waypoints.length})
             </Text>
             {waypoints.map((wp) => (
-              <WaypointDetailCard key={wp.id} wp={wp} />
+              <WaypointDetailCard
+                key={wp.id}
+                wp={wp}
+                onEdit={() => router.push(`/routes/edit-waypoint/${wp.id}`)}
+              />
             ))}
           </View>
         )}

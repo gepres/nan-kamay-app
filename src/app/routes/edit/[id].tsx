@@ -18,7 +18,7 @@ const DIFFICULTIES: Difficulty[] = ['easy', 'moderate', 'hard', 'very_hard', 'ex
 const DIFF_COLORS: Record<Difficulty, string> = {
   easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert,
 };
-const DEFAULT_ACTIVITIES = ['Senderismo', 'Correr', 'Maratón', 'Ciclismo', 'Escalada'];
+const DEFAULT_ACTIVITIES = ['Senderismo', 'Recorrido', 'Correr', 'Maratón', 'Ciclismo', 'Escalada'];
 
 export default function EditRouteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

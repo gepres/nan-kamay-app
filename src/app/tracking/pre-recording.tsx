@@ -33,7 +33,7 @@ const difficultyColors: Record<Difficulty, string> = {
   expert: colors.expert,
 };
 
-const DEFAULT_ACTIVITIES = ['Senderismo', 'Correr', 'Maratón', 'Ciclismo', 'Escalada'];
+const DEFAULT_ACTIVITIES = ['Senderismo', 'Recorrido', 'Correr', 'Maratón', 'Ciclismo', 'Escalada'];
 
 export default function PreRecordingScreen() {
   const { followFrom } = useLocalSearchParams<{ followFrom?: string }>();

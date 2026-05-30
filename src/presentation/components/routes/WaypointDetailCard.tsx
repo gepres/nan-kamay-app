@@ -1,4 +1,5 @@
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Waypoint } from '@core/entities/Waypoint';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import { getWaypointTypeInfo } from '@shared/constants/waypointTypes';
@@ -15,7 +16,7 @@ const CAROUSEL_W = SCREEN_W - 40 - 28;
  * icono del tipo + título + tipo/altitud + descripción + carrusel de fotos
  * con descarga a galería. Reutilizable para mantener UX consistente.
  */
-export default function WaypointDetailCard({ wp }: { wp: Waypoint }) {
+export default function WaypointDetailCard({ wp, onEdit }: { wp: Waypoint; onEdit?: () => void }) {
   const info = wp.type ? getWaypointTypeInfo(wp.type) : undefined;
   const iconName = info?.icon ?? 'MapPin';
   const iconColor = info?.iconColor ?? colors.accent;
@@ -56,6 +57,20 @@ export default function WaypointDetailCard({ wp }: { wp: Waypoint }) {
             </Text>
           ) : null}
         </View>
+        {onEdit && (
+          <TouchableOpacity
+            onPress={onEdit}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: colors.bgInput,
+              borderWidth: 1, borderColor: colors.border,
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.accent} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {wp.imageUris.length > 0 && (
