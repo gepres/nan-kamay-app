@@ -41,7 +41,14 @@
       "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --console=plain 2>&1 | Select-Object -Last 5)",
       "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --console=plain 2>&1 | Select-String -Pattern \"FAILURE|What went wrong|Execution failed|FAILED|error:|Caused by|^e: |A problem occurred|> \" | Select-Object -First 40)",
       "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --console=plain 2>&1 | Select-Object -Last 45)",
-      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --dry-run --console=plain 2>&1 | Select-Object -Last 12})"
+      "PowerShell($env:ANDROID_HOME = \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Android\\\\Sdk\"; & \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" :app:assembleRelease --dry-run --console=plain 2>&1 | Select-Object -Last 12})",
+      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease --no-daemon 2>&1)",
+      "PowerShell(Get-Process *)",
+      "PowerShell($adb = \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\"; if \\(Test-Path $adb\\) { & $adb devices -l } else { Write-Output \"adb no encontrado en $adb\" })",
+      "PowerShell($emu = \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe\"; if \\(Test-Path $emu\\) { & $emu -list-avds } else { Write-Output \"emulator.exe no encontrado en $emu\" })",
+      "PowerShell(npx expo run:android)",
+      "PowerShell(npx tsc --noEmit -p D:\\\\projects\\\\nan-kamay\\\\tsconfig.json 2>&1 | Select-Object -First 30)",
+      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease)"
     ]
   }
 }

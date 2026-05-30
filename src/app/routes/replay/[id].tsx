@@ -812,6 +812,7 @@ export default function ReplayScreen() {
           index={waypoints.findIndex((w) => w.id === activeWaypoint.id)}
           total={waypoints.length}
           onContinue={handleWaypointContinue}
+          insetsTop={insets.top}
           insetsBottom={insets.bottom}
         />
       )}
@@ -1138,12 +1139,13 @@ const AnimatedImage = Animated.createAnimatedComponent(Image);
 const WAVE_BARS = [10, 18, 26, 14, 30, 20, 12, 24, 16, 28, 12, 20];
 
 function WaypointOverlay({
-  waypoint, index, total, onContinue, insetsBottom,
+  waypoint, index, total, onContinue, insetsTop, insetsBottom,
 }: {
   waypoint: Waypoint;
   index: number;
   total: number;
   onContinue: () => void;
+  insetsTop: number;
   insetsBottom: number;
 }) {
   // Media de la escena: hero = video (si hay) o fotos (slideshow); narración = nota de voz.
@@ -1298,12 +1300,16 @@ function WaypointOverlay({
         />
       </Animated.View>
 
-      {/* Bloque de contenido anclado abajo: hero · tira · datos. */}
+      {/* Bloque de contenido centrado verticalmente: el hero nace del waypoint
+          (centro de pantalla) y crece, luego entran tira y datos debajo. */}
       <View
+        pointerEvents="box-none"
         style={{
           position: 'absolute',
+          top: insetsTop,
           left: 16, right: 16,
-          bottom: insetsBottom + 16,
+          bottom: insetsBottom,
+          justifyContent: 'center',
         }}
       >
         {/* ── Hero media (crece a su tamaño) ── */}
