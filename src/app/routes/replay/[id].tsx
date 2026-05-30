@@ -582,6 +582,9 @@ export default function ReplayScreen() {
         zoomEnabled={false}
         rotateEnabled={false}
         pitchEnabled={false}
+        compassEnabled
+        compassViewPosition={0}
+        compassViewMargins={{ x: 16, y: 132 }}
       >
         <RasterSource
           id="replay-tiles"
@@ -1131,6 +1134,9 @@ function IntroOverlay({ name, insetsTop }: { name: string; insetsTop: number }) 
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
+/** Forma de onda estática (decorativa) para la píldora de nota de voz. */
+const WAVE_BARS = [10, 18, 26, 14, 30, 20, 12, 24, 16, 28, 12, 20];
+
 function WaypointOverlay({
   waypoint, index, total, onContinue, insetsBottom,
 }: {
@@ -1144,9 +1150,15 @@ function WaypointOverlay({
   const heroVideo = waypoint.videos[0];
   const narration = waypoint.audios[0];
   const photos = waypoint.imageUris;
+  const videos = waypoint.videos;
+  const audios = waypoint.audios;
+
+  // La tira de multimedia se muestra solo si hay más de un elemento (si no, basta el hero).
+  const mediaCount = photos.length + videos.length + audios.length;
+  const showStrip = mediaCount > 1;
 
   const HERO_W = SCREEN_W - 32;
-  const HERO_H = Math.round(SCREEN_W * 0.62);
+  const HERO_H = Math.round(SCREEN_W * 0.56);
 
   // Datos enriquecidos: tipo (con su icono), altitud y coordenadas.
   const typeInfo = waypoint.type ? getWaypointTypeInfo(waypoint.type) : undefined;
@@ -1168,16 +1180,18 @@ function WaypointOverlay({
   });
   const audioPlayer = useAudioPlayer(narration ? narration.uri : undefined);
 
-  // Animaciones.
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(40);
-  const backdropOpacity = useSharedValue(0);
+  // Animaciones (storyboard A→D: la imagen "crece" a su tamaño, luego entran
+  // la tira de media y los datos, dentro de los ~7s de escena).
+  const vignetteOpacity = useSharedValue(0);
+  const heroScale = useSharedValue(0.4);   // hero crece desde el centro (nace del punto)
+  const heroOpacity = useSharedValue(0);
+  const stripOpacity = useSharedValue(0);
+  const stripY = useSharedValue(20);
+  const dataOpacity = useSharedValue(0);
+  const dataY = useSharedValue(24);
   const progress = useSharedValue(0);     // progreso de escena (auto-avance)
-  const imgScale = useSharedValue(1);     // Ken Burns
+  const imgScale = useSharedValue(1);     // Ken Burns (interno al hero)
   const imgOpacity = useSharedValue(1);   // crossfade entre fotos
-  const titleOpacity = useSharedValue(0);
-  const titleY = useSharedValue(10);
-  const descOpacity = useSharedValue(0);
 
   const [slideIdx, setSlideIdx] = useState(0);
   const finishedRef = useRef(false);
@@ -1187,26 +1201,38 @@ function WaypointOverlay({
     finishedRef.current = true;
     try { videoPlayer.pause(); } catch { /* noop */ }
     try { audioPlayer.pause(); } catch { /* noop */ }
-    backdropOpacity.value = withTiming(0, { duration: 300 });
-    translateY.value = withTiming(40, { duration: 280 });
-    opacity.value = withTiming(0, { duration: 280 }, (finished) => {
+    vignetteOpacity.value = withTiming(0, { duration: 300 });
+    stripOpacity.value = withTiming(0, { duration: 220 });
+    dataOpacity.value = withTiming(0, { duration: 220 });
+    heroOpacity.value = withTiming(0, { duration: 280 }, (finished) => {
       if (finished) runOnJS(onContinue)();
     });
+    heroScale.value = withTiming(0.85, { duration: 280 });
   }, [onContinue, videoPlayer, audioPlayer]);
 
   useEffect(() => {
     finishedRef.current = false;
-    opacity.value = 0; translateY.value = 40; backdropOpacity.value = 0;
+    vignetteOpacity.value = 0;
+    heroScale.value = 0.4; heroOpacity.value = 0;
+    stripOpacity.value = 0; stripY.value = 20;
+    dataOpacity.value = 0; dataY.value = 24;
     progress.value = 0; imgScale.value = 1; imgOpacity.value = 1;
-    titleOpacity.value = 0; titleY.value = 10; descOpacity.value = 0;
     setSlideIdx(0);
 
-    backdropOpacity.value = withTiming(0.72, { duration: 700 });
-    opacity.value = withTiming(1, { duration: 450 });
-    translateY.value = withSpring(0, { damping: 16, stiffness: 130 });
-    titleOpacity.value = withDelay(250, withTiming(1, { duration: 500 }));
-    titleY.value = withDelay(250, withSpring(0, { damping: 18, stiffness: 160 }));
-    descOpacity.value = withDelay(550, withTiming(1, { duration: 600 }));
+    // Viñeta de legibilidad (deja ver el mapa detrás, no un fondo negro sólido).
+    vignetteOpacity.value = withTiming(1, { duration: 600 });
+
+    // 0–1.8s: el hero nace y crece a su tamaño definido.
+    heroOpacity.value = withTiming(1, { duration: 450 });
+    heroScale.value = withSpring(1, { damping: 13, stiffness: 72 });
+
+    // ~1.6s: entra la tira de multimedia.
+    stripOpacity.value = withDelay(1600, withTiming(1, { duration: 450 }));
+    stripY.value = withDelay(1600, withSpring(0, { damping: 16, stiffness: 150 }));
+
+    // ~2.2s: entran los datos (sobre la viñeta, sin tarjeta).
+    dataOpacity.value = withDelay(2200, withTiming(1, { duration: 550 }));
+    dataY.value = withDelay(2200, withSpring(0, { damping: 18, stiffness: 150 }));
 
     // Ken Burns durante toda la escena.
     imgScale.value = withTiming(1.18, { duration: sceneMs, easing: Easing.linear });
@@ -1236,170 +1262,233 @@ function WaypointOverlay({
     imgOpacity.value = withTiming(1, { duration: 600 });
   }, [slideIdx, heroVideo]);
 
-  const cardStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+  const vignetteStyle = useAnimatedStyle(() => ({ opacity: vignetteOpacity.value }));
+  const heroCardStyle = useAnimatedStyle(() => ({
+    opacity: heroOpacity.value,
+    transform: [{ scale: heroScale.value }],
   }));
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
   const heroImgStyle = useAnimatedStyle(() => ({
     opacity: imgOpacity.value,
     transform: [{ scale: imgScale.value }],
   }));
-  const progressStyle = useAnimatedStyle(() => ({ width: progress.value * HERO_W }));
-  const titleStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleY.value }],
+  const stripStyle = useAnimatedStyle(() => ({
+    opacity: stripOpacity.value,
+    transform: [{ translateY: stripY.value }],
   }));
-  const descStyle = useAnimatedStyle(() => ({ opacity: descOpacity.value }));
+  const dataStyle = useAnimatedStyle(() => ({
+    opacity: dataOpacity.value,
+    transform: [{ translateY: dataY.value }],
+  }));
+  const progressStyle = useAnimatedStyle(() => ({ width: progress.value * HERO_W }));
+
+  const fmtDur = (ms?: number) => {
+    const s = Math.round((ms ?? 0) / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
 
   return (
     <>
-      <Animated.View
-        pointerEvents="none"
-        style={[{ ...StyleSheet.absoluteFillObject, backgroundColor: '#000' }, backdropStyle]}
-      />
-
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            left: 16, right: 16,
-            bottom: insetsBottom + 24,
-          },
-          cardStyle,
-        ]}
-      >
-        <View style={{
-          backgroundColor: colors.bgCard,
-          borderRadius: 20,
-          overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: '#F59E0B40',
-        }}>
-          {/* Hero media: video (autoplay) o slideshow de fotos (Ken Burns).
-              overflow:'hidden' recorta el zoom Ken Burns a esta caja para que la
-              imagen ampliada NO se desborde sobre el texto de abajo. */}
-          <View style={{ width: '100%', height: HERO_H, backgroundColor: '#000', overflow: 'hidden' }}>
-            {heroVideo ? (
-              <VideoView
-                player={videoPlayer}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                nativeControls={false}
-              />
-            ) : photos.length > 0 ? (
-              <AnimatedImage
-                source={{ uri: photos[slideIdx] }}
-                style={[{ width: '100%', height: '100%' }, heroImgStyle]}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <WaypointIcon name={typeIconName} size={48} color={typeColor} />
-              </View>
-            )}
-
-            {/* Degradado inferior (legibilidad) */}
-            <LinearGradient
-              pointerEvents="none"
-              colors={['#0D1B1200', '#0D1B12E6']}
-              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 90 }}
-            />
-
-            {/* Barra de progreso de la escena (auto-avance) */}
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#FFFFFF22' }}>
-              <Animated.View style={[{ height: 3, backgroundColor: colors.accent }, progressStyle]} />
-            </View>
-
-            {/* Indicador de narración (nota de voz sonando) */}
-            {narration ? (
-              <View style={{
-                position: 'absolute', top: 12, left: 12,
-                flexDirection: 'row', alignItems: 'center', gap: 6,
-                backgroundColor: '#0D1B12CC', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
-              }}>
-                <Ionicons name="mic" size={13} color={colors.accent} />
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>Narrando…</Text>
-              </View>
-            ) : null}
-
-            {/* Dots del slideshow */}
-            {!heroVideo && photos.length > 1 && (
-              <View style={{ position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
-                {photos.map((_, i) => (
-                  <View key={i} style={{ width: i === slideIdx ? 16 : 5, height: 5, borderRadius: 3, backgroundColor: i === slideIdx ? colors.accent : '#FFFFFF66' }} />
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View style={{ padding: 18, gap: 8 }}>
-            {/* Tipo (icono real) + contador de waypoints */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <WaypointIcon name={typeIconName} size={18} color={typeColor} />
-                <Text style={{ color: typeColor, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
-                  {typeLabel}
-                </Text>
-              </View>
-              {total > 1 && (
-                <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>
-                  {index + 1} / {total}
-                </Text>
-              )}
-            </View>
-            <Animated.Text style={[{ color: '#fff', fontSize: 22, fontWeight: '700' }, titleStyle]}>
-              {waypoint.title}
-            </Animated.Text>
-
-            {/* Meta: altitud + coordenadas */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
-              {waypoint.altitude != null && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="trending-up-outline" size={13} color={colors.textMuted} />
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    {Math.round(waypoint.altitude)} m
-                  </Text>
-                </View>
-              )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="location-outline" size={13} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{coords}</Text>
-              </View>
-            </View>
-
-            {waypoint.description ? (
-              <Animated.View style={descStyle}>
-                <ScrollView style={{ maxHeight: 120 }}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>
-                    {waypoint.description}
-                  </Text>
-                </ScrollView>
-              </Animated.View>
-            ) : null}
-
-
-            <TouchableOpacity
-              onPress={handleContinue}
-              style={{
-                backgroundColor: colors.accent,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: 'center',
-                marginTop: 10,
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Text style={{ color: '#0D1B12', fontWeight: '700', fontSize: 15 }}>
-                Continuar
-              </Text>
-              <Ionicons name="arrow-forward" size={18} color="#0D1B12" />
-            </TouchableOpacity>
-          </View>
-        </View>
+      {/* Viñeta inferior: deja ver el mapa detrás y da legibilidad a los datos
+          transparentes (en vez de un fondo negro sólido). */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, vignetteStyle]}>
+        <LinearGradient
+          colors={['#0D1B1200', '#0D1B12D9', '#0D1B12F2']}
+          locations={[0, 0.55, 1]}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: SCREEN_W * 1.5 }}
+        />
       </Animated.View>
+
+      {/* Bloque de contenido anclado abajo: hero · tira · datos. */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 16, right: 16,
+          bottom: insetsBottom + 16,
+        }}
+      >
+        {/* ── Hero media (crece a su tamaño) ── */}
+        <Animated.View
+          style={[
+            {
+              width: HERO_W,
+              height: HERO_H,
+              borderRadius: 20,
+              overflow: 'hidden',
+              backgroundColor: '#000',
+              borderWidth: 3,
+              borderColor: '#FFFFFF',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 16 },
+              shadowOpacity: 0.7,
+              shadowRadius: 24,
+              elevation: 12,
+            },
+            heroCardStyle,
+          ]}
+        >
+          {heroVideo ? (
+            <VideoView
+              player={videoPlayer}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : photos.length > 0 ? (
+            <AnimatedImage
+              source={{ uri: photos[slideIdx] }}
+              style={[{ width: '100%', height: '100%' }, heroImgStyle]}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgCard }}>
+              <WaypointIcon name={typeIconName} size={48} color={typeColor} />
+            </View>
+          )}
+
+          {/* Barra de progreso de la escena (auto-avance) */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#FFFFFF22' }}>
+            <Animated.View style={[{ height: 3, backgroundColor: colors.accent }, progressStyle]} />
+          </View>
+
+          {/* Indicador de narración (nota de voz sonando) */}
+          {narration ? (
+            <View style={{
+              position: 'absolute', top: 12, left: 12,
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: '#0D1B12CC', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
+            }}>
+              <Ionicons name="mic" size={13} color={colors.accent} />
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>Narrando…</Text>
+            </View>
+          ) : null}
+
+          {/* Dots del slideshow */}
+          {!heroVideo && photos.length > 1 && (
+            <View style={{ position: 'absolute', bottom: 10, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 }}>
+              {photos.map((_, i) => (
+                <View key={i} style={{ width: i === slideIdx ? 16 : 5, height: 5, borderRadius: 3, backgroundColor: i === slideIdx ? colors.accent : '#FFFFFF66' }} />
+              ))}
+            </View>
+          )}
+        </Animated.View>
+
+        {/* ── Tira de multimedia: fotos · video · notas de voz ── */}
+        {showStrip && (
+          <Animated.View style={[{ marginTop: 14 }, stripStyle]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+            >
+              {photos.map((uri, i) => (
+                <Image
+                  key={`p${i}`}
+                  source={{ uri }}
+                  style={{ width: 60, height: 60, borderRadius: 12, borderWidth: 1, borderColor: '#FFFFFF40' }}
+                />
+              ))}
+              {videos.map((v, i) => (
+                <View key={`v${i}`} style={{ width: 60, height: 60, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#FFFFFF40', backgroundColor: '#000' }}>
+                  {v.thumbnailUri ? (
+                    <Image source={{ uri: v.thumbnailUri }} style={{ width: '100%', height: '100%' }} />
+                  ) : null}
+                  <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0D1B1259' }}>
+                    <Ionicons name="play" size={18} color="#fff" />
+                  </View>
+                  <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: '#0D1B12CC', borderRadius: 5, paddingHorizontal: 4, paddingVertical: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 9 }}>{fmtDur(v.durationMs)}</Text>
+                  </View>
+                </View>
+              ))}
+              {audios.map((a, i) => (
+                <View
+                  key={`a${i}`}
+                  style={{
+                    height: 60, flexDirection: 'row', alignItems: 'center', gap: 8,
+                    paddingHorizontal: 12, borderRadius: 12,
+                    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: '#F59E0B55',
+                  }}
+                >
+                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="mic" size={16} color="#0D1B12" />
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 34 }}>
+                    {WAVE_BARS.map((h, j) => (
+                      <View key={j} style={{ width: 3, height: h, borderRadius: 2, backgroundColor: colors.accent }} />
+                    ))}
+                  </View>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>{fmtDur(a.durationMs)}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* ── Datos (transparente, sobre la viñeta) ── */}
+        <Animated.View style={[{ marginTop: 16, gap: 10 }, dataStyle]}>
+          {/* Tipo (icono real) + contador de waypoints */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <WaypointIcon name={typeIconName} size={18} color={typeColor} />
+              <Text style={{ color: typeColor, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>
+                {typeLabel}
+              </Text>
+            </View>
+            {total > 1 && (
+              <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>
+                {index + 1} / {total}
+              </Text>
+            )}
+          </View>
+
+          <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700' }}>
+            {waypoint.title}
+          </Text>
+
+          {/* Meta: altitud + coordenadas (iconos en ámbar) */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
+            {waypoint.altitude != null && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Ionicons name="trending-up-outline" size={14} color={colors.accent} />
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '600' }}>
+                  {Math.round(waypoint.altitude)} m
+                </Text>
+              </View>
+            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Ionicons name="location-outline" size={14} color={colors.accent} />
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '600' }}>{coords}</Text>
+            </View>
+          </View>
+
+          {waypoint.description ? (
+            <ScrollView style={{ maxHeight: 84 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>
+                {waypoint.description}
+              </Text>
+            </ScrollView>
+          ) : null}
+
+          <TouchableOpacity
+            onPress={handleContinue}
+            style={{
+              backgroundColor: colors.accent,
+              borderRadius: 12,
+              paddingVertical: 14,
+              alignItems: 'center',
+              marginTop: 4,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <Text style={{ color: '#0D1B12', fontWeight: '700', fontSize: 15 }}>
+              Continuar
+            </Text>
+            <Ionicons name="arrow-forward" size={18} color="#0D1B12" />
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </>
   );
 }
