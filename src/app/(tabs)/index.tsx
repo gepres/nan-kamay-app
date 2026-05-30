@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, TouchableOpacity,
@@ -14,6 +14,7 @@ import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { getRecoverableDraft, discardDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import RouteCard from '@presentation/components/routes/RouteCard';
 import OfflineBanner from '@presentation/components/ui/OfflineBanner';
+import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
 import { colors } from '@presentation/theme/colors';
 
 export default function HomeScreen() {
@@ -24,6 +25,17 @@ export default function HomeScreen() {
 
   // Monitorea red y actualiza uiStore
   useNetworkStatus();
+
+  // Perfiles de elevación (firma de las cards) — una sola query al cambiar la lista.
+  const [profiles, setProfiles] = useState<Record<string, number[]>>({});
+  const routeIdsKey = routes.map((r) => r.id).join(',');
+  useEffect(() => {
+    if (routes.length === 0) { setProfiles({}); return; }
+    routeRepository
+      .getElevationProfiles(routes.map((r) => r.id))
+      .then(setProfiles)
+      .catch(() => { /* sin firma si falla */ });
+  }, [routeIdsKey]);
 
   // Cargar rutas al montar
   useEffect(() => {
@@ -239,6 +251,7 @@ export default function HomeScreen() {
           <RouteCard
             route={item}
             index={index}
+            profile={profiles[item.id]}
             onPress={() => router.push(`/routes/${item.id}`)}
           />
         )}

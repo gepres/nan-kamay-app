@@ -1,6 +1,7 @@
 import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { NK_TABLES } from '@infrastructure/supabase/tables';
 import { Difficulty } from '@core/value-objects/Difficulty';
+import { downsampleElevation } from '@shared/utils/elevation';
 
 export interface PublicRoute {
   id: string;
@@ -59,4 +60,35 @@ export async function getPublicRoutesUseCase(
     isSynced: true,
     createdAt: new Date(row.created_at),
   }));
+}
+
+/**
+ * Perfiles de elevación (muestras normalizadas) de varias rutas públicas en UNA
+ * sola consulta, para la "firma" de las cards de Explorar. Nota: trae las
+ * altitudes de los puntos GPS; para catálogos grandes convendría una columna
+ * cacheada o un RPC que ya devuelva el downsample.
+ */
+export async function getPublicElevationProfiles(
+  routeIds: string[],
+): Promise<Record<string, number[]>> {
+  if (routeIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from(NK_TABLES.gpsPoints)
+    .select('route_id, altitude, sequence_index')
+    .in('route_id', routeIds)
+    .order('route_id', { ascending: true })
+    .order('sequence_index', { ascending: true });
+
+  if (error || !data) return {};
+
+  const byRoute: Record<string, (number | null)[]> = {};
+  for (const r of data as { route_id: string; altitude: number | null }[]) {
+    (byRoute[r.route_id] ??= []).push(r.altitude);
+  }
+  const out: Record<string, number[]> = {};
+  for (const [id, alts] of Object.entries(byRoute)) {
+    const s = downsampleElevation(alts);
+    if (s) out[id] = s;
+  }
+  return out;
 }

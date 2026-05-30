@@ -369,7 +369,7 @@ export default function ReplayScreen() {
     cameraRef.current?.fitBounds(
       [Math.max(...lons), Math.max(...lats)],
       [Math.min(...lons), Math.min(...lats)],
-      [120, 60, 240, 60], // padding [top, right, bottom, left]
+      [70, 36, 170, 36], // padding [top, right, bottom, left] (ajustado: mapa más cercano)
       1200,
     );
   }, [phase, gpsPoints]);
@@ -463,7 +463,7 @@ export default function ReplayScreen() {
         cameraRef.current.fitBounds(
           [Math.max(...lons), Math.max(...lats)],
           [Math.min(...lons), Math.min(...lats)],
-          [120, 60, 240, 60],
+          [70, 36, 170, 36],
           500,
         );
       }

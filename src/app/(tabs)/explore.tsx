@@ -8,87 +8,87 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@presentation/stores/authStore';
 import { useUiStore } from '@presentation/stores/uiStore';
-import { getPublicRoutesUseCase, PublicRoute } from '@application/routes/GetPublicRoutesUseCase';
+import { getPublicRoutesUseCase, getPublicElevationProfiles, PublicRoute } from '@application/routes/GetPublicRoutesUseCase';
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatElevation } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
+import ElevationSparkline from '@presentation/components/routes/ElevationSparkline';
 
 const DIFF_COLORS: Record<string, string> = { easy: colors.easy, moderate: colors.medium, hard: colors.hard, very_hard: colors.veryHard, expert: colors.expert };
 
-function PublicRouteCard({ route, isOwn }: { route: PublicRoute; isOwn?: boolean }) {
+function PubStat({ icon, value }: { icon: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+      <Ionicons name={icon as any} size={14} color={colors.accent} />
+      <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '600' }}>{value}</Text>
+    </View>
+  );
+}
+
+function PublicRouteCard({ route, isOwn, profile }: { route: PublicRoute; isOwn?: boolean; profile?: number[] }) {
   const diffColor = DIFF_COLORS[route.difficulty];
   return (
     <TouchableOpacity
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={() => router.push(`/routes/public/${route.id}`)}
       style={{
         backgroundColor: colors.bgCard,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
+        borderRadius: 16,
+        marginBottom: 10,
         borderWidth: 1,
-        borderColor: '#2D6A4F',
+        borderColor: colors.border,
+        overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-          <View style={{
-            backgroundColor: diffColor + '20',
-            borderRadius: 6,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderWidth: 1,
-            borderColor: diffColor + '60',
-          }}>
-            <Text style={{ color: diffColor, fontSize: 11, fontWeight: '700' }}>
-              {DifficultyLabel[route.difficulty]}
-            </Text>
-          </View>
+      <View style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10, gap: 10 }}>
+        {/* Nombre + (Tuya) + dificultad */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text
+            style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '700', flex: 1 }}
+            numberOfLines={1}
+          >
+            {route.name}
+          </Text>
+
           {isOwn && (
             <View style={{
               backgroundColor: colors.accent + '20',
-              borderRadius: 6,
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderWidth: 1,
-              borderColor: colors.accent + '60',
+              borderRadius: 8,
+              paddingHorizontal: 9,
+              paddingVertical: 4,
             }}>
               <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700' }}>Tuya</Text>
             </View>
           )}
+
+          <View style={{
+            backgroundColor: diffColor + '20',
+            borderRadius: 8,
+            paddingHorizontal: 9,
+            paddingVertical: 4,
+          }}>
+            <Text style={{ color: diffColor, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 }}>
+              {DifficultyLabel[route.difficulty]}
+            </Text>
+          </View>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+
+        {route.description ? (
+          <Text style={{ color: colors.textMuted, fontSize: 13 }} numberOfLines={1}>
+            {route.description}
+          </Text>
+        ) : null}
+
+        {/* Stats clave en línea */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+          <PubStat icon="navigate-outline" value={formatDistance(route.distanceMeters)} />
+          <PubStat icon="time-outline" value={formatDuration(route.durationSeconds)} />
+          <PubStat icon="trending-up-outline" value={formatElevation(route.elevationGainMeters)} />
+        </View>
       </View>
 
-      <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>
-        {route.name}
-      </Text>
-      {route.description ? (
-        <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 10 }} numberOfLines={2}>
-          {route.description}
-        </Text>
-      ) : null}
-
-      {/* Stats chips */}
-      <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="navigate-outline" size={13} color={colors.accent} />
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDistance(route.distanceMeters)}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="time-outline" size={13} color={colors.accent} />
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatDuration(route.durationSeconds)}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="trending-up-outline" size={13} color={colors.accent} />
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatElevation(route.elevationGainMeters)}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Ionicons name="arrow-up-outline" size={13} color={colors.accent} />
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{formatElevation(route.maxElevationMeters, false)} máx.</Text>
-        </View>
-      </View>
+      {/* Firma de elevación al pie */}
+      {profile && <ElevationSparkline data={profile} height={44} />}
     </TouchableOpacity>
   );
 }
@@ -97,6 +97,7 @@ export default function ExploreScreen() {
   const { user } = useAuthStore();
   const { isOffline, showToast } = useUiStore();
   const [routes, setRoutes] = useState<PublicRoute[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, number[]>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -105,6 +106,10 @@ export default function ExploreScreen() {
     try {
       const data = await getPublicRoutesUseCase(user.id);
       setRoutes(data);
+      // Firmas de elevación (no bloquea el render de la lista).
+      getPublicElevationProfiles(data.map((r) => r.id))
+        .then(setProfiles)
+        .catch(() => { /* sin firma si falla */ });
     } catch (err) {
       showToast('Error al cargar rutas públicas', 'error');
     } finally {
@@ -206,7 +211,7 @@ export default function ExploreScreen() {
             </View>
           )
         }
-        renderItem={({ item }) => <PublicRouteCard route={item} isOwn={item.userId === user?.id} />}
+        renderItem={({ item }) => <PublicRouteCard route={item} isOwn={item.userId === user?.id} profile={profiles[item.id]} />}
       />
     </SafeAreaView>
   );

@@ -6,6 +6,7 @@ import { db } from '@infrastructure/database/sqliteDb';
 import { rowToRoute, routeToRow } from '@infrastructure/mappers/RouteMapper';
 import { rowToGpsPoint, gpsPointToRow } from '@infrastructure/mappers/GpsPointMapper';
 import { rowToWaypoint, waypointToRow } from '@infrastructure/mappers/WaypointMapper';
+import { downsampleElevation } from '@shared/utils/elevation';
 
 export class RouteRepositoryImpl implements IRouteRepository {
   /**
@@ -141,6 +142,31 @@ export class RouteRepositoryImpl implements IRouteRepository {
       [id]
     );
     return row ? rowToRoute(row) : null;
+  }
+
+  /**
+   * Perfiles de elevación (muestras normalizadas) de varias rutas en UNA sola
+   * query, para dibujar la "firma" en las cards de la lista sin N consultas.
+   */
+  async getElevationProfiles(routeIds: string[]): Promise<Record<string, number[]>> {
+    if (routeIds.length === 0) return {};
+    const placeholders = routeIds.map(() => '?').join(',');
+    const rows = await db.getAllAsync<{ route_id: string; altitude: number | null }>(
+      `SELECT route_id, altitude FROM gps_points
+        WHERE route_id IN (${placeholders})
+        ORDER BY route_id, sequence_index ASC`,
+      routeIds
+    );
+    const byRoute: Record<string, (number | null)[]> = {};
+    for (const r of rows) {
+      (byRoute[r.route_id] ??= []).push(r.altitude);
+    }
+    const out: Record<string, number[]> = {};
+    for (const [id, alts] of Object.entries(byRoute)) {
+      const s = downsampleElevation(alts);
+      if (s) out[id] = s;
+    }
+    return out;
   }
 
   async getGpsPoints(routeId: string): Promise<GpsPoint[]> {

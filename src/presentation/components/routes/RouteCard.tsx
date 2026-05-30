@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { colors } from '@presentation/theme/colors';
 import Animated, {
   useSharedValue,
@@ -8,11 +8,11 @@ import Animated, {
   withSpring,
   withDelay,
 } from 'react-native-reanimated';
-import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Route } from '@core/entities/Route';
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatDate, formatElevation } from '@shared/utils/formatters';
+import ElevationSparkline from '@presentation/components/routes/ElevationSparkline';
 
 const difficultyColors: Record<string, string> = {
   easy: colors.easy,
@@ -22,13 +22,22 @@ const difficultyColors: Record<string, string> = {
   expert: colors.expert,
 };
 
+/** Icono Ionicons aproximado según el tipo de actividad. */
+function activityIcon(type?: string): string {
+  const t = (type ?? '').toLowerCase();
+  if (t.includes('cicl') || t.includes('bici') || t.includes('mtb') || t.includes('bike')) return 'bicycle';
+  return 'walk';
+}
+
 interface Props {
   route: Route;
   onPress?: () => void;
   index?: number;
+  /** Muestras normalizadas del perfil de elevación (firma visual). */
+  profile?: number[];
 }
 
-export default function RouteCard({ route, onPress, index = 0 }: Props) {
+export default function RouteCard({ route, onPress, index = 0, profile }: Props) {
   const diffColor = difficultyColors[route.difficulty];
 
   // Entrada staggered por index
@@ -62,61 +71,72 @@ export default function RouteCard({ route, onPress, index = 0 }: Props) {
         onPressOut={handlePressOut}
         style={{
           backgroundColor: colors.bgCard,
-          borderRadius: 12,
-          padding: 16,
+          borderRadius: 16,
           borderWidth: 1,
           borderColor: colors.border,
-          marginBottom: 12,
+          marginBottom: 10,
+          overflow: 'hidden',
         }}
       >
-        {/* Fila superior: nombre + badge dificultad + sync */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-          <Text
-            style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '700', flex: 1 }}
-            numberOfLines={1}
-          >
-            {route.name}
-          </Text>
+        <View style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10, gap: 12 }}>
+          {/* Icono de actividad + título + (pendiente sync) + dificultad */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{
+              width: 34, height: 34, borderRadius: 10,
+              backgroundColor: colors.accentSoft,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Ionicons name={activityIcon(route.activityType) as any} size={18} color={colors.accent} />
+            </View>
 
-          <View style={{
-            backgroundColor: diffColor + '20',
-            borderRadius: 6,
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderWidth: 1,
-            borderColor: diffColor + '60',
-          }}>
-            <Text style={{ color: diffColor, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>
-              {DifficultyLabel[route.difficulty]}
+            <Text
+              style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '700', flex: 1 }}
+              numberOfLines={1}
+            >
+              {route.name}
             </Text>
+
+            {!route.isSynced && (
+              <Ionicons name="cloud-upload-outline" size={15} color={colors.accent} />
+            )}
+
+            <View style={{
+              backgroundColor: diffColor + '20',
+              borderRadius: 8,
+              paddingHorizontal: 9,
+              paddingVertical: 4,
+            }}>
+              <Text style={{ color: diffColor, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 }}>
+                {DifficultyLabel[route.difficulty]}
+              </Text>
+            </View>
           </View>
 
-          {!route.isSynced && (
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
-          )}
+          {/* Stats clave en línea */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+            <Stat icon="navigate-outline" value={formatDistance(route.distanceMeters)} />
+            <Stat icon="time-outline" value={formatDuration(route.durationSeconds)} />
+            <Stat icon="trending-up-outline" value={formatElevation(route.elevationGainMeters)} />
+          </View>
+
+          {/* Actividad · fecha */}
+          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+            {route.activityType ? `${route.activityType} · ` : ''}{formatDate(route.createdAt)}
+          </Text>
         </View>
 
-        {/* Stats */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <StatChip icon="navigate-outline" value={formatDistance(route.distanceMeters)} />
-          <StatChip icon="time-outline" value={formatDuration(route.durationSeconds)} />
-          <StatChip icon="arrow-up-outline" value={formatElevation(route.elevationGainMeters)} />
-          <StatChip icon="speedometer-outline" value={`${route.avgSpeedKmh.toFixed(1)} km/h`} />
-        </View>
-
-        <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 10 }}>
-          {formatDate(route.createdAt)}
-        </Text>
+        {/* Firma de elevación (perfil real de la ruta) al pie */}
+        {profile && <ElevationSparkline data={profile} height={44} />}
       </Pressable>
     </Animated.View>
   );
 }
 
-function StatChip({ icon, value }: { icon: string; value: string }) {
+function Stat({ icon, value }: { icon: string; value: string }) {
   return (
-    <View style={{ alignItems: 'center', gap: 4 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
       <Ionicons name={icon as any} size={14} color={colors.accent} />
-      <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '600' }}>{value}</Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '600' }}>{value}</Text>
     </View>
   );
 }

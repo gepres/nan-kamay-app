@@ -89,6 +89,7 @@ export const WAYPOINT_CATEGORIES: WaypointCategory[] = [
       { label: 'Pasadizo', icon: 'Milestone' },
       { label: 'Barrio', icon: 'Building' },
       { label: 'Pasaje', icon: 'MoveHorizontal' },
+      { label: 'Puente Peatonal', icon: 'Footprints' },
       { label: 'Bajada', icon: 'TrendingDown' },
       { label: 'Parque', icon: 'Trees' },
       { label: 'Complejo Deportivo', icon: 'Trophy' },
