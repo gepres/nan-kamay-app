@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView,
   TouchableOpacity, ActivityIndicator, Alert, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
@@ -79,6 +79,15 @@ export default function RouteDetailScreen() {
       setRefining(false);
     }
   };
+
+  // Recargar al volver al detalle (p. ej. tras editar la metadata).
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) { firstFocus.current = false; return; }
+      reloadRoute();
+    }, [id])
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -185,6 +194,18 @@ export default function RouteDetailScreen() {
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700', flex: 1 }} numberOfLines={1}>
           {route.name}
         </Text>
+        <TouchableOpacity
+          onPress={() => router.push(`/routes/edit/${route.id}`)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{
+            width: 38, height: 38, borderRadius: 19,
+            backgroundColor: colors.bgCard,
+            borderWidth: 1, borderColor: colors.border,
+            alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <Ionicons name="create-outline" size={19} color={colors.accent} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>

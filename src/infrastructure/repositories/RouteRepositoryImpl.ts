@@ -1,5 +1,6 @@
 import { IRouteRepository } from '@core/ports/repositories/IRouteRepository';
 import { Route } from '@core/entities/Route';
+import { Difficulty } from '@core/value-objects/Difficulty';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
 import { db } from '@infrastructure/database/sqliteDb';
@@ -210,6 +211,17 @@ export class RouteRepositoryImpl implements IRouteRepository {
     await db.runAsync(
       'UPDATE routes SET is_synced = 0 WHERE id = ?',
       [routeId]
+    );
+  }
+
+  /** Actualiza la metadata editable de una ruta en SQLite. */
+  async updateMeta(
+    routeId: string,
+    fields: { name: string; description: string | null; difficulty: Difficulty; activityType: string | null },
+  ): Promise<void> {
+    await db.runAsync(
+      `UPDATE routes SET name = ?, description = ?, difficulty = ?, activity_type = ? WHERE id = ?`,
+      [fields.name, fields.description, fields.difficulty, fields.activityType, routeId]
     );
   }
 
