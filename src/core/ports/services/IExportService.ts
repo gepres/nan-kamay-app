@@ -2,7 +2,7 @@ import { Route } from '../../entities/Route';
 import { GpsPoint } from '../../entities/GpsPoint';
 import { Waypoint } from '../../entities/Waypoint';
 
-export type ExportFormat = 'gpx' | 'kml' | 'kmz';
+export type ExportFormat = 'gpx' | 'kml' | 'kmz' | 'csv';
 
 export interface IExportService {
   exportRoute(

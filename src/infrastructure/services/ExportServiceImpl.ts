@@ -30,7 +30,18 @@ export class ExportServiceImpl implements IExportService {
       case 'gpx': return this.exportGpx(route, gpsPoints, waypoints);
       case 'kml': return this.exportKml(route, gpsPoints, waypoints);
       case 'kmz': return this.exportKmz(route, gpsPoints, waypoints);
+      case 'csv': return this.exportCsv(route, gpsPoints);
     }
+  }
+
+  /**
+   * CSV de DIAGNÓSTICO (no es un formato de usuario final): vuelca los puntos
+   * GPS crudos tal como quedaron en SQLite, con columnas derivadas, para
+   * depurar la grabación. No necesita waypoints.
+   */
+  private async exportCsv(route: Route, gpsPoints: GpsPoint[]): Promise<string> {
+    const content = buildDiagnosticsCsv(gpsPoints);
+    return writeFile(`${sanitizeName(route.name)}-diagnostico.csv`, content, 'text');
   }
 
   private async exportGpx(route: Route, gpsPoints: GpsPoint[], waypoints: Waypoint[]): Promise<string> {
@@ -255,4 +266,91 @@ ${placemarks}
     </Placemark>
   </Document>
 </kml>`;
+}
+
+// ── Diagnóstico ──────────────────────────────────────────────────
+
+/**
+ * CSV de diagnóstico de la grabación. Vuelca los puntos GPS (post-filtro, tal
+ * como quedaron en SQLite) MÁS columnas derivadas para no recalcular a mano:
+ *
+ *   seq            sequence_index del punto
+ *   recorded_at    timestamp ISO
+ *   dt_s           segundos desde el punto anterior (detecta gaps de muestreo)
+ *   lat, lon       coordenadas SIN truncar (fidelidad para recomputar distancia)
+ *   dist_m         distancia haversine al punto anterior
+ *   seg_speed_kmh  velocidad REAL del segmento (dist/dt) — la fiable; contrasta
+ *                  con gps_speed_kmh, que en Android suele venir 0/vacío
+ *   gps_speed_ms   speed crudo del sensor (m/s), vacío si el SO no lo reportó
+ *   gps_speed_kmh  speed del sensor en km/h
+ *   altitude_m     altitud guardada (ya fusionada/filtrada en su momento)
+ *   accuracy_m     precisión horizontal — NO la lleva ningún otro export y es
+ *                  la entrada del gate de precisión del filtro
+ *
+ * Campos numéricos no disponibles (null/NaN) quedan vacíos para distinguirlos
+ * de un 0 real.
+ */
+function buildDiagnosticsCsv(gpsPoints: GpsPoint[]): string {
+  const header =
+    'seq,recorded_at,dt_s,lat,lon,dist_m,seg_speed_kmh,gps_speed_ms,gps_speed_kmh,altitude_m,accuracy_m';
+
+  // Robusto ante cualquier orden de entrada.
+  const points = [...gpsPoints].sort((a, b) => a.sequenceIndex - b.sequenceIndex);
+
+  const lines = [header];
+  let prev: GpsPoint | null = null;
+
+  for (const p of points) {
+    let dtS = '';
+    let distM = '';
+    let segKmh = '';
+    if (prev) {
+      const dt = (p.recordedAt.getTime() - prev.recordedAt.getTime()) / 1000;
+      const d = haversineMeters(prev.latitude, prev.longitude, p.latitude, p.longitude);
+      dtS = csvNum(dt, 1);
+      distM = csvNum(d, 2);
+      if (dt > 0) segKmh = csvNum((d / dt) * 3.6, 2);
+    }
+
+    lines.push(
+      [
+        p.sequenceIndex,
+        iso(p.recordedAt),
+        dtS,
+        csvCoord(p.latitude),
+        csvCoord(p.longitude),
+        distM,
+        segKmh,
+        csvNum(p.speed, 2),
+        p.speed != null ? csvNum(p.speed * 3.6, 2) : '',
+        csvNum(p.altitude, 1),
+        csvNum(p.accuracy, 1),
+      ].join(','),
+    );
+    prev = p;
+  }
+
+  return lines.join('\n');
+}
+
+/** Campo numérico CSV: null/NaN/Infinity → vacío; si no, toFixed(decimals). */
+function csvNum(v: number | null | undefined, decimals: number): string {
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(decimals) : '';
+}
+
+/** Coordenada CSV sin truncar (máxima fidelidad). No-finito → vacío. */
+function csvCoord(v: number): string {
+  return Number.isFinite(v) ? String(v) : '';
+}
+
+/** Distancia haversine en metros (columnas derivadas del CSV de diagnóstico). */
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
