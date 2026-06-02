@@ -48,7 +48,9 @@
       "PowerShell($emu = \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\emulator\\\\emulator.exe\"; if \\(Test-Path $emu\\) { & $emu -list-avds } else { Write-Output \"emulator.exe no encontrado en $emu\" })",
       "PowerShell(npx expo run:android)",
       "PowerShell(npx tsc --noEmit -p D:\\\\projects\\\\nan-kamay\\\\tsconfig.json 2>&1 | Select-Object -First 30)",
-      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease)"
+      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease)",
+      "PowerShell(npx tsc --noEmit -p D:\\\\projects\\\\nan-kamay\\\\tsconfig.json 2>&1 | Select-Object -First 40)",
+      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease --console=plain)"
     ]
   }
 }

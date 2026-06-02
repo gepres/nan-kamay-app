@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
+import LocationPickerModal from '@presentation/components/map/LocationPickerModal';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { Waypoint, WaypointMedia } from '@core/entities/Waypoint';
 import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
@@ -61,6 +62,8 @@ export default function WaypointScreen() {
   const [waypointType, setWaypointType] = useState('Mirador');
   const [media, setMedia] = useState<WaypointMedia[]>([]);
   const [recentTypes, setRecentTypes] = useState<WaypointTypeInfo[]>([]);
+  const [picked, setPicked] = useState<{ lat: number; lon: number } | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
   const { addWaypoint, routeId, currentPosition } = useTrackingStore();
 
   // Grabador de notas de voz (expo-audio).
@@ -246,14 +249,33 @@ export default function WaypointScreen() {
   // Limpieza del timer al desmontar.
   useEffect(() => () => { if (recTimerRef.current) clearInterval(recTimerRef.current); }, []);
 
+  // Ubicación efectiva: la elegida en el mapa tiene prioridad sobre el GPS.
+  const effLat = picked?.lat ?? currentPosition?.latitude;
+  const effLon = picked?.lon ?? currentPosition?.longitude;
+  const hasLocation =
+    effLat != null && effLon != null && Number.isFinite(effLat) && Number.isFinite(effLon) &&
+    !(effLat === 0 && effLon === 0);
+
   const handleSave = () => {
     if (!title.trim() || !routeId) return;
 
+    // Sin ubicación (GPS sin fix y sin colocar en el mapa) no guardamos: antes
+    // se guardaba en (0,0) — golfo de Guinea — sin aviso.
+    if (!hasLocation) {
+      Alert.alert(
+        'Falta la ubicación',
+        'Aún no hay señal GPS. Coloca el punto en el mapa con "Ajustar en mapa".',
+        [{ text: 'Entendido' }],
+      );
+      return;
+    }
+
     const waypoint = Waypoint.create({
       routeId,
-      latitude: currentPosition?.latitude ?? 0,
-      longitude: currentPosition?.longitude ?? 0,
-      altitude: currentPosition?.altitude ?? null,
+      latitude: effLat as number,
+      longitude: effLon as number,
+      // La altitud solo viene del GPS; si se colocó manualmente, queda nula.
+      altitude: picked ? null : currentPosition?.altitude ?? null,
       title: title.trim(),
       description: description.trim() || undefined,
       type: waypointType,
@@ -277,9 +299,7 @@ export default function WaypointScreen() {
     });
   };
 
-  const lat = currentPosition?.latitude;
-  const lon = currentPosition?.longitude;
-  const alt = currentPosition?.altitude;
+  const alt = picked ? null : currentPosition?.altitude;
 
   // Current type info for the chip display
   const currentTypeInfo = getWaypointTypeInfo(waypointType);
@@ -318,26 +338,47 @@ export default function WaypointScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Ubicación actual */}
-        {lat !== undefined && lon !== undefined && (
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            marginHorizontal: 20,
-            marginBottom: 20,
-            backgroundColor: colors.bgCard,
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-          }}>
-            <Ionicons name="location" size={16} color={colors.accent} />
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500' }}>
-              {lat.toFixed(4)}, {lon.toFixed(4)}
-              {alt !== null && alt !== undefined ? ` · ${Math.round(alt)} m` : ''}
+        {/* Ubicación: GPS actual o la colocada en el mapa, con botón para ajustar */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginHorizontal: 20,
+          marginBottom: 20,
+          backgroundColor: colors.bgCard,
+          borderRadius: 10,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+        }}>
+          <Ionicons
+            name={picked ? 'pin' : 'location'}
+            size={16}
+            color={hasLocation ? colors.accent : colors.danger}
+          />
+          <Text style={{ color: hasLocation ? colors.textSecondary : colors.danger, fontSize: 12, fontWeight: '500', flex: 1 }}>
+            {hasLocation
+              ? `${(effLat as number).toFixed(4)}, ${(effLon as number).toFixed(4)}${alt != null ? ` · ${Math.round(alt)} m` : ''}${picked ? ' · en mapa' : ''}`
+              : 'Sin señal GPS — coloca el punto en el mapa'}
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowPicker(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="map-outline" size={14} color={colors.accent} />
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '600' }}>
+              {picked ? 'Reajustar' : 'Ajustar en mapa'}
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
+
+        <LocationPickerModal
+          visible={showPicker}
+          initial={{ lat: effLat ?? 0, lon: effLon ?? 0 }}
+          title="Colocar punto"
+          onConfirm={(c) => { setPicked(c); setShowPicker(false); }}
+          onClose={() => setShowPicker(false)}
+        />
 
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 20 }}

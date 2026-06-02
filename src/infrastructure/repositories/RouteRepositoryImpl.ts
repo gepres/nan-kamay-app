@@ -194,16 +194,24 @@ export class RouteRepositoryImpl implements IRouteRepository {
     return row ? rowToWaypoint(row) : null;
   }
 
-  /** Actualiza los campos editables de un waypoint (título, descripción, tipo, media). */
+  /** Actualiza los campos editables de un waypoint (título, descripción, tipo,
+   *  media y, opcionalmente, su ubicación lat/lon si el usuario la movió). */
   async updateWaypoint(
     id: string,
-    fields: { title: string; description: string | null; type: string | null; media: WaypointMedia[] },
+    fields: {
+      title: string; description: string | null; type: string | null; media: WaypointMedia[];
+      latitude?: number; longitude?: number;
+    },
   ): Promise<void> {
     const imageUris = fields.media.filter((m) => m.type === 'image').map((m) => m.uri);
-    await db.runAsync(
-      'UPDATE waypoints SET title = ?, description = ?, type = ?, media = ?, image_uris = ? WHERE id = ?',
-      [fields.title, fields.description, fields.type, JSON.stringify(fields.media), JSON.stringify(imageUris), id]
-    );
+    const moveLocation = fields.latitude != null && fields.longitude != null;
+    const sql = moveLocation
+      ? 'UPDATE waypoints SET title = ?, description = ?, type = ?, media = ?, image_uris = ?, latitude = ?, longitude = ? WHERE id = ?'
+      : 'UPDATE waypoints SET title = ?, description = ?, type = ?, media = ?, image_uris = ? WHERE id = ?';
+    const params = moveLocation
+      ? [fields.title, fields.description, fields.type, JSON.stringify(fields.media), JSON.stringify(imageUris), fields.latitude!, fields.longitude!, id]
+      : [fields.title, fields.description, fields.type, JSON.stringify(fields.media), JSON.stringify(imageUris), id];
+    await db.runAsync(sql, params);
   }
 
   async delete(id: string): Promise<void> {

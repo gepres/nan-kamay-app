@@ -133,14 +133,31 @@ export default function PublicRouteDetailScreen() {
           ))}
         </View>
 
-        {/* Mapa de la ruta */}
+        {/* Mapa de la ruta (tap → mapa interactivo a pantalla completa) */}
         {gpsPoints.length > 1 && (
-          <View style={{
-            height: 220, borderRadius: 12, overflow: 'hidden',
-            marginBottom: 16, borderWidth: 1, borderColor: '#2D6A4F',
-          }}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => router.push(`/routes/map/${route.id}?public=1`)}
+            style={{
+              height: 220, borderRadius: 12, overflow: 'hidden',
+              marginBottom: 16, borderWidth: 1, borderColor: '#2D6A4F',
+            }}
+          >
             <RouteMap gpsPoints={gpsPoints} waypoints={waypoints} />
-          </View>
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: '#0D1B12CC', borderRadius: 8,
+                paddingHorizontal: 10, paddingVertical: 6,
+                borderWidth: 1, borderColor: '#2D6A4F80',
+              }}
+            >
+              <Ionicons name="expand-outline" size={14} color={colors.accent} />
+              <Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: '600' }}>Ver mapa</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
         {/* Acciones destacadas: Seguir ruta + Previsualizar */}

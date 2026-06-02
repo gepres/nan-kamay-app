@@ -15,8 +15,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import * as Sharing from 'expo-sharing';
-import * as MediaLibrary from 'expo-media-library';
 import { useUiStore } from '@presentation/stores/uiStore';
 import {
   MapView, Camera, RasterSource, RasterLayer,
@@ -141,10 +139,7 @@ export default function ReplayScreen() {
 
   const { showToast } = useUiStore();
   const mapRef = useRef<any>(null);
-  const postalRef = useRef<View>(null);
   const barWidthRef = useRef(0);
-  const [postalMapUri, setPostalMapUri] = useState<string | null>(null);
-  const [capturing, setCapturing] = useState(false);
 
   // ── Scrubbing: arrastrar la barra de progreso para mover el replay ──
   const seekTo = useCallback((fraction: number) => {
@@ -397,80 +392,12 @@ export default function ReplayScreen() {
     setPhase('intro');
   }, []);
 
-  // ── Descargar "postal" de la ruta (imagen compartible) ──
-  const handleDownloadPostal = useCallback(async () => {
-    if (capturing) return;
-    // Carga diferida de react-native-view-shot: es un módulo NATIVO; si el
-    // binario instalado no lo incluye, importarlo arriba tumbaba toda la
-    // pantalla. Aquí degradamos con un mensaje en vez de romper el preview.
-    let captureRefFn: ((ref: unknown, opts: unknown) => Promise<string>) | null = null;
-    try {
-      captureRefFn = require('react-native-view-shot').captureRef;
-    } catch {
-      captureRefFn = null;
-    }
-    if (!captureRefFn) {
-      showToast('Reinstala la app para descargar la postal (módulo de captura no incluido en este build).', 'error');
-      return;
-    }
-    setCapturing(true);
-    const lons = gpsPoints.map((p) => p.longitude);
-    const lats = gpsPoints.map((p) => p.latitude);
-    const hasBounds = gpsPoints.length >= 2;
-    try {
-      // 1. Encuadre TIGHT y centrado para la postal (el del fin queda muy lejos
-      //    por el padding inferior que deja sitio a la tarjeta). Padding
-      //    simétrico y pequeño → la ruta llena el cuadro.
-      let mapUri: string | null = null;
-      try {
-        if (hasBounds && cameraRef.current) {
-          cameraRef.current.fitBounds(
-            [Math.max(...lons), Math.max(...lats)],
-            [Math.min(...lons), Math.min(...lats)],
-            [70, 50, 70, 50],
-            0,
-          );
-          await new Promise((r) => setTimeout(r, 900)); // esperar carga de tiles
-        }
-        mapUri = (await mapRef.current?.takeSnap?.(false)) ?? null;
-      } catch { /* sin mapa en la postal */ }
-      setPostalMapUri(mapUri);
-
-      // 2. Esperar a que la postal (oculta) renderice con la imagen del mapa.
-      await new Promise((r) => setTimeout(r, 400));
-
-      // 3. Permiso de galería.
-      const perm = await MediaLibrary.requestPermissionsAsync();
-      if (!perm.granted) {
-        showToast('Permiso de galería denegado.', 'error');
-        return;
-      }
-
-      // 4. Capturar la postal compuesta (Image + overlays → captura fiable).
-      const uri = await captureRefFn(postalRef, { format: 'png', quality: 1 });
-      await MediaLibrary.saveToLibraryAsync(uri);
-
-      // 5. Ofrecer compartir.
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Compartir ruta' });
-      }
-      showToast('Postal guardada en tu galería.', 'success');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'No se pudo generar la postal.', 'error');
-    } finally {
-      // Restaurar el encuadre del fin (deja sitio a la tarjeta de stats).
-      if (hasBounds && cameraRef.current) {
-        cameraRef.current.fitBounds(
-          [Math.max(...lons), Math.max(...lats)],
-          [Math.min(...lons), Math.min(...lats)],
-          [70, 36, 170, 36],
-          500,
-        );
-      }
-      setCapturing(false);
-      setPostalMapUri(null);
-    }
-  }, [capturing, showToast, gpsPoints]);
+  // ── Compartir "postal" de la ruta ──
+  // Reutiliza el editor de postal (estilo Strava: traza + stats, transparente o
+  // sólida) en vez de capturar inline aquí: un solo flujo de postal en la app.
+  const handleDownloadPostal = useCallback(() => {
+    router.push(`/routes/postal/${id}${isPublic ? '?public=1' : ''}`);
+  }, [id, isPublic]);
 
   // ── Datos derivados para el render ───────────────────────────
   const traveledCoords = useMemo(() => {
@@ -826,7 +753,7 @@ export default function ReplayScreen() {
           onRestart={handleRestart}
           onClose={handleClose}
           onDownload={handleDownloadPostal}
-          capturing={capturing}
+          capturing={false}
           insetsBottom={insets.bottom}
         />
       )}
@@ -966,22 +893,6 @@ export default function ReplayScreen() {
         </View>
       )}
 
-      {/* ── Postal oculta (fuera de pantalla) para capturar y compartir ── */}
-      {capturing && (
-        <View
-          ref={postalRef}
-          collapsable={false}
-          style={{ position: 'absolute', left: -9999, top: 0, width: SCREEN_W }}
-        >
-          <RoutePostalContent
-            route={route}
-            mapUri={postalMapUri}
-            bars={elevation.bars}
-            waypointsCount={waypoints.length}
-            gpsCount={gpsPoints.length}
-          />
-        </View>
-      )}
     </View>
   );
 }
@@ -989,83 +900,6 @@ export default function ReplayScreen() {
 // ─────────────────────────────────────────────────────────────────
 // Overlays
 // ─────────────────────────────────────────────────────────────────
-
-/** Tarjeta "postal" compartible: mapa + stats + perfil de elevación. */
-function RoutePostalContent({
-  route, mapUri, bars, waypointsCount, gpsCount,
-}: {
-  route: Route;
-  mapUri: string | null;
-  bars: number[];
-  waypointsCount: number;
-  gpsCount: number;
-}) {
-  const chips = [
-    { label: 'Distancia', value: formatDistance(route.distanceMeters) },
-    { label: 'Duración', value: formatDuration(route.durationSeconds) },
-    { label: 'Subida', value: formatElevation(route.elevationGainMeters) },
-    { label: 'Elev. máx.', value: formatElevation(route.maxElevationMeters, false) },
-  ];
-  return (
-    <View style={{ width: SCREEN_W, backgroundColor: colors.bgPrimary }}>
-      {/* Mapa */}
-      <View style={{ width: SCREEN_W, height: SCREEN_W * 0.66, backgroundColor: '#0D1B12' }}>
-        {mapUri ? (
-          <Image source={{ uri: mapUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-        ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="map-outline" size={48} color="#2D6A4F" />
-          </View>
-        )}
-        <LinearGradient
-          colors={['#0D1B1200', '#0D1B12F2']}
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 }}
-        />
-        <View style={{ position: 'absolute', left: 20, bottom: 16, right: 20 }}>
-          <Text style={{ color: colors.accent, fontSize: 11, fontWeight: '700', letterSpacing: 2 }}>
-            ÑAN KAMAY
-          </Text>
-          <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800' }} numberOfLines={1}>
-            {route.name}
-          </Text>
-        </View>
-      </View>
-
-      {/* Stats */}
-      <View style={{ padding: 20, gap: 16 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          {chips.map((c) => (
-            <View key={c.label} style={{
-              width: (SCREEN_W - 40 - 12) / 2,
-              backgroundColor: colors.bgCard,
-              borderRadius: 12, padding: 14,
-              borderWidth: 1, borderColor: colors.border,
-            }}>
-              <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }}>{c.value}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{c.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Perfil de elevación */}
-        {bars.length > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 44, gap: 2 }}>
-            {bars.map((h, i) => (
-              <View key={i} style={{ flex: 1, height: h + 4, borderRadius: 1, backgroundColor: colors.accent }} />
-            ))}
-          </View>
-        )}
-
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>{gpsCount} puntos GPS</Text>
-          {waypointsCount > 0 && (
-            <Text style={{ color: colors.textMuted, fontSize: 12 }}>{waypointsCount} waypoints</Text>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-}
 
 function IntroOverlay({ name, insetsTop }: { name: string; insetsTop: number }) {
   // Contenedor entra desde abajo con fade.

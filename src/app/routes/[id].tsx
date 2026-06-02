@@ -246,14 +246,32 @@ export default function RouteDetailScreen() {
           ))}
         </View>
 
-        {/* Mapa de la ruta */}
+        {/* Mapa de la ruta (tap → mapa interactivo a pantalla completa) */}
         {gpsPoints.length > 1 && (
-          <View style={{
-            height: 220, borderRadius: 12, overflow: 'hidden',
-            marginBottom: 16, borderWidth: 1, borderColor: '#2D6A4F',
-          }}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => router.push(`/routes/map/${route.id}`)}
+            style={{
+              height: 220, borderRadius: 12, overflow: 'hidden',
+              marginBottom: 16, borderWidth: 1, borderColor: '#2D6A4F',
+            }}
+          >
             <RouteMap gpsPoints={gpsPoints} waypoints={waypoints} />
-          </View>
+            {/* Indicador de "expandir" */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: '#0D1B12CC', borderRadius: 8,
+                paddingHorizontal: 10, paddingVertical: 6,
+                borderWidth: 1, borderColor: '#2D6A4F80',
+              }}
+            >
+              <Ionicons name="expand-outline" size={14} color={colors.accent} />
+              <Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: '600' }}>Ver mapa</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
         {/* Acciones destacadas: Seguir ruta + Previsualizar */}
@@ -300,6 +318,31 @@ export default function RouteDetailScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Compartir postal (editor estilo Strava: traza + stats) */}
+        {gpsPoints.length > 1 && (
+          <TouchableOpacity
+            onPress={() => router.push(`/routes/postal/${route.id}`)}
+            style={{
+              backgroundColor: colors.bgCard,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.accent + '60',
+              paddingVertical: 14,
+              paddingHorizontal: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="share-social-outline" size={18} color={colors.accent} />
+            <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>
+              Compartir postal
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Perfil de elevación */}

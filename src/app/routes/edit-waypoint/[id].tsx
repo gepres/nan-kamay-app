@@ -12,6 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
+import LocationPickerModal from '@presentation/components/map/LocationPickerModal';
 import { WaypointMedia } from '@core/entities/Waypoint';
 import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
 import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
@@ -57,6 +58,8 @@ export default function EditWaypointScreen() {
   const [saving, setSaving] = useState(false);
   const [found, setFound] = useState(true);
   const [coords, setCoords] = useState<{ lat: number; lon: number; alt: number | null } | null>(null);
+  const [locationChanged, setLocationChanged] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -217,7 +220,10 @@ export default function EditWaypointScreen() {
     if (!id || !title.trim() || saving) return;
     setSaving(true);
     try {
-      await editWaypointUseCase(id, { title, description, type: waypointType, media });
+      await editWaypointUseCase(id, {
+        title, description, type: waypointType, media,
+        ...(locationChanged && coords ? { latitude: coords.lat, longitude: coords.lon } : {}),
+      });
       showToast('Punto actualizado.', 'success');
       router.back();
     } catch (err) {
@@ -271,19 +277,42 @@ export default function EditWaypointScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Ubicación (solo lectura) */}
+        {/* Ubicación (editable: mover en el mapa) */}
         {coords && (
           <View style={{
             flexDirection: 'row', alignItems: 'center', gap: 8,
             marginHorizontal: 20, marginBottom: 20,
             backgroundColor: colors.bgCard, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
           }}>
-            <Ionicons name="location" size={16} color={colors.accent} />
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500' }}>
+            <Ionicons name={locationChanged ? 'pin' : 'location'} size={16} color={colors.accent} />
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', flex: 1 }}>
               {coords.lat.toFixed(4)}, {coords.lon.toFixed(4)}
               {coords.alt != null ? ` · ${Math.round(coords.alt)} m` : ''}
+              {locationChanged ? ' · movido' : ''}
             </Text>
+            <TouchableOpacity
+              onPress={() => setShowPicker(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="map-outline" size={14} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '600' }}>Mover en mapa</Text>
+            </TouchableOpacity>
           </View>
+        )}
+
+        {coords && (
+          <LocationPickerModal
+            visible={showPicker}
+            initial={{ lat: coords.lat, lon: coords.lon }}
+            title="Mover punto"
+            onConfirm={(c) => {
+              setCoords((prev) => (prev ? { ...prev, lat: c.lat, lon: c.lon } : prev));
+              setLocationChanged(true);
+              setShowPicker(false);
+            }}
+            onClose={() => setShowPicker(false)}
+          />
         )}
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 20 }} keyboardShouldPersistTaps="handled">
