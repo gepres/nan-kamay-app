@@ -49,6 +49,12 @@ export interface SeriesBucket {
   current: boolean;
 }
 
+export interface DayDot {
+  label: string;
+  active: boolean;
+  today: boolean;
+}
+
 export interface YearRecap {
   year: number;
   distanceMeters: number;
@@ -58,6 +64,7 @@ export interface YearRecap {
 }
 
 const MONTHS_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DOW_ES = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
 const real = (routes: Route[]): Route[] => routes.filter((r) => !r.isDraft);
 
@@ -191,6 +198,19 @@ export function computePersonalRecords(routes: Route[], now: Date = new Date()):
     longestDuration: best((r) => r.durationSeconds),
     streakDays: computeStreakDays(rs, now),
   };
+}
+
+/** Últimos `days` días (más antiguo→hoy) con flag de actividad. Para "constancia". */
+export function computeRecentDays(routes: Route[], days = 7, now: Date = new Date()): DayDot[] {
+  const set = new Set(real(routes).map((r) => ymd(r.startedAt)));
+  const todayKey = ymd(now);
+  const out: DayDot[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = ymd(d);
+    out.push({ label: DOW_ES[d.getDay()], active: set.has(key), today: key === todayKey });
+  }
+  return out;
 }
 
 export function computeYearRecap(routes: Route[], year: number): YearRecap {

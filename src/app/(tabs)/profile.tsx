@@ -134,6 +134,23 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Ver progreso detallado */}
+        <TouchableOpacity
+          onPress={() => router.push('/metrics/progress')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.accent + '60', marginBottom: 24,
+          }}
+        >
+          <Ionicons name="stats-chart-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Ver progreso</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Tendencias por semana, mes y año</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Sincronización */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 12,
