@@ -8,6 +8,7 @@ import { rowToRoute, routeToRow } from '@infrastructure/mappers/RouteMapper';
 import { rowToGpsPoint, gpsPointToRow } from '@infrastructure/mappers/GpsPointMapper';
 import { rowToWaypoint, waypointToRow } from '@infrastructure/mappers/WaypointMapper';
 import { downsampleElevation } from '@shared/utils/elevation';
+import { simplifyLngLat } from '@shared/utils/geometry';
 
 export class RouteRepositoryImpl implements IRouteRepository {
   /**
@@ -176,6 +177,32 @@ export class RouteRepositoryImpl implements IRouteRepository {
       [routeId]
     );
     return rows.map(rowToGpsPoint);
+  }
+
+  /**
+   * Polilíneas `[lon,lat][]` simplificadas de TODAS las rutas no-borrador del
+   * usuario, en una sola consulta. Para el mapa de calor personal del perfil.
+   * Simplifica con ε mayor (heatmap compacto, no necesita fidelidad fina).
+   */
+  async getAllTrackPolylines(userId: string): Promise<[number, number][][]> {
+    const rows = await db.getAllAsync<{ route_id: string; longitude: number; latitude: number }>(
+      `SELECT g.route_id, g.longitude, g.latitude
+         FROM gps_points g JOIN routes r ON r.id = g.route_id
+        WHERE r.user_id = ? AND r.is_draft = 0
+        ORDER BY g.route_id, g.sequence_index ASC`,
+      [userId]
+    );
+    const byRoute = new Map<string, [number, number][]>();
+    for (const row of rows) {
+      const arr = byRoute.get(row.route_id) ?? [];
+      arr.push([row.longitude, row.latitude]);
+      byRoute.set(row.route_id, arr);
+    }
+    const out: [number, number][][] = [];
+    for (const coords of byRoute.values()) {
+      if (coords.length >= 2) out.push(simplifyLngLat(coords, 8));
+    }
+    return out;
   }
 
   async getWaypoints(routeId: string): Promise<Waypoint[]> {
