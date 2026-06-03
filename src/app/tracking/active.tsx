@@ -11,6 +11,7 @@ import { Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
+import { useUiStore } from '@presentation/stores/uiStore';
 import { useTracking } from '@presentation/hooks/useTracking';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
@@ -33,10 +34,12 @@ export default function ActiveTrackingScreen() {
     gpsPoints,
     currentPosition,
     guide,
+    autoPaused,
     pauseRecording,
     resumeRecording,
     finishRecording,
   } = useTrackingStore();
+  const { audioCues, setAudioCues } = useUiStore();
 
   // Distancia a la traza guía (solo si estamos siguiendo una ruta).
   // Se recalcula cada vez que cambia la posición o la guía — barato porque
@@ -189,6 +192,20 @@ export default function ActiveTrackingScreen() {
         <GpsIndicator accuracy={lastAccuracy} />
       </View>
 
+      {/* Indicador de auto-pausa (centrado) */}
+      {autoPaused && status === 'recording' && (
+        <View pointerEvents="none" style={{ position: 'absolute', top: insets.top + 92, left: 0, right: 0, alignItems: 'center' }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 6,
+            backgroundColor: '#F59E0B20', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+            borderWidth: 1, borderColor: '#F59E0B40',
+          }}>
+            <Ionicons name="pause" size={14} color={colors.accent} />
+            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: '600' }}>Auto-pausado</Text>
+          </View>
+        </View>
+      )}
+
       {/* Banner de desvío (solo si estamos siguiendo una ruta y nos alejamos) */}
       {guide && deviationMeters !== null && (
         <View style={{
@@ -288,6 +305,26 @@ export default function ActiveTrackingScreen() {
         }}
       >
         <Ionicons name="layers" size={20} color={colors.textPrimary} />
+      </TouchableOpacity>
+
+      {/* Anuncios de audio (toggle) */}
+      <TouchableOpacity
+        onPress={() => setAudioCues(!audioCues)}
+        style={{
+          position: 'absolute',
+          top: insets.top + 304,
+          right: 16,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          backgroundColor: audioCues ? colors.accentSoft : '#0D1B12E6',
+          borderWidth: 1,
+          borderColor: audioCues ? colors.accent : '#2D6A4F80',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons name={audioCues ? 'volume-high' : 'volume-mute'} size={20} color={audioCues ? colors.accent : colors.textPrimary} />
       </TouchableOpacity>
 
       {/* Controles inferiores */}

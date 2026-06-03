@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useTrackingStore } from '@presentation/stores/trackingStore';
+import { useTrackingStore, activeElapsedSeconds } from '@presentation/stores/trackingStore';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { GpsPoint } from '@core/entities/GpsPoint';
@@ -8,6 +8,21 @@ import { GpsUpdate } from '@core/ports/services/IGpsService';
 import { GpsFilter } from '@infrastructure/services/GpsFilter';
 import { appendDraftGpsPoint } from '@application/tracking/DraftRouteUseCase';
 import { formatDistance, formatDuration } from '@shared/utils/formatters';
+
+/** Segundos sin punto aceptado (filtro estacionario lo corta todo) → auto-pausa. */
+const AUTO_PAUSE_SEC = 30;
+
+/** Anuncio de voz (expo-speech cargado de forma diferida: si el build no lo
+ *  incluye, no rompe — simplemente no habla). */
+function speakCue(text: string): void {
+  try {
+    const Speech = require('expo-speech');
+    Speech.stop?.();
+    Speech.speak(text, { language: 'es-ES' });
+  } catch {
+    /* expo-speech ausente en este build */
+  }
+}
 
 /**
  * Hook principal para la grabación GPS.
@@ -35,6 +50,10 @@ export function useTracking() {
   );
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const gpsFilterRef = useRef(new GpsFilter());
+  // Auto-pausa: marca de tiempo del último punto ACEPTADO por el filtro.
+  const lastAcceptedAtRef = useRef(Date.now());
+  // Último km ya anunciado por audio (evita repetir).
+  const lastAnnouncedKmRef = useRef(0);
 
   // Callback que recibe cada update de GPS
   const handleGpsUpdate = useCallback(
@@ -79,6 +98,20 @@ export function useTracking() {
       appendDraftGpsPoint(point).catch((e) =>
         console.error('[draft] no se pudo persistir punto', e)
       );
+
+      // Un punto aceptado = movimiento real → reanudar si estábamos auto-pausados.
+      lastAcceptedAtRef.current = Date.now();
+      const st = useTrackingStore.getState();
+      if (st.autoPaused) st.autoResume();
+
+      // Anuncio de audio al cruzar cada km (si el usuario lo activó).
+      if (useUiStore.getState().audioCues) {
+        const km = Math.floor(st.liveStats.distanceMeters / 1000);
+        if (km > lastAnnouncedKmRef.current) {
+          lastAnnouncedKmRef.current = km;
+          speakCue(`${km} kilómetro${km > 1 ? 's' : ''}. Tiempo ${formatDuration(st.liveStats.durationSeconds)}.`);
+        }
+      }
     },
     [routeId, addGpsPoint, updatePosition]
   );
@@ -123,7 +156,25 @@ export function useTracking() {
         last.recordedAt,
       );
     }
+    lastAcceptedAtRef.current = Date.now();
+    lastAnnouncedKmRef.current = Math.floor(useTrackingStore.getState().liveStats.distanceMeters / 1000);
   }, [routeId]);
+
+  // Auto-pausa: si el filtro no acepta puntos por AUTO_PAUSE_SEC (parada real,
+  // el filtro estacionario corta todo), congela el reloj. NO cambia el estado a
+  // 'paused' → se siguen grabando puntos; al moverse, un punto aceptado reanuda.
+  useEffect(() => {
+    if (status !== 'recording') return;
+    lastAcceptedAtRef.current = Date.now(); // arranque / reanudación
+    const id = setInterval(() => {
+      const st = useTrackingStore.getState();
+      if (st.status === 'recording' && !st.autoPaused &&
+          Date.now() - lastAcceptedAtRef.current > AUTO_PAUSE_SEC * 1000) {
+        st.autoPause();
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [status]);
 
   // Manejar cambios de AppState (foreground ↔ background)
   useEffect(() => {
@@ -143,11 +194,10 @@ export function useTracking() {
         const state = useTrackingStore.getState();
         if (!state.startedAt) return;
 
-        const now = Date.now();
-        const elapsed = Math.floor((now - state.startedAt.getTime()) / 1000) - state.totalPausedSeconds;
+        const elapsed = activeElapsedSeconds(state);
         const dist = formatDistance(state.liveStats.distanceMeters);
-        const dur = formatDuration(Math.max(0, elapsed));
-        const statusText = state.status === 'paused' ? ' (Pausado)' : '';
+        const dur = formatDuration(elapsed);
+        const statusText = state.status === 'paused' ? ' (Pausado)' : state.autoPaused ? ' (Auto-pausa)' : '';
 
         gpsService.updateTrackingNotification(
           `${dist} · ${dur}${statusText}`,

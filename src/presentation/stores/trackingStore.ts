@@ -33,6 +33,9 @@ interface TrackingState {
   pausedAt: Date | null;
   totalPausedSeconds: number;
   liveStats: RouteStats;
+  /** Auto-pausa: true cuando se detecta parada (congela el reloj, NO deja de grabar). */
+  autoPaused: boolean;
+  autoPausedAt: Date | null;
   /** Si se está siguiendo una ruta-padre, sus datos quedan aquí. */
   guide: RouteGuide | null;
   /** Acumulador incremental de stats (interno; evita recalcular O(n²)). */
@@ -48,6 +51,8 @@ interface TrackingState {
   ) => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
+  autoPause: () => void;
+  autoResume: () => void;
   addGpsPoint: (point: GpsPoint) => void;
   addWaypoint: (waypoint: Waypoint) => void;
   updatePosition: (coords: Coordinates) => void;
@@ -76,6 +81,22 @@ const initialStats: RouteStats = {
   maxSpeedKmh: 0,
 };
 
+/**
+ * Segundos activos de grabación: tiempo total menos pausas (manuales) menos la
+ * auto-pausa en curso. Fuente única para el reloj (store, notificación, UI).
+ */
+export function activeElapsedSeconds(
+  s: { startedAt: Date | null; totalPausedSeconds: number; autoPaused: boolean; autoPausedAt: Date | null },
+  nowMs: number = Date.now(),
+): number {
+  if (!s.startedAt) return 0;
+  const raw = Math.floor((nowMs - s.startedAt.getTime()) / 1000);
+  const ongoingAuto = s.autoPaused && s.autoPausedAt
+    ? Math.floor((nowMs - s.autoPausedAt.getTime()) / 1000)
+    : 0;
+  return Math.max(0, raw - s.totalPausedSeconds - ongoingAuto);
+}
+
 export const useTrackingStore = create<TrackingState>((set, get) => ({
   status: 'idle',
   routeId: null,
@@ -90,6 +111,8 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   pausedAt: null,
   totalPausedSeconds: 0,
   liveStats: initialStats,
+  autoPaused: false,
+  autoPausedAt: null,
   guide: null,
   _statsAcc: StatsCalculator.createAccumulator(),
 
@@ -108,13 +131,40 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: null,
       totalPausedSeconds: 0,
       liveStats: initialStats,
+      autoPaused: false,
+      autoPausedAt: null,
       guide,
       _statsAcc: StatsCalculator.createAccumulator(),
     });
   },
 
   pauseRecording: () => {
-    set({ status: 'paused', pausedAt: new Date() });
+    // Pausa manual: si había auto-pausa en curso, pliega su hueco al total y la
+    // limpia (no se acumulan dos pausas).
+    const { autoPaused, autoPausedAt, totalPausedSeconds } = get();
+    const autoGap = autoPaused && autoPausedAt
+      ? Math.floor((Date.now() - autoPausedAt.getTime()) / 1000)
+      : 0;
+    set({
+      status: 'paused', pausedAt: new Date(),
+      autoPaused: false, autoPausedAt: null,
+      totalPausedSeconds: totalPausedSeconds + autoGap,
+    });
+  },
+
+  autoPause: () => {
+    const s = get();
+    if (s.status === 'recording' && !s.autoPaused) {
+      set({ autoPaused: true, autoPausedAt: new Date() });
+    }
+  },
+
+  autoResume: () => {
+    const s = get();
+    if (s.autoPaused) {
+      const gap = s.autoPausedAt ? Math.floor((Date.now() - s.autoPausedAt.getTime()) / 1000) : 0;
+      set({ autoPaused: false, autoPausedAt: null, totalPausedSeconds: s.totalPausedSeconds + gap });
+    }
   },
 
   resumeRecording: () => {
@@ -132,10 +182,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   addGpsPoint: (point) => {
     set((state) => {
       const gpsPoints = [...state.gpsPoints, point];
-      const { startedAt, totalPausedSeconds } = state;
-      const elapsed = startedAt
-        ? Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000) - totalPausedSeconds)
-        : 0;
+      const elapsed = activeElapsedSeconds(state);
       // O(1): acumulador incremental en vez de recalcular todo el array.
       StatsCalculator.accumulate(state._statsAcc, point);
       const liveStats = StatsCalculator.finalize(state._statsAcc, elapsed);
@@ -152,13 +199,11 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
   },
 
   finishRecording: () => {
-    // Calcular el durationSeconds final (tiempo activo real, sin pausas)
-    const { startedAt, totalPausedSeconds, gpsPoints } = get();
-    const elapsed = startedAt
-      ? Math.floor((Date.now() - startedAt.getTime()) / 1000) - totalPausedSeconds
-      : 0;
-    const finalStats = StatsCalculator.calculate(gpsPoints, Math.max(0, elapsed));
-    set({ status: 'finished', liveStats: finalStats });
+    // Duración final = tiempo activo real (sin pausas manuales ni auto-pausa).
+    const s = get();
+    const elapsed = activeElapsedSeconds(s);
+    const finalStats = StatsCalculator.calculate(s.gpsPoints, elapsed);
+    set({ status: 'finished', liveStats: finalStats, autoPaused: false, autoPausedAt: null });
   },
 
   restoreSession: (p) => {
@@ -189,6 +234,8 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: new Date(now),
       totalPausedSeconds: gapSeconds,
       liveStats: StatsCalculator.calculate(p.gpsPoints, activeSeconds),
+      autoPaused: false,
+      autoPausedAt: null,
       _statsAcc: StatsCalculator.buildAccumulator(p.gpsPoints),
     });
   },
@@ -208,6 +255,8 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       pausedAt: null,
       totalPausedSeconds: 0,
       liveStats: initialStats,
+      autoPaused: false,
+      autoPausedAt: null,
       guide: null,
       _statsAcc: StatsCalculator.createAccumulator(),
     });
