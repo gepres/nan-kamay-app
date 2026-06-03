@@ -205,6 +205,41 @@ export class RouteRepositoryImpl implements IRouteRepository {
     return out;
   }
 
+  /** Ancla (primer punto GPS) + metadatos de cada ruta no-borrador del usuario.
+   *  Para agrupar rutas por zona geográfica. */
+  async getRouteAnchors(userId: string): Promise<
+    { routeId: string; name: string; distanceMeters: number; activityType?: string; lat: number; lon: number }[]
+  > {
+    const rows = await db.getAllAsync<{
+      id: string; name: string; distance_meters: number; activity_type: string | null;
+      lat: number | null; lon: number | null;
+    }>(
+      `SELECT r.id, r.name, r.distance_meters, r.activity_type,
+              (SELECT latitude  FROM gps_points WHERE route_id = r.id ORDER BY sequence_index LIMIT 1) AS lat,
+              (SELECT longitude FROM gps_points WHERE route_id = r.id ORDER BY sequence_index LIMIT 1) AS lon
+         FROM routes r
+        WHERE r.user_id = ? AND r.is_draft = 0`,
+      [userId]
+    );
+    return rows
+      .filter((r) => r.lat != null && r.lon != null)
+      .map((r) => ({
+        routeId: r.id, name: r.name, distanceMeters: r.distance_meters,
+        activityType: r.activity_type ?? undefined, lat: r.lat as number, lon: r.lon as number,
+      }));
+  }
+
+  /** Waypoints (título/tipo/coords) de todas las rutas no-borrador del usuario. */
+  async getAllWaypointsLite(userId: string): Promise<{ title: string; type?: string; lat: number; lon: number }[]> {
+    const rows = await db.getAllAsync<{ title: string; type: string | null; latitude: number; longitude: number }>(
+      `SELECT w.title, w.type, w.latitude, w.longitude
+         FROM waypoints w JOIN routes r ON r.id = w.route_id
+        WHERE r.user_id = ? AND r.is_draft = 0`,
+      [userId]
+    );
+    return rows.map((r) => ({ title: r.title, type: r.type ?? undefined, lat: r.latitude, lon: r.longitude }));
+  }
+
   async getWaypoints(routeId: string): Promise<Waypoint[]> {
     const rows = await db.getAllAsync<Record<string, unknown>>(
       'SELECT * FROM waypoints WHERE route_id = ? ORDER BY created_at ASC',

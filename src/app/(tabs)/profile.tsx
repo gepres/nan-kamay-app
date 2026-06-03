@@ -151,6 +151,23 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
+        {/* Lugares / zonas */}
+        <TouchableOpacity
+          onPress={() => router.push('/metrics/places')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.accent + '60', marginBottom: 24,
+          }}
+        >
+          <Ionicons name="map-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Lugares y zonas</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Dónde vas más y lugares más visitados</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Sincronización */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 12,
