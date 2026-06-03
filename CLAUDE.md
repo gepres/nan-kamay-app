@@ -24,8 +24,11 @@
 | Login Google OAuth (A5) | ✅ Corregido (`expo-web-browser` + PKCE; requiere config Supabase/Google + rebuild) |
 | Sync bidireccional / imágenes idempotentes (A6/A8) | ✅ Corregido (pull + delete remoto; imágenes delete+insert sin re-subir) |
 | 🟡 lote final (M16 minElev, M12 recientes, M14 aviso tiles, M17 perfil, A6-ext borrado cross-device + Storage) | ✅ Corregido |
+| GPS: suavizado One Euro + anti-serpenteo (RDP) + orden timestamps background | ✅ Hecho (`OneEuroFilter`, `geometry.simplifyLngLat`, `GpsServiceImpl`). Protocolo: `docs/GPS_FIELD_TESTS.md` |
+| Mejoras estilo Strava — **Fase 1** (analítica local) y **Fase 2** (grabación pro) | ✅ Hecho. Plan completo y estado por fase: `docs/STRAVA_ROADMAP.md` (análisis: `docs/STRAVA_ANALYSIS.md`) |
 
 **Antes de tocar sync, backend o esquema:** lee `docs/VALIDATION.md`.
+**Antes de planear features tipo Strava:** lee `docs/STRAVA_ROADMAP.md`.
 
 ---
 

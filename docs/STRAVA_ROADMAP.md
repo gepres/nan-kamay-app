@@ -19,9 +19,16 @@ Base sobre la que se apoya todo lo demás. Ya en `master` (commit `7aac406`).
 
 ---
 
-## Fase 1 — "Tu progreso" (analítica local) 🟡 · esfuerzo M · riesgo BAJO
+## Fase 1 — "Tu progreso" (analítica local) ✅ HECHA · commits `1c7a494`→`046c6b4`
 **Por qué primero:** máximo valor percibido con el menor riesgo. Es **solo lectura**
 sobre datos que ya existen en SQLite — sin backend, sin permisos, sin nativo.
+
+**Entregado:**
+- [x] 1.1 Perfil de elevación interactivo (`InteractiveElevationChart`, scrub↔mapa) — `1c7a494`
+- [x] 1.2 Capa de métricas pura (`computeMetrics`) + hook `usePersonalMetrics` — `c2448c3`
+- [x] 1.3 Perfil: récords + mapa de calor personal + recap (`PersonalHeatmap`, `getAllTrackPolylines`) — `77ee988`
+- [x] 1.4 Pantalla Progreso (`/metrics/progress`: período/barras/donut/constancia) — `40f6124`
+- [x] 1.5 Pantalla Lugares/Zonas (`/metrics/places`, `computeZones`, `ClusterMap`) — `046c6b4`
 
 **Alcance:**
 - **Perfil de elevación interactivo** (detalle): scrub en el gráfico que resalta el
@@ -49,8 +56,15 @@ sobre datos que ya existen en SQLite — sin backend, sin permisos, sin nativo.
 
 ---
 
-## Fase 2 — "Grabación pro" (splits + auto-pausa + audio) 🔴 · esfuerzo M · riesgo MEDIO
+## Fase 2 — "Grabación pro" (splits + auto-pausa + audio) ✅ HECHA · commits `0482a39`, `5bf9716`
 **Por qué aquí:** mejora el core de grabación, self-contained, sin backend. Datos ya en `gps_points`.
+
+**Entregado:**
+- [x] 2.1 Parciales por km (`computeSplits` + `SplitsTable` en el detalle) — `0482a39`
+- [x] 2.2 Auto-pausa **clock-only** (congela el reloj, NO deja de grabar; `activeElapsedSeconds`) — `5bf9716`
+- [x] 2.3 Anuncios de audio por km (`expo-speech` diferido + toggle `audioCues`) — `5bf9716`
+- ⚠️ Pendiente de **validar auto-pausa en campo** (riesgo medio): repetir test de reposo.
+- ⚠️ `expo-speech` es nativo → requiere rebuild del APK.
 
 **Alcance:**
 - **Parciales por km** en vivo y en el detalle (ritmo/desnivel por km).
@@ -174,11 +188,11 @@ no aportan al producto individual offline-first. Reconsiderar solo si el product
 
 ## Orden recomendado y dependencias
 ```
-Fase 0 ✅ ── Fase 1 (analítica) ── Fase 2 (grabación pro)
-                       │
-                       └── Fase 3 (tiles offline) ── Fase 4 (planificador)
-                                                          │
-                                   Fase 5 (seguridad) ────┘   Fase 6 (social) [independiente]
+Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
+                  │
+                  └── Fase 3 (tiles offline) ── Fase 4 (planificador)   ← SIGUIENTE
+                                                     │
+                              Fase 5 (seguridad) ────┘   Fase 6 (social) [independiente]
 ```
 - **1 y 2** no dependen de nada → arrancar ya (riesgo bajo, valor alto).
 - **3** habilita el uso real en montaña; **4** se apoya en el mapa.
