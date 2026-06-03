@@ -41,3 +41,7 @@ yarn-error.*
 /android
 
 .env
+
+# local build artifacts
+/build-*.log
+/build-preview.apk
