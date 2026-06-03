@@ -19,6 +19,7 @@ import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
 import { getWaypointTypeInfo } from '@shared/constants/waypointTypes';
+import { simplifyLngLat } from '@shared/utils/geometry';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import WaypointDetailCard from '@presentation/components/routes/WaypointDetailCard';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
@@ -127,11 +128,13 @@ export default function RouteMapScreen() {
     return () => { cancelled = true; sub?.remove(); };
   }, []);
 
-  const coords = useMemo(() => gpsPoints.map((p) => [p.longitude, p.latitude]), [gpsPoints]);
+  const coords = useMemo(() => gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number]), [gpsPoints]);
 
+  // Línea simplificada (RDP) para el dibujo: quita el serpenteo del GPS sin
+  // redondear curvas. `coords` crudas se siguen usando para encuadrar (bounds).
   const routeGeoJson = useMemo<GeoJSON.Feature<GeoJSON.LineString> | null>(
     () => (coords.length > 1
-      ? { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
+      ? { type: 'Feature', geometry: { type: 'LineString', coordinates: simplifyLngLat(coords) }, properties: {} }
       : null),
     [coords],
   );

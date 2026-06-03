@@ -11,6 +11,7 @@ import {
   Logger,
 } from '@maplibre/maplibre-react-native';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
+import { simplifyLngLat } from '@shared/utils/geometry';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
 import { colors } from '@presentation/theme/colors';
@@ -38,11 +39,15 @@ export default function RouteMap({
   centerCoordinate,
   zoomLevel = 14,
 }: Props) {
-  const coords = gpsPoints.map((p) => [p.longitude, p.latitude]);
+  const coords = gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number]);
+  // Línea simplificada (RDP) para el dibujo: quita el serpenteo lateral del GPS
+  // sin redondear curvas reales. Inicio/fin se conservan, así start/end y bounds
+  // (calculados sobre `coords` crudas) no cambian.
+  const lineCoords = simplifyLngLat(coords);
 
   const routeGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
     type: 'Feature',
-    geometry: { type: 'LineString', coordinates: coords },
+    geometry: { type: 'LineString', coordinates: lineCoords },
     properties: {},
   };
 

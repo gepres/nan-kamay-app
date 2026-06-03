@@ -15,6 +15,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
+import { simplifyLngLat } from '@shared/utils/geometry';
 import { colors } from '@presentation/theme/colors';
 import MissingTileKeyBanner from './MissingTileKeyBanner';
 
@@ -115,11 +116,13 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     },
   }));
 
+  // Traza en vivo simplificada (RDP): quita el serpenteo del GPS sin redondear
+  // curvas. RDP conserva el último punto → la línea no se separa del dot actual.
   const routeGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
     type: 'Feature',
     geometry: {
       type: 'LineString',
-      coordinates: gpsPoints.map((p) => [p.longitude, p.latitude]),
+      coordinates: simplifyLngLat(gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number])),
     },
     properties: {},
   };

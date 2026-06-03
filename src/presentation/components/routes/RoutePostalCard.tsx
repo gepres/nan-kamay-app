@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { formatDistance, formatDuration, formatElevation } from '@shared/utils/formatters';
+import { simplifyLngLat } from '@shared/utils/geometry';
 import { colors } from '@presentation/theme/colors';
 
 export interface PostalOptions {
@@ -38,8 +39,10 @@ interface Props {
  *  por latitud) y dejando un margen interior. Devuelve el path SVG. */
 function buildTracePath(gpsPoints: GpsPoint[], w: number, h: number, pad: number) {
   if (gpsPoints.length < 2) return null;
-  const lons = gpsPoints.map((p) => p.longitude);
-  const lats = gpsPoints.map((p) => p.latitude);
+  // Simplificar (RDP) antes de proyectar: traza limpia sin serpenteo.
+  const ll = simplifyLngLat(gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number]));
+  const lons = ll.map((c) => c[0]);
+  const lats = ll.map((c) => c[1]);
   const minLon = Math.min(...lons), maxLon = Math.max(...lons);
   const minLat = Math.min(...lats), maxLat = Math.max(...lats);
   const midLat = (minLat + maxLat) / 2;
@@ -63,7 +66,7 @@ function buildTracePath(gpsPoints: GpsPoint[], w: number, h: number, pad: number
     return [x, y];
   };
 
-  const pts = gpsPoints.map((p) => project(p.longitude, p.latitude));
+  const pts = ll.map((c) => project(c[0], c[1]));
   const d = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
   return { d, start: pts[0], end: pts[pts.length - 1] };
 }

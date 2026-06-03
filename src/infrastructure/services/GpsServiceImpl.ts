@@ -44,21 +44,28 @@ async function persistBackgroundLocation(loc: Location.LocationObject): Promise<
     if (acc == null || acc > 30) return; // gate de precisión (alineado con GpsFilter)
 
     const last = await db.getFirstAsync<{
-      latitude: number; longitude: number; sequence_index: number;
+      latitude: number; longitude: number; sequence_index: number; recorded_at: string;
     }>(
-      `SELECT latitude, longitude, sequence_index FROM gps_points
+      `SELECT latitude, longitude, sequence_index, recorded_at FROM gps_points
        WHERE route_id = ? ORDER BY sequence_index DESC LIMIT 1`,
       [draft.id]
     );
 
     let seq = 0;
     if (last) {
+      // Guard de monotonicidad temporal: en background el SO entrega lotes
+      // de fixes que pueden venir desordenados o duplicados. Sin esto, un fix
+      // con timestamp anterior recibía un sequence_index mayor → dt negativo y
+      // distancia inflada. Descartamos lo que no avance en el tiempo.
+      const lastT = new Date(last.recorded_at).getTime();
+      if (loc.timestamp <= lastT) return;
+
       seq = last.sequence_index + 1;
       const d = haversineMeters(
         last.latitude, last.longitude,
         loc.coords.latitude, loc.coords.longitude
       );
-      if (d < 4) return; // desplazamiento mínimo (igual que el filtro foreground)
+      if (d < 5) return; // desplazamiento mínimo (alineado con GpsFilter foreground)
     }
 
     // Gate de altitud vertical: si la precisión vertical es mala (> 50 m),
@@ -98,10 +105,16 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskMan
   }
   if (!data) return;
   const { locations } = data as { locations: Location.LocationObject[] };
+  if (!locations?.length) return;
+
+  // El SO puede entregar el lote desordenado; ordenar por timestamp asegura
+  // que tanto el filtro foreground como la escritura directa vean los fixes
+  // en orden cronológico (evita dt negativos / distancias infladas).
+  const ordered = [...locations].sort((a, b) => a.timestamp - b.timestamp);
 
   if (_backgroundCallback) {
     // App viva (foreground/background): el store + useTracking persisten.
-    for (const loc of locations) {
+    for (const loc of ordered) {
       _backgroundCallback({
         coordinates: {
           latitude: loc.coords.latitude,
@@ -116,7 +129,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: TaskMan
     }
   } else {
     // Proceso revivido por el SO sin contexto JS → escribir directo a SQLite.
-    for (const loc of locations) {
+    for (const loc of ordered) {
       await persistBackgroundLocation(loc);
     }
   }

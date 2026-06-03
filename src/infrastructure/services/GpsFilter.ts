@@ -1,4 +1,13 @@
 import { KalmanFilter1D } from './KalmanFilter1D';
+import { OneEuroFilter } from './OneEuroFilter';
+
+/** One Euro horizontal — suavizado adaptativo a la velocidad (ver OneEuroFilter).
+ *  `minCutoff` bajo suaviza el jitter/serpenteo en recto/lento; `beta` sube el
+ *  cutoff al moverse para no laguear ni cortar esquinas. Ajuste conservador
+ *  validado contra capturas reales (apenas toca rutas limpias; ataca el zig-zag
+ *  de alta frecuencia). Afinable con una captura en calle con edificios. */
+const EURO_MIN_CUTOFF = 0.1;
+const EURO_BETA = 0.02;
 
 /**
  * Pipeline de filtrado GPS para apps de trekking.
@@ -8,8 +17,11 @@ import { KalmanFilter1D } from './KalmanFilter1D';
  * 2. Anti-teleport — descarta saltos imposibles (sobre fix crudo)
  * 3. Detección estacionaria — congela TODO si NO hay desplazamiento real
  *    (basada en velocidad CALCULADA, no en el `speed` del SO)
- * 4. Kalman 1D SOLO en altitud (lat/lon usan coords raw; ver clase)
- * 5. Desplazamiento mínimo sobre raw — no contar jitter menor que el error GPS
+ * 4. Kalman 1D SOLO en altitud
+ * 4b. One Euro 2D en lat/lon — suavizado adaptativo a la velocidad: quita el
+ *     jitter/serpenteo en línea recta y la deriva fina en reposo SIN lag ni
+ *     cortar esquinas (los gates anteriores trabajan sobre coords RAW).
+ * 5. Desplazamiento mínimo — no contar jitter menor que el error GPS
  *
  * ⚠️ Lección de campo (2026-05-19): el `speed` reportado por expo-location
  * es 0/null en muchos Android caminando a paso normal. Usarlo como única
@@ -39,6 +51,11 @@ export class GpsFilter {
   // nuevo eje varios fixes después. La calidad la siguen aportando los gates
   // (accuracy, anti-teleport, stationary detection, min displacement).
   private altKalman = new KalmanFilter1D(0.8, 150);
+
+  // One Euro horizontal (x este / y norte, en metros relativos a `origin`).
+  private origin: { lat: number; lon: number } | null = null;
+  private euroX = new OneEuroFilter(EURO_MIN_CUTOFF, EURO_BETA);
+  private euroY = new OneEuroFilter(EURO_MIN_CUTOFF, EURO_BETA);
 
   // Estado estacionario
   private slowCount = 0;
@@ -74,13 +91,13 @@ export class GpsFilter {
   /** Radio de drift ignorado mientras está parado (metros). */
   private readonly DRIFT_RADIUS = 12;
   /**
-   * Desplazamiento mínimo para contar como movimiento real (metros).
-   * Bajada 4 → 3 (2026-05-26): con el Kalman más responsivo (q=1e-4) el
-   * filtrado lagueaba menos y un gate de 4 m descartaba pasos cortos; 3 m
-   * captura una polilínea más densa sin que jitter de pie pasen (el filtro
-   * estacionario los corta antes).
+   * Desplazamiento mínimo para contar como movimiento real (metros), medido
+   * sobre la coordenada YA suavizada (One Euro).
+   * Subida 3 → 5 (2026-06-03): con el suavizado horizontal re-introducido, un
+   * gate algo mayor adelgaza la polilínea y reduce el zig-zag residual sin
+   * perder la forma de la ruta (el suavizado ya quita el jitter fino).
    */
-  private readonly MIN_DISPLACEMENT = 3;
+  private readonly MIN_DISPLACEMENT = 5;
   /** Velocidad máxima razonable caminando/trekking (km/h). */
   private readonly MAX_HIKING_SPEED_KMH = 18;
   /** Tamaño de la ventana de raw fixes para análisis espacial. */
@@ -199,25 +216,40 @@ export class GpsFilter {
       }
     }
 
-    // ── 5. Desplazamiento mínimo (anti-jitter) sobre RAW ──
-    // Antes comparaba contra coords filtradas (post-Kalman). Con el Kalman
-    // lagueado, esa distancia era < real → fixes legítimos en caminata
-    // rápida o en codos se descartaban → polilínea quedaba atrás del dot.
+    // ── 4b. Suavizado horizontal One Euro (adaptativo a la velocidad) ──
+    // Trabaja en metros locales (x este / y norte) relativos a un origen fijo.
+    // A baja velocidad suaviza fuerte (quita jitter/serpenteo y deriva fina);
+    // al moverse sube el cutoff y casi no introduce lag (no corta esquinas).
+    // El `dot` del mapa usa estas mismas coords de salida → no se separa de la
+    // polilínea. Los gates previos (accuracy, anti-teleport, estacionario)
+    // siguen evaluándose sobre el fix RAW.
+    if (this.origin === null) {
+      this.origin = { lat: latitude, lon: longitude };
+    }
+    const local = this.toLocal(latitude, longitude);
+    const smoothed = this.toGeo(
+      this.euroX.filter(local.x, now),
+      this.euroY.filter(local.y, now),
+    );
+    const outLat = smoothed.lat;
+    const outLon = smoothed.lon;
+
+    // ── 5. Desplazamiento mínimo (anti-jitter) sobre la coord SUAVIZADA ──
     if (this.lastAccepted) {
       const dist = fastDistance(
         this.lastAccepted.lat, this.lastAccepted.lon,
-        latitude, longitude,
+        outLat, outLon,
       );
       if (dist < this.MIN_DISPLACEMENT) {
         return null;
       }
     }
 
-    this.lastAccepted = { lat: latitude, lon: longitude, time: now };
+    this.lastAccepted = { lat: outLat, lon: outLon, time: now };
 
     return {
-      latitude,
-      longitude,
+      latitude: outLat,
+      longitude: outLon,
       altitude: filteredAlt,
       accuracy,
       speed,
@@ -225,8 +257,31 @@ export class GpsFilter {
     };
   }
 
+  /** lat/lon → metros locales (este/norte) relativos a `origin`. */
+  private toLocal(lat: number, lon: number): { x: number; y: number } {
+    const o = this.origin!;
+    const cl = Math.cos((o.lat * Math.PI) / 180);
+    return {
+      x: ((lon - o.lon) * Math.PI / 180) * cl * 6371000,
+      y: ((lat - o.lat) * Math.PI / 180) * 6371000,
+    };
+  }
+
+  /** Metros locales → lat/lon. */
+  private toGeo(x: number, y: number): { lat: number; lon: number } {
+    const o = this.origin!;
+    const cl = Math.cos((o.lat * Math.PI) / 180);
+    return {
+      lat: o.lat + ((y / 6371000) * 180) / Math.PI,
+      lon: o.lon + ((x / (6371000 * cl)) * 180) / Math.PI,
+    };
+  }
+
   reset(): void {
     this.altKalman.reset();
+    this.euroX.reset();
+    this.euroY.reset();
+    this.origin = null;
     this.slowCount = 0;
     this.isStationary = false;
     this.stationaryAnchor = null;
@@ -259,10 +314,14 @@ export class GpsFilter {
    */
   seed(latitude: number, longitude: number, altitude: number | null, timestamp: Date): void {
     this.altKalman.reset();
-    // Solo la altitud necesita seed del Kalman; lat/lon ya no se filtran.
     if (altitude !== null) this.altKalman.filter(altitude);
 
     const t = timestamp.getTime();
+    // Origen y filtros One Euro anclados al punto sembrado (0,0 local) → sin
+    // transitorio de convergencia al reanudar un borrador.
+    this.origin = { lat: latitude, lon: longitude };
+    this.euroX.seed(0, t);
+    this.euroY.seed(0, t);
     this.lastAccepted = { lat: latitude, lon: longitude, time: t };
     this.lastRaw = { lat: latitude, lon: longitude, time: t };
     this.slowCount = 0;

@@ -28,7 +28,7 @@ import { getPublicRouteDetailUseCase } from '@application/routes/GetPublicRouteD
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
-import { fastDistanceMeters } from '@shared/utils/geometry';
+import { fastDistanceMeters, simplifyLngLat } from '@shared/utils/geometry';
 import { formatDistance, formatDuration, formatElevation } from '@shared/utils/formatters';
 import { colors } from '@presentation/theme/colors';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
@@ -402,12 +402,12 @@ export default function ReplayScreen() {
   // ── Datos derivados para el render ───────────────────────────
   const traveledCoords = useMemo(() => {
     const i = Math.floor(progressIdx);
-    if (i < 1) return [];
-    return gpsPoints.slice(0, i + 1).map((p) => [p.longitude, p.latitude]);
+    if (i < 1) return [] as [number, number][];
+    return simplifyLngLat(gpsPoints.slice(0, i + 1).map((p) => [p.longitude, p.latitude] as [number, number]));
   }, [progressIdx, gpsPoints]);
 
   const fullCoords = useMemo(
-    () => gpsPoints.map((p) => [p.longitude, p.latitude]),
+    () => simplifyLngLat(gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number])),
     [gpsPoints],
   );
 
