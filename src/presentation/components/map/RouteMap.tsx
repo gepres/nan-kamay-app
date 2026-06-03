@@ -31,6 +31,8 @@ interface Props {
   waypoints?: Waypoint[];
   centerCoordinate?: [number, number];
   zoomLevel?: number;
+  /** Punto [lon, lat] a resaltar (p. ej. la posición del scrub de elevación). */
+  highlight?: [number, number] | null;
 }
 
 export default function RouteMap({
@@ -38,6 +40,7 @@ export default function RouteMap({
   waypoints = [],
   centerCoordinate,
   zoomLevel = 14,
+  highlight,
 }: Props) {
   const coords = gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number]);
   // Línea simplificada (RDP) para el dibujo: quita el serpenteo lateral del GPS
@@ -146,6 +149,23 @@ export default function RouteMap({
             <CircleLayer
               id="waypoints-layer"
               style={{ circleRadius: 5, circleColor: colors.accent, circleStrokeColor: '#fff', circleStrokeWidth: 2 }}
+            />
+          </ShapeSource>
+        )}
+
+        {/* Punto resaltado (scrub del perfil de elevación) */}
+        {highlight && (
+          <ShapeSource
+            id="route-highlight"
+            shape={{ type: 'Feature', geometry: { type: 'Point', coordinates: highlight }, properties: {} }}
+          >
+            <CircleLayer
+              id="route-highlight-halo"
+              style={{ circleRadius: 13, circleColor: '#F59E0B40', circleStrokeColor: '#F59E0B80', circleStrokeWidth: 1 }}
+            />
+            <CircleLayer
+              id="route-highlight-dot"
+              style={{ circleRadius: 7, circleColor: colors.accent, circleStrokeColor: '#fff', circleStrokeWidth: 3 }}
             />
           </ShapeSource>
         )}

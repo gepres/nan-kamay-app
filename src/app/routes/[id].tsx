@@ -13,7 +13,7 @@ import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImp
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatSpeed, formatElevation, formatDate } from '@shared/utils/formatters';
 import ExportButtons from '@presentation/components/routes/ExportButtons';
-import ElevationChart from '@presentation/components/routes/ElevationChart';
+import InteractiveElevationChart from '@presentation/components/routes/InteractiveElevationChart';
 import WaypointDetailCard from '@presentation/components/routes/WaypointDetailCard';
 import RouteMap from '@presentation/components/map/RouteMap';
 import { useRoutesStore } from '@presentation/stores/routesStore';
@@ -36,6 +36,8 @@ export default function RouteDetailScreen() {
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Índice del punto bajo el dedo en el perfil de elevación (resalta en el mapa).
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
 
   // Estado de nube: visibilidad pública + sincronización por-ruta.
   const [isPublic, setIsPublic] = useState(false);
@@ -256,7 +258,15 @@ export default function RouteDetailScreen() {
               marginBottom: 16, borderWidth: 1, borderColor: '#2D6A4F',
             }}
           >
-            <RouteMap gpsPoints={gpsPoints} waypoints={waypoints} />
+            <RouteMap
+              gpsPoints={gpsPoints}
+              waypoints={waypoints}
+              highlight={
+                scrubIndex != null && gpsPoints[scrubIndex]
+                  ? [gpsPoints[scrubIndex].longitude, gpsPoints[scrubIndex].latitude]
+                  : null
+              }
+            />
             {/* Indicador de "expandir" */}
             <View
               pointerEvents="none"
@@ -345,13 +355,13 @@ export default function RouteDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Perfil de elevación */}
+        {/* Perfil de elevación interactivo (scrub → resalta el punto en el mapa) */}
         {gpsPoints.some((p) => p.altitude != null) && (
           <View style={{
             backgroundColor: colors.bgCard, borderRadius: 12, padding: 14,
             borderWidth: 1, borderColor: '#2D6A4F', marginBottom: 16,
           }}>
-            <ElevationChart gpsPoints={gpsPoints} height={80} />
+            <InteractiveElevationChart gpsPoints={gpsPoints} height={110} onScrub={setScrubIndex} />
           </View>
         )}
 
