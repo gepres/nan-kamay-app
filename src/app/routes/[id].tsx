@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView,
   TouchableOpacity, ActivityIndicator, Alert, Switch,
@@ -14,6 +14,8 @@ import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatSpeed, formatElevation, formatDate } from '@shared/utils/formatters';
 import ExportButtons from '@presentation/components/routes/ExportButtons';
 import InteractiveElevationChart from '@presentation/components/routes/InteractiveElevationChart';
+import SplitsTable from '@presentation/components/routes/SplitsTable';
+import { computeSplits } from '@application/metrics/computeSplits';
 import WaypointDetailCard from '@presentation/components/routes/WaypointDetailCard';
 import RouteMap from '@presentation/components/map/RouteMap';
 import { useRoutesStore } from '@presentation/stores/routesStore';
@@ -38,6 +40,8 @@ export default function RouteDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   // Índice del punto bajo el dedo en el perfil de elevación (resalta en el mapa).
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  // Parciales por km (derivado de los puntos GPS).
+  const splits = useMemo(() => computeSplits(gpsPoints), [gpsPoints]);
 
   // Estado de nube: visibilidad pública + sincronización por-ruta.
   const [isPublic, setIsPublic] = useState(false);
@@ -364,6 +368,9 @@ export default function RouteDetailScreen() {
             <InteractiveElevationChart gpsPoints={gpsPoints} height={110} onScrub={setScrubIndex} />
           </View>
         )}
+
+        {/* Parciales por km */}
+        <SplitsTable splits={splits} />
 
         {/* Ajustar elevación con el terreno (DEM) */}
         {gpsPoints.length > 1 && (
