@@ -50,7 +50,17 @@
       "PowerShell(npx tsc --noEmit -p D:\\\\projects\\\\nan-kamay\\\\tsconfig.json 2>&1 | Select-Object -First 30)",
       "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease)",
       "PowerShell(npx tsc --noEmit -p D:\\\\projects\\\\nan-kamay\\\\tsconfig.json 2>&1 | Select-Object -First 40)",
-      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease --console=plain)"
+      "PowerShell(& \"D:\\\\projects\\\\nan-kamay\\\\android\\\\gradlew.bat\" -p \"D:\\\\projects\\\\nan-kamay\\\\android\" assembleRelease --console=plain)",
+      "Bash(ls -la *.csv)",
+      "Bash(wc -l *.csv)",
+      "Bash(tee build-local.log)",
+      "Bash(./gradlew assembleRelease --console=plain)",
+      "Bash(tee ../build-gradle.log)",
+      "Bash(ls -lh android/app/build/outputs/apk/release/*.apk)",
+      "Bash(git check-ignore *)",
+      "PowerShell(Write-Output \"=== AVDs disponibles ===\"; & \"$env:ANDROID_HOME\\\\emulator\\\\emulator.exe\" -list-avds; Write-Output \"=== dispositivos/emuladores conectados ===\"; & \"$env:ANDROID_HOME\\\\platform-tools\\\\adb.exe\" devices)",
+      "PowerShell(& \"$env:ANDROID_HOME\\\\platform-tools\\\\adb.exe\" install -r \"D:\\\\projects\\\\nan-kamay\\\\android\\\\app\\\\build\\\\outputs\\\\apk\\\\release\\\\app-release.apk\")",
+      "PowerShell($pkg = \\(Get-Content \"D:\\\\projects\\\\nan-kamay\\\\app.json\" -Raw | ConvertFrom-Json\\).expo.android.package; Write-Output \"package: $pkg\"; & \"$env:ANDROID_HOME\\\\platform-tools\\\\adb.exe\" shell monkey -p $pkg -c android.intent.category.LAUNCHER 1)"
     ]
   }
 }
