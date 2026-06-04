@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import * as Location from 'expo-location';
 import {
   View,
   Text,
@@ -35,6 +36,10 @@ const difficultyColors: Record<Difficulty, string> = {
 
 const DEFAULT_ACTIVITIES = ['Senderismo', 'Recorrido', 'Correr', 'Maratón', 'Ciclismo', 'Escalada'];
 
+/** Precisión (m) bajo la cual consideramos el GPS "listo" para empezar a grabar.
+ *  Evita el arranque disperso por el cold-start (primeros fixes ruidosos). */
+const GPS_READY_ACCURACY_M = 18;
+
 export default function PreRecordingScreen() {
   const { followFrom } = useLocalSearchParams<{ followFrom?: string }>();
   const [name, setName] = useState('');
@@ -47,6 +52,11 @@ export default function PreRecordingScreen() {
   const [checkingGps, setCheckingGps] = useState(false);
   const [guide, setGuide] = useState<RouteGuide | null>(null);
   const [loadingGuide, setLoadingGuide] = useState(false);
+  // Precalentamiento del GPS: precisión del último fix mientras el usuario llena
+  // el formulario, para no arrancar a grabar con el GPS en frío.
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsPermitted, setGpsPermitted] = useState<boolean | null>(null);
+  const warmSubRef = useRef<Location.LocationSubscription | null>(null);
   const { startRecording } = useTrackingStore();
   const { user } = useAuthStore();
   const { showToast } = useUiStore();
@@ -69,6 +79,30 @@ export default function PreRecordingScreen() {
       .finally(() => setLoadingGuide(false));
   }, [followFrom]);
 
+  // ── Precalentar el GPS al entrar a la pantalla ──
+  // Mantiene el chip GPS activo mientras se configura la ruta; al navegar a
+  // grabar, el GPS ya está "caliente" y los primeros fixes son precisos.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (cancelled) return;
+      if (status !== 'granted') { setGpsPermitted(false); return; }
+      setGpsPermitted(true);
+      warmSubRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
+        (loc) => setGpsAccuracy(loc.coords.accuracy ?? null),
+      );
+    })();
+    return () => {
+      cancelled = true;
+      warmSubRef.current?.remove();
+      warmSubRef.current = null;
+    };
+  }, []);
+
+  const permDenied = gpsPermitted === false;
+  const gpsReady = !permDenied && gpsAccuracy != null && gpsAccuracy <= GPS_READY_ACCURACY_M;
   const allActivities = [...DEFAULT_ACTIVITIES, ...customActivities];
 
   const handleAddCustomActivity = () => {
@@ -366,16 +400,45 @@ export default function PreRecordingScreen() {
             )}
           </View>
 
-          {/* Botón iniciar */}
+          {/* Estado de señal GPS (precalentamiento) */}
+          {(() => {
+            const cardColor = permDenied ? colors.danger : gpsReady ? colors.success : colors.accent;
+            const title = permDenied
+              ? 'Permiso de ubicación desactivado'
+              : gpsReady ? 'Señal GPS lista'
+              : gpsAccuracy != null ? 'Mejorando señal GPS…'
+              : 'Buscando señal GPS…';
+            const subtitle = permDenied
+              ? 'Actívalo para grabar la ruta'
+              : gpsAccuracy != null ? `Precisión ±${Math.round(gpsAccuracy)} m`
+              : 'Mantén el dispositivo a cielo abierto unos segundos';
+            return (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: colors.bgCard, borderRadius: 12, padding: 14,
+                borderWidth: 1, borderColor: cardColor + '60',
+              }}>
+                <Ionicons name={gpsReady ? 'location' : 'location-outline'} size={20} color={cardColor} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>{title}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{subtitle}</Text>
+                </View>
+                {!gpsReady && !permDenied && <ActivityIndicator size="small" color={colors.accent} />}
+              </View>
+            );
+          })()}
+
+          {/* Botón iniciar — espera a tener buena señal para no arrancar disperso.
+              Si el permiso está denegado, se habilita para disparar el flujo de
+              permisos/alerta en handleStart. */}
           <TouchableOpacity
-            onPress={handleStart}
-            disabled={!name.trim() || checkingGps}
+            onPress={() => handleStart()}
+            disabled={!name.trim() || checkingGps || (!gpsReady && !permDenied)}
             style={{
-              backgroundColor: name.trim() ? colors.accent : colors.bgCard,
+              backgroundColor: (name.trim() && (gpsReady || permDenied)) ? colors.accent : colors.bgCard,
               borderRadius: 12,
               paddingVertical: 16,
               alignItems: 'center',
-              marginTop: 8,
               flexDirection: 'row',
               justifyContent: 'center',
               gap: 10,
@@ -385,17 +448,34 @@ export default function PreRecordingScreen() {
               <ActivityIndicator color={colors.bgPrimary} />
             ) : (
               <>
-                <Ionicons name="play-circle" size={22} color={name.trim() ? colors.bgPrimary : colors.textMuted} />
+                <Ionicons
+                  name={permDenied ? 'location-outline' : gpsReady ? 'play-circle' : 'time-outline'}
+                  size={22}
+                  color={(name.trim() && (gpsReady || permDenied)) ? colors.bgPrimary : colors.textMuted}
+                />
                 <Text style={{
-                  color: name.trim() ? colors.bgPrimary : colors.textMuted,
+                  color: (name.trim() && (gpsReady || permDenied)) ? colors.bgPrimary : colors.textMuted,
                   fontSize: 16,
                   fontWeight: '700',
                 }}>
-                  Iniciar Grabación
+                  {!name.trim()
+                    ? 'Iniciar Grabación'
+                    : permDenied ? 'Activar ubicación'
+                    : gpsReady ? 'Iniciar Grabación'
+                    : 'Esperando señal GPS…'}
                 </Text>
               </>
             )}
           </TouchableOpacity>
+
+          {/* Override: empezar aunque la señal aún sea débil (p. ej. bajo techo) */}
+          {name.trim() && !gpsReady && !permDenied && gpsAccuracy != null && !checkingGps && (
+            <TouchableOpacity onPress={() => handleStart()} style={{ alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                Iniciar de todos modos (±{Math.round(gpsAccuracy)} m)
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
