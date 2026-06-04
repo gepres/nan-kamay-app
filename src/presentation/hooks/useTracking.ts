@@ -142,10 +142,19 @@ export function useTracking() {
   //   b) restoreSession → gpsPoints tiene N puntos → seq=max+1 y semilla el
   //      filtro con el último punto para no perder/saltar al reanudar.
   useEffect(() => {
-    const pts = useTrackingStore.getState().gpsPoints;
+    const st0 = useTrackingStore.getState();
+    const pts = st0.gpsPoints;
     if (pts.length === 0) {
       sequenceRef.current = 0;
-      gpsFilterRef.current.reset();
+      // Si la pre-grabación dejó una posición calentada, sembrar el filtro con
+      // ella: el primer punto se mide contra un fix bueno (no contra el primer
+      // fix frío de la grabación) → arranque sin dispersión.
+      const cp = st0.currentPosition;
+      if (cp) {
+        gpsFilterRef.current.seed(cp.latitude, cp.longitude, cp.altitude ?? null, new Date());
+      } else {
+        gpsFilterRef.current.reset();
+      }
     } else {
       sequenceRef.current = Math.max(...pts.map((p) => p.sequenceIndex)) + 1;
       const last = pts[pts.length - 1];

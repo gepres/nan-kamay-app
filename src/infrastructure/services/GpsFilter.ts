@@ -189,7 +189,14 @@ export class GpsFilter {
           latitude, longitude,
         );
 
-        if (driftDist < this.DRIFT_RADIUS) {
+        // Radio anti-deriva proporcional a la precisión: con GPS pobre (junto a
+        // edificios) el drift estacionario es mayor; absorberlo evita contar
+        // metros fantasma en reposo. Acotado a [DRIFT_RADIUS, MAX_ACCURACY].
+        const driftRadius = Math.min(
+          this.MAX_ACCURACY,
+          Math.max(this.DRIFT_RADIUS, (accuracy ?? 0) * 1.5),
+        );
+        if (driftDist < driftRadius) {
           // Drift dentro del radio — NO actualizar Kalman, NO contar punto
           return null;
         }

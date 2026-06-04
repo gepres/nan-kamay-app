@@ -57,6 +57,8 @@ export default function PreRecordingScreen() {
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [gpsPermitted, setGpsPermitted] = useState<boolean | null>(null);
   const warmSubRef = useRef<Location.LocationSubscription | null>(null);
+  // Último fix bueno del precalentamiento: se siembra en el filtro al iniciar.
+  const warmCoordRef = useRef<{ latitude: number; longitude: number; altitude?: number } | null>(null);
   const { startRecording } = useTrackingStore();
   const { user } = useAuthStore();
   const { showToast } = useUiStore();
@@ -91,7 +93,17 @@ export default function PreRecordingScreen() {
       setGpsPermitted(true);
       warmSubRef.current = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 },
-        (loc) => setGpsAccuracy(loc.coords.accuracy ?? null),
+        (loc) => {
+          setGpsAccuracy(loc.coords.accuracy ?? null);
+          // Guardar el fix como semilla solo si es de buena calidad.
+          if (loc.coords.accuracy != null && loc.coords.accuracy <= GPS_READY_ACCURACY_M) {
+            warmCoordRef.current = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+              altitude: loc.coords.altitude ?? undefined,
+            };
+          }
+        },
       );
     })();
     return () => {
@@ -135,6 +147,12 @@ export default function PreRecordingScreen() {
     }
 
     startRecording(name.trim(), difficulty, description.trim(), activityType, guide);
+
+    // Sembrar la posición ya calentada: el mapa se centra desde el inicio y el
+    // filtro arranca anclado a un fix bueno (no al primer fix frío de la grabación).
+    if (warmCoordRef.current) {
+      useTrackingStore.getState().updatePosition(warmCoordRef.current);
+    }
 
     // Crear el borrador en SQLite ANTES de navegar: a partir de aquí cada
     // punto se persiste incrementalmente y la ruta sobrevive a un kill.
