@@ -87,9 +87,20 @@ sobre datos que ya existen en SQLite — sin backend, sin permisos, sin nativo.
 
 ---
 
-## Fase 3 — "Mapas offline" (tiles) 🔴 · esfuerzo L · riesgo ALTO
+## Fase 3 — "Mapas offline" (tiles) 🟦 v1 HECHA · pendiente validación en dispositivo + licencia
 **Por qué crítica:** es lo más alineado con el dominio (montaña sin señal). Sin esto,
 "seguir ruta" y "ver mapa" fallan donde más se necesitan.
+
+**Spike resuelto:** MapLibre `OfflineManager.createPack` con un **style JSON local** que
+referencia el raster Thunderforest. La app ya pide esas mismas URLs → el MapView las
+sirve del caché offline. (`OfflineTilesService` + pantalla `/map-offline`.)
+
+**Entregado (v1):**
+- [x] `OfflineTilesService` (createPack/list/delete + estimación de tiles, `setTileCountLimit`).
+- [x] Pantalla `/map-offline`: encuadrar zona (viewport), nivel de detalle (zoom), tamaño estimado, descarga con progreso, lista de zonas + borrar. Acceso desde Perfil.
+- [ ] **Validar en dispositivo real** (descargar zona → modo avión → abrir "Ver mapa").
+- [ ] ⚠️ **Licencia Thunderforest**: el caché/descarga masiva puede no estar permitido en el plan gratuito — revisar antes de publicar.
+- [ ] (futuro) política de almacenamiento / aviso de tamaño grande.
 
 **Alcance:**
 - Seleccionar una zona en el mapa (recuadro) y **descargar** los tiles para uso offline.

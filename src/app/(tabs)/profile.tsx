@@ -168,6 +168,23 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
+        {/* Mapas offline */}
+        <TouchableOpacity
+          onPress={() => router.push('/map-offline')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.accent + '60', marginBottom: 24,
+          }}
+        >
+          <Ionicons name="cloud-download-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Mapas offline</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Descarga zonas para usar sin señal</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Sincronización */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 12,
