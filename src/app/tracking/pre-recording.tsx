@@ -21,6 +21,7 @@ import { Difficulty, DifficultyLabel } from '@core/value-objects/Difficulty';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import { startDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import { loadRouteGuide } from '@application/tracking/FollowRouteUseCase';
+import { consumePlannedGuide } from '@shared/utils/plannedRoute';
 import { colors } from '@presentation/theme/colors';
 
 const DIFF_ROW_1: Difficulty[] = ['easy', 'moderate', 'hard'];
@@ -41,7 +42,7 @@ const DEFAULT_ACTIVITIES = ['Senderismo', 'Recorrido', 'Correr', 'Maratón', 'Ci
 const GPS_READY_ACCURACY_M = 18;
 
 export default function PreRecordingScreen() {
-  const { followFrom } = useLocalSearchParams<{ followFrom?: string }>();
+  const { followFrom, planned } = useLocalSearchParams<{ followFrom?: string; planned?: string }>();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
@@ -115,6 +116,16 @@ export default function PreRecordingScreen() {
 
   const permDenied = gpsPermitted === false;
   const gpsReady = !permDenied && gpsAccuracy != null && gpsAccuracy <= GPS_READY_ACCURACY_M;
+  // Guía proveniente del Planificador (?planned=1): puntos dibujados en memoria.
+  useEffect(() => {
+    if (planned !== '1') return;
+    const g = consumePlannedGuide();
+    if (g) {
+      setGuide(g);
+      if (!name) setName('Ruta planificada');
+    }
+  }, [planned]);
+
   const allActivities = [...DEFAULT_ACTIVITIES, ...customActivities];
 
   const handleAddCustomActivity = () => {

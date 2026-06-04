@@ -126,8 +126,15 @@ sirve del caché offline. (`OfflineTilesService` + pantalla `/map-offline`.)
 
 ---
 
-## Fase 4 — "Planificador de ruta" 🔴 · esfuerzo M · riesgo MEDIO
+## Fase 4 — "Planificador de ruta" 🟦 v1 HECHA
 **Por qué después de offline:** se apoya en el mapa y complementa "Seguir ruta" (ya existe).
+
+**Entregado (v1):**
+- [x] Pantalla `/routes/plan`: tocar el mapa para añadir puntos, tocar un punto para quitarlo, deshacer/limpiar; distancia + tiempo estimado (4 km/h) + nº puntos.
+- [x] **Seguir ahora**: pasa la guía dibujada (en memoria, `plannedRoute.ts`) a la pre-grabación (`?planned=1`) → reusa toda la infra de *Seguir Ruta* (banner de desvío, línea guía). Sin tocar el esquema.
+- [x] Acceso desde Perfil → "Planificar ruta".
+- [ ] **4.2 (futuro): persistir** la ruta planificada para reusarla — requiere flag `is_planned` (excluirla de métricas/listado) + guardarla como ruta seguible.
+- [ ] (futuro) *snap* a senderos (routing externo); v1 usa tramos rectos.
 
 **Alcance:**
 - Dibujar/editar una ruta tocando el mapa (añadir/mover/borrar puntos).
