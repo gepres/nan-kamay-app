@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import {
-  MapView, Camera, RasterSource, RasterLayer, ShapeSource, LineLayer, MarkerView,
+  MapView, Camera, RasterSource, RasterLayer, ShapeSource, LineLayer, CircleLayer,
   setAccessToken, Logger,
 } from '@maplibre/maplibre-react-native';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
@@ -31,6 +31,7 @@ export default function RoutePlannerScreen() {
   const { showToast } = useUiStore();
   const cameraRef = useRef<any>(null);
   const [points, setPoints] = useState<[number, number][]>([]); // [lon, lat]
+  const [zoom, setZoom] = useState(13);
 
   useEffect(() => {
     (async () => {
@@ -43,11 +44,21 @@ export default function RoutePlannerScreen() {
     })().catch(() => {});
   }, []);
 
-  const addPoint = (e: any) => {
+  // Tocar el mapa: si el toque cae cerca de un punto existente lo quita; si no,
+  // añade un punto nuevo. (Umbral en metros equivalente a ~22 px del zoom actual.)
+  const onMapPress = (e: any) => {
     const c = e?.geometry?.coordinates;
-    if (Array.isArray(c) && c.length >= 2) setPoints((p) => [...p, [c[0], c[1]]]);
+    if (!Array.isArray(c) || c.length < 2) return;
+    const mpp = (156543.03392 * Math.cos((c[1] * Math.PI) / 180)) / Math.pow(2, zoom);
+    let hit = -1;
+    let best = mpp * 22;
+    for (let i = 0; i < points.length; i++) {
+      const d = fastDistanceMeters(points[i][1], points[i][0], c[1], c[0]);
+      if (d < best) { best = d; hit = i; }
+    }
+    if (hit >= 0) setPoints((p) => p.filter((_, idx) => idx !== hit));
+    else setPoints((p) => [...p, [c[0], c[1]]]);
   };
-  const removePoint = (i: number) => setPoints((p) => p.filter((_, idx) => idx !== i));
   const undo = () => setPoints((p) => p.slice(0, -1));
   const clear = () => setPoints([]);
 
@@ -61,6 +72,18 @@ export default function RoutePlannerScreen() {
 
   const lineGeoJson = useMemo<GeoJSON.Feature<GeoJSON.LineString> | null>(
     () => (points.length > 1 ? { type: 'Feature', geometry: { type: 'LineString', coordinates: points }, properties: {} } : null),
+    [points],
+  );
+
+  const dotsGeoJson = useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(
+    () => ({
+      type: 'FeatureCollection',
+      features: points.map((c, i) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: c },
+        properties: { role: i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'mid' },
+      })),
+    }),
     [points],
   );
 
@@ -79,7 +102,16 @@ export default function RoutePlannerScreen() {
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <MapView style={{ flex: 1 }} logoEnabled={false} attributionEnabled={false} onPress={addPoint}>
+      <MapView
+        style={{ flex: 1 }}
+        logoEnabled={false}
+        attributionEnabled={false}
+        onPress={onMapPress}
+        onRegionDidChange={(f: any) => {
+          const z = f?.properties?.zoomLevel;
+          if (typeof z === 'number') setZoom(z);
+        }}
+      >
         <RasterSource id="plan-tiles" tileUrlTemplates={thunderforestTileUrls('outdoors')} tileSize={256} maxZoomLevel={18} minZoomLevel={1}>
           <RasterLayer id="plan-tile-layer" sourceID="plan-tiles" style={{ rasterOpacity: 1 }} />
         </RasterSource>
@@ -91,19 +123,20 @@ export default function RoutePlannerScreen() {
           </ShapeSource>
         )}
 
-        {points.map((c, i) => (
-          <MarkerView key={`${c[0]},${c[1]},${i}`} coordinate={c} anchor={{ x: 0.5, y: 0.5 }} allowOverlap>
-            <TouchableOpacity onPress={() => removePoint(i)} activeOpacity={0.8}>
-              <View style={{
-                width: 24, height: 24, borderRadius: 12,
-                backgroundColor: i === 0 ? colors.success : i === points.length - 1 ? '#EF4444' : colors.accent,
-                borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Text style={{ color: '#0D1B12', fontSize: 11, fontWeight: '800' }}>{i + 1}</Text>
-              </View>
-            </TouchableOpacity>
-          </MarkerView>
-        ))}
+        {/* Puntos como capa nativa (exactos, cuadran con la línea) */}
+        {points.length > 0 && (
+          <ShapeSource id="plan-dots" shape={dotsGeoJson}>
+            <CircleLayer
+              id="plan-dots-layer"
+              style={{
+                circleRadius: 6,
+                circleColor: ['match', ['get', 'role'], 'start', colors.success, 'end', '#EF4444', colors.accent] as any,
+                circleStrokeColor: '#FFFFFF',
+                circleStrokeWidth: 2,
+              }}
+            />
+          </ShapeSource>
+        )}
       </MapView>
 
       <MissingTileKeyBanner />

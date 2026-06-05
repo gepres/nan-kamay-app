@@ -33,10 +33,6 @@ export interface OfflinePackInfo {
   completedTileSizeBytes: number;
 }
 
-// El límite por defecto (~6000 tiles) se queda corto para una zona de montaña a
-// buen zoom; lo subimos. Es solo un tope de seguridad, no reserva memoria.
-OfflineManager.setTileCountLimit(60000);
-
 /** Escribe un style JSON local (raster Thunderforest) y devuelve su file:// URL. */
 async function writeStyleFile(layer: string): Promise<string> {
   const style = {
@@ -62,6 +58,10 @@ export async function downloadOfflineRegion(
   onError: (message: string) => void,
 ): Promise<void> {
   const styleURL = await writeStyleFile(input.layer);
+  // El límite por defecto (~6000 tiles) se queda corto para una zona a buen
+  // zoom. Se llama aquí (no a nivel de módulo) para que el nativo ya esté listo.
+  try { OfflineManager.setTileCountLimit(60000); } catch { /* noop */ }
+
   await OfflineManager.createPack(
     {
       name: input.name,
@@ -74,6 +74,20 @@ export async function downloadOfflineRegion(
     (_pack, status) => onProgress(status.percentage, status.completedTileCount, status.completedTileSize),
     (_pack, err) => onError(typeof err === 'string' ? err : (err?.message ?? 'Error al descargar el área')),
   );
+
+  // En algunas plataformas el pack se crea PAUSADO → forzamos la descarga.
+  try {
+    const pack = await OfflineManager.getPack(input.name);
+    await pack?.resume();
+  } catch { /* noop */ }
+}
+
+/** Estado actual de un pack (para hacer polling desde la UI). */
+export async function getPackStatus(name: string): Promise<{ percentage: number; tiles: number; bytes: number } | null> {
+  const p = await OfflineManager.getPack(name);
+  if (!p) return null;
+  const s = await p.status();
+  return { percentage: s.percentage, tiles: s.completedTileCount, bytes: s.completedTileSize };
 }
 
 export async function listOfflinePacks(): Promise<OfflinePackInfo[]> {

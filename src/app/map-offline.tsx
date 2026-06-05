@@ -9,7 +9,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
 import {
-  downloadOfflineRegion, listOfflinePacks, deleteOfflinePack, estimateTiles,
+  downloadOfflineRegion, listOfflinePacks, deleteOfflinePack, estimateTiles, getPackStatus,
   type OfflinePackInfo,
 } from '@infrastructure/services/OfflineTilesService';
 import { useUiStore } from '@presentation/stores/uiStore';
@@ -42,9 +42,13 @@ export default function MapOfflineScreen() {
   const [detail, setDetail] = useState<typeof DETAIL[number]['key']>('medio');
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [dlTiles, setDlTiles] = useState(0);
   const [packs, setPacks] = useState<OfflinePackInfo[]>([]);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshPacks = () => listOfflinePacks().then(setPacks).catch(() => {});
+  const stopPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  useEffect(() => () => stopPoll(), []);
 
   useEffect(() => {
     refreshPacks();
@@ -79,22 +83,36 @@ export default function MapOfflineScreen() {
     if (!v) { showToast('Mueve el mapa para fijar la zona.', 'info'); return; }
     setDownloading(true);
     setProgress(0);
+    setDlTiles(0);
     const name = `nk-area-${Date.now()}`;
+
+    const finish = () => {
+      stopPoll();
+      setDownloading(false);
+      showToast('Zona descargada para uso sin conexión.', 'success');
+      refreshPacks();
+    };
+
+    // Polling de respaldo: lee el estado real del pack por si el callback de
+    // progreso no llega (así no se queda "0%" sin información).
+    stopPoll();
+    pollRef.current = setInterval(async () => {
+      const s = await getPackStatus(name).catch(() => null);
+      if (!s) return;
+      setProgress(s.percentage);
+      setDlTiles(s.tiles);
+      if (s.percentage >= 100) finish();
+    }, 1500);
+
     try {
       await downloadOfflineRegion(
         { name, layer: 'outdoors', bounds: { ne: v.ne, sw: v.sw }, minZoom, maxZoom },
-        (pct) => {
-          setProgress(pct);
-          if (pct >= 100) {
-            setDownloading(false);
-            showToast('Zona descargada para uso sin conexión.', 'success');
-            refreshPacks();
-          }
-        },
-        (msg) => { setDownloading(false); showToast(msg, 'error'); },
+        (pct, tiles) => { setProgress(pct); setDlTiles(tiles); if (pct >= 100) finish(); },
+        (msg) => { stopPoll(); setDownloading(false); showToast(msg, 'error'); },
       );
       refreshPacks();
     } catch (e) {
+      stopPoll();
       setDownloading(false);
       showToast(e instanceof Error ? e.message : 'No se pudo iniciar la descarga.', 'error');
     }
@@ -178,7 +196,9 @@ export default function MapOfflineScreen() {
           {downloading ? (
             <>
               <ActivityIndicator color="#0D1B12" />
-              <Text style={{ color: '#0D1B12', fontSize: 15, fontWeight: '700' }}>Descargando… {Math.round(progress)}%</Text>
+              <Text style={{ color: '#0D1B12', fontSize: 15, fontWeight: '700' }}>
+                Descargando… {Math.round(progress)}% · {dlTiles.toLocaleString()} tiles
+              </Text>
             </>
           ) : (
             <>
