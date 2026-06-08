@@ -24,11 +24,12 @@
 | Login Google OAuth (A5) | ✅ Corregido (`expo-web-browser` + PKCE; requiere config Supabase/Google + rebuild) |
 | Sync bidireccional / imágenes idempotentes (A6/A8) | ✅ Corregido (pull + delete remoto; imágenes delete+insert sin re-subir) |
 | 🟡 lote final (M16 minElev, M12 recientes, M14 aviso tiles, M17 perfil, A6-ext borrado cross-device + Storage) | ✅ Corregido |
-| GPS: suavizado One Euro + anti-serpenteo (RDP) + orden timestamps background | ✅ Hecho (`OneEuroFilter`, `geometry.simplifyLngLat`, `GpsServiceImpl`). Protocolo: `docs/GPS_FIELD_TESTS.md` |
-| Mejoras estilo Strava — **Fase 1** (analítica local) y **Fase 2** (grabación pro) | ✅ Hecho. Plan completo y estado por fase: `docs/STRAVA_ROADMAP.md` (análisis: `docs/STRAVA_ANALYSIS.md`) |
+| GPS — calidad de grabación | ✅ Hecho: One Euro (`OneEuroFilter`), anti-serpenteo RDP (`geometry.simplifyLngLat`), orden timestamps background (`GpsServiceImpl`), **precalentado + gate de señal** y **siembra del filtro** en pre-grabación, **radio anti-deriva por precisión**. Protocolo: `docs/GPS_FIELD_TESTS.md`; análisis: `docs/GPS_RECORDING_REVIEW.md` |
+| Strava **Fase 1** (analítica) + **Fase 2** (grabación pro: parciales/auto-pausa/audio) | ✅ Hecho. Pantallas `/metrics/progress`, `/metrics/places`; perfil con récords/heatmap/recap; `computeMetrics`/`computeSplits`/`computeZones` |
+| Strava **Fase 3** (mapas offline) + **Fase 4** (planificador) | 🟦 v1 (a validar en dispositivo). `OfflineTilesService` + `/map-offline`; `/routes/plan` → "seguir ahora". ⚠️ offline: licencia Thunderforest |
 
 **Antes de tocar sync, backend o esquema:** lee `docs/VALIDATION.md`.
-**Antes de planear features tipo Strava:** lee `docs/STRAVA_ROADMAP.md`.
+**Antes de planear/seguir features tipo Strava:** lee `docs/STRAVA_ROADMAP.md` (incluye §"Pendientes por implementar").
 
 ---
 
@@ -345,8 +346,12 @@ SEO (app móvil, no web), Swift/SwiftUI/Liquid Glass/FoundationModels (Swift nat
 - [x] **P2**: OAuth Google (A5), sync bidireccional push+pull + borrado remoto (A6), imágenes idempotentes (A8). **(hecho 2026-05-18)**
 - [x] **🟡 lote** (2026-05-18): M3 stats incremental O(1), M7 formatters defensivos, M6 XML control-chars/NaN, M5 KMZ imágenes referenciadas+resiliente, M11 limpieza `exports/`, M2 `reset()` completo, M8 `explore` recarga, M4 Kalman no-reset en resume (+ `startTracking` idempotente), M15 quita `useOutdoorTiles`.
 - [x] **🟡 final** (2026-05-18): M16 persistir `minElevation`, M12 recientes waypoint (AsyncStorage), M14 aviso de API key de tiles, M17 perfil con stats agregadas, A6-ext borrado cross-device + cleanup Storage.
+- [x] **GPS calidad** (2026-06): One Euro, RDP anti-serpenteo, orden timestamps background, precalentado+gate de señal, siembra del filtro, radio anti-deriva por precisión, auto-pausa, audio por km.
+- [x] **Strava Fases 1–2** (2026-06): analítica local (progreso/lugares/récords/heatmap/recap) + grabación pro (parciales/auto-pausa/audio).
+- [~] **Strava Fases 3–4** (2026-06): mapas offline y planificador en **v1, a validar en dispositivo**.
+- [ ] **Pendientes (lista única y ordenada): ver `docs/STRAVA_ROADMAP.md` §"Pendientes por implementar"** — incluye validación offline + licencia Thunderforest, persistir ruta planificada (flag `is_planned`), Fase 5 (seguridad) y Fase 6 (social).
 - [ ] Deuda arquitectónica (presentación→infra, use-cases no-clase, DI) — **deferida a propósito** (refactor amplio, alto riesgo, sin ganancia funcional). Ver `ARCHITECTURE.md` §6.
-- [ ] Testing (no hay framework instalado), tiles offline cacheados.
+- [ ] Testing (no hay framework instalado).
 
 ### Config externa requerida (A5 — Google OAuth)
 1. Supabase Dashboard → **Auth → Providers → Google**: habilitar con Client ID/Secret de Google Cloud.

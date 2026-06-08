@@ -208,9 +208,9 @@ no aportan al producto individual offline-first. Reconsiderar solo si el product
 ```
 Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
                   │
-                  └── Fase 3 (tiles offline) ── Fase 4 (planificador)   ← SIGUIENTE
-                                                     │
-                              Fase 5 (seguridad) ────┘   Fase 6 (social) [independiente]
+                  └── Fase 3 ✅v1 ── Fase 4 ✅v1
+                                          │
+                   Fase 5 (seguridad) ────┘   Fase 6 (social) [independiente]   ← SIGUIENTE
 ```
 - **1 y 2** no dependen de nada → arrancar ya (riesgo bajo, valor alto).
 - **3** habilita el uso real en montaña; **4** se apoya en el mapa.
@@ -220,3 +220,31 @@ Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
 - Cada fase con feature de grabación/GPS se valida con `docs/GPS_FIELD_TESTS.md`.
 - Dependencias JS nativas nuevas (`expo-speech`, `expo-sms`, offline de MapLibre) → **rebuild** del APK.
 - Mantener la **deuda arquitectónica deferida** (ver `ARCHITECTURE.md`); no es bloqueante.
+
+---
+
+## 📌 Pendientes por implementar (consolidado)
+
+> Lista única de lo que falta, ordenada por prioridad. Actualizar al cerrar cada item.
+
+### 🔴 Validación / cierre de lo ya hecho
+- [ ] **Offline (Fase 3) — validar en dispositivo real**: descargar zona → modo avión → "Ver mapa". Tras el fix (`resume()` + polling), confirmar que sube `% · tiles`. Si sigue en 0/0 → `adb logcat` (filtrar `mbgl/offline/style`) para ver el error nativo del *style* local.
+- [ ] **Offline — licencia Thunderforest**: el cacheo/descarga masiva puede no estar permitido en el plan gratuito. Revisar términos / plan antes de publicar (o cambiar de proveedor de tiles con offline permitido).
+- [ ] **GPS — validar reposo con señal pobre**: confirmar que el radio anti-deriva adaptativo reduce el drift (caso v1 de ~17 m junto a edificios). Pasar CSV de diagnóstico.
+- [ ] **Auto-pausa — validar en campo**: confirmar que congela el reloj en paradas y NO pierde puntos al caminar lento.
+
+### 🟡 Mejoras de features ya entregadas
+- [ ] **Planificador 4.2 — persistir** la ruta planificada (hoy solo "seguir ahora", en memoria). Requiere **flag `is_planned`** (columna SQLite + mapper + excluirla de métricas/listado/`getAll`/`getAllTrackPolylines`/anclas de zonas) y guardarla como ruta seguible.
+- [ ] **Planificador — *snap* a senderos** (routing externo). v1 usa tramos rectos.
+- [ ] **Offline — UX**: nombrar la zona, aviso si el área es muy grande (tiles/tamaño), pausar/reanudar descarga, y usar la **capa elegida** (hoy fija a `outdoors`).
+- [ ] **Detalle público** — migrar a la **elevación interactiva** (hoy solo el detalle privado la usa).
+- [ ] **Métricas — desnivel por zona/recap** desde DEM; **nombres de zona** vía reverse-geocode (hoy se etiqueta con el nombre de la ruta más larga del clúster).
+
+### 🟢 Fases pendientes (necesitan backend Supabase)
+- [ ] **Fase 5 — Seguridad / ubicación en vivo** (tabla `nk_live_sessions` + RLS, `expo-sms`, pantalla `safety/`). Diseño Pencil listo.
+- [ ] **Fase 6 — Social ligero** (kudos + comentarios en rutas públicas; `nk_route_kudos`, `nk_route_comments` + RLS). Diseño Pencil listo.
+
+### ⚪ Deuda / fuera de foco
+- [ ] Deuda arquitectónica (presentación→infra, use-cases no-clase, DI) — deferida a propósito (`ARCHITECTURE.md` §6).
+- [ ] Testing automatizado (no hay framework instalado).
+- Descartado (no implementar salvo pivote a social): segments/KOM/leaderboards, clubs, challenges, feed/follow, heatmap global, rutas IA, mapas 3D.

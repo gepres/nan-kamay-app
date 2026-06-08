@@ -200,3 +200,15 @@ sequenceDiagram
     Svc-->>Btn: fileUri
     Btn->>Share: shareAsync(fileUri, mimeType)
 ```
+
+---
+
+## Actualización 2026-06 — flujos nuevos
+
+Además de los flujos base, se añadieron (estado y detalle en `STRAVA_ROADMAP.md`):
+
+- **Analítica personal** (Fase 1): Perfil → récords + mapa de calor + recap; `/metrics/progress` (período/barras/donut/constancia); `/metrics/places` (zonas + lugares). Todo se calcula offline desde SQLite vía `application/metrics/*` + `usePersonalMetrics`.
+- **Grabación pro** (Fase 2): parciales por km en el detalle (`computeSplits` + `SplitsTable`); **auto-pausa** (congela el reloj sin dejar de grabar, `activeElapsedSeconds`); **audio por km** (`expo-speech`, toggle en `active`).
+- **Mapas offline** (Fase 3, v1): Perfil → "Mapas offline" → `/map-offline` (encuadrar zona → `OfflineTilesService.downloadOfflineRegion` → MapLibre `OfflineManager`). El MapView pide las mismas URLs → se sirven del caché.
+- **Planificador** (Fase 4, v1): Perfil → "Planificar ruta" → `/routes/plan` (dibujar puntos) → "Seguir ruta" pasa la guía en memoria (`plannedRoute.ts`) a `pre-recording?planned=1`, reusando *Seguir Ruta*.
+- **Calidad de grabación**: pre-grabación precalienta el GPS y espera buena señal antes de iniciar; el filtro se siembra con esa posición. Ver `GPS_RECORDING_REVIEW.md`.

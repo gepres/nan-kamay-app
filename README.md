@@ -2,7 +2,7 @@
 
 > *Ñan Kamay* (Quechua: "el camino de la mano") — App móvil React Native para grabar rutas de trekking y montaña con GPS, funcional **online y offline**.
 
-App de senderismo: graba tu recorrido por GPS (foreground + background), añade waypoints con fotos, revisa estadísticas y perfil de elevación al finalizar, y exporta la ruta en GPX/KML/KMZ.
+App de senderismo: graba tu recorrido por GPS (foreground + background), añade waypoints con fotos/video/voz, revisa estadísticas y **perfil de elevación interactivo** al finalizar, exporta la ruta (GPX/KML/KMZ + CSV de diagnóstico) y comparte una **postal** estilo Strava. Incluye **analítica personal** (progreso, récords, mapa de calor, lugares/zonas), **parciales por km + auto-pausa + anuncios de audio**, **mapas offline** y **planificador de ruta**.
 
 ---
 
@@ -18,6 +18,10 @@ App de senderismo: graba tu recorrido por GPS (foreground + background), añade 
 | Google OAuth · sync bidireccional (pull+delete) · imágenes idempotentes | ✅ Corregidos (A5 / A6 / A8) — A5 requiere config Supabase/Google |
 | Lote 🟡 (stats O(1), formatters/XML seguros, KMZ imgs, limpieza exports, Kalman resume…) | ✅ Corregido |
 | 🟡 final (minElevation, recientes waypoint, aviso tiles, perfil con stats, borrado cross-device) | ✅ Corregido |
+| **Calidad GPS** (One Euro, anti-serpenteo RDP, orden background, precalentado+gate, siembra filtro, radio anti-deriva) | ✅ Hecho — ver `docs/GPS_RECORDING_REVIEW.md` |
+| **Strava Fase 1** (analítica: progreso/lugares/récords/heatmap/recap) + **Fase 2** (parciales/auto-pausa/audio) | ✅ Hecho |
+| **Strava Fase 3** (mapas offline) + **Fase 4** (planificador) | 🟦 v1, a validar en dispositivo — ⚠️ offline: licencia Thunderforest |
+| Pendientes (Fase 5 seguridad, Fase 6 social, persistir ruta planificada…) | 📋 Ver `docs/STRAVA_ROADMAP.md` §Pendientes |
 | Deuda arquitectónica (presentación→infra, use-cases no-clase, DI) | ⏸️ Deferida a propósito — ver `ARCHITECTURE.md` §6 |
 
 > **Base de datos compartida.** El proyecto apunta a una Supabase que aloja **otra plataforma** (comunidad de trekking). Ñan Kamay convive con prefijo `nk_` (tablas `nk_routes`, `nk_gps_points`, `nk_waypoints`, `nk_waypoint_images`) y **comparte el login** (`auth.users`). No toca las tablas de la otra plataforma.
@@ -36,7 +40,9 @@ App de senderismo: graba tu recorrido por GPS (foreground + background), añade 
 | Estado | Zustand |
 | Backend | Supabase (PostgreSQL + Auth + Storage) |
 | Mapas | MapLibre GL + tiles Thunderforest (9 estilos) |
-| GPS | expo-location (foreground + background via TaskManager) |
+| GPS | expo-location (foreground + background via TaskManager); filtro One Euro + RDP |
+| Mapas offline | MapLibre `OfflineManager` (descarga de tiles raster por zona) |
+| Audio | expo-speech (anuncios por km durante la grabación) |
 | Notificaciones | expo-notifications (persistente con stats en vivo) |
 | Storage local | expo-sqlite (rutas), react-native-mmkv, expo-secure-store (tokens) |
 | Exportación | GPX / KML / KMZ (JSZip), manual sin librería |
@@ -86,14 +92,21 @@ npx expo run:android           # compila e instala con hot reload
 
 > Tras `expo prebuild --clean` hay que **restaurar `index.ts`** (entry point custom) y **eliminar `App.tsx`** si se regeneró. `index.ts` debe importar `GpsServiceImpl` antes que `expo-router/entry` para registrar el TaskManager. `package.json` apunta `"main": "./index.ts"`.
 
-## Builds (EAS Cloud)
+## Builds
 
+**EAS Cloud:**
 ```bash
 eas build --platform android --profile preview      # APK de prueba (internal)
 eas build --platform android --profile production    # APK de producción
 ```
-
 Perfiles en `eas.json`: `development` (dev client), `preview` y `production` (`buildType: apk`).
+
+**APK local (Windows):** `eas build --local` **no funciona en Windows** ("macOS or Linux required"). Usa Gradle directo:
+```powershell
+cd android; ./gradlew assembleRelease; cd ..
+# APK: android/app/build/outputs/apk/release/app-release.apk  (firmado con debug.keystore → instalable)
+adb install -r "android/app/build/outputs/apk/release/app-release.apk"
+```
 
 ---
 

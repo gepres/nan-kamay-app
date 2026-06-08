@@ -224,3 +224,12 @@ El proyecto declara Clean Architecture + Hexagonal, pero el código la viola de 
 | P1 | Surfacing de errores de sync al usuario (toast con `result.errors`) | M10 |
 | P2 | OAuth Google completo; políticas RLS UPDATE; sync idempotente de imágenes | A5, A7, A8 |
 | P3 | Resto de 🟡 (perf O(n²), formatters defensivos, limpieza exports, KMZ→KML imágenes) | M3, M5, M7, M11 |
+
+---
+
+## Nota 2026-06
+
+La validación original cubre los flujos base. El trabajo posterior (calidad GPS:
+One Euro/RDP/cold-start/background; y mejoras estilo Strava Fases 1–4) está
+documentado en **`GPS_RECORDING_REVIEW.md`** y **`STRAVA_ROADMAP.md`** (este último
+incluye la §"Pendientes por implementar" con la lista única de lo que falta).

@@ -322,3 +322,21 @@ TrackingMap.tsx
 ```
 
 `npx tsc --noEmit -p tsconfig.json` pasa sin errores tras estos cambios.
+
+---
+
+## Actualización 2026-06 — fiabilidad de grabación (One Euro, RDP, cold-start)
+
+Tras pruebas de campo (CSV de diagnóstico en `test-data/`, protocolo en `GPS_FIELD_TESTS.md`) se aplicaron mejoras adicionales. Estado por área:
+
+| Tema | Antes | Ahora |
+|------|-------|-------|
+| Serpenteo en recto | lat/lon crudas (sin suavizado horizontal desde 2026-05-26) | **One Euro** 2D adaptativo en `GpsFilter` (etapa 4b) + **RDP** (`simplifyLngLat`) al dibujar la traza (TrackingMap/RouteMap/replay/postal). Validado: banda lateral sin zig-zag; distancia ≈ línea recta (+0.7/1.7 %) |
+| Arranque disperso (cold-start) | grababa desde el primer fix frío (accuracy alta) | **Precalentado + gate de señal** en pre-grabación (espera ≤18 m) + **siembra del filtro** con la posición calentada |
+| Deriva en reposo | radio anti-deriva fijo 12 m | **radio = clamp(accuracy×1.5, 12, 30)** — absorbe más drift con GPS pobre |
+| Background (app matada) | `dt_s` negativos (timestamps fuera de orden), distancia inflada | lote **ordenado por timestamp** + **guard de monotonicidad** en `persistBackgroundLocation` |
+| Tiempo en paradas | el reloj corría aunque estuvieras parado | **auto-pausa** (`activeElapsedSeconds`): congela el reloj sin dejar de grabar puntos; reanuda al moverse |
+
+**Decisión clave (One Euro vs RDP):** a ~3 s de muestreo, zig-zag y esquinas comparten frecuencia de Nyquist → un paso-bajo solo no puede separarlos sin redondear curvas. Por eso el One Euro va **conservador** (no daña rutas limpias) y el de-serpenteo real lo hace **RDP** (corner-safe: conserva vértices y extremos; el cierre de un loop no cambia). RDP es **solo de dibujo**: los `gps_points` guardados siguen crudos → distancia/elevación/CSV mantienen fidelidad.
+
+`npx tsc --noEmit` pasa tras estos cambios. Pendiente: validar offline (Fase 3) y reposo con señal pobre en dispositivo (ver `STRAVA_ROADMAP.md` §Pendientes).

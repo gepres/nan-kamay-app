@@ -181,3 +181,20 @@ La protección de rutas depende **únicamente** del redirect en `src/app/index.t
 
 > **Última actualización:** 2026-05-17 · Refleja el código en la rama `master`.
 > Documento anterior (plantilla genérica de e-commerce) descartado por no corresponder al proyecto.
+
+---
+
+## Actualización 2026-06 — módulos nuevos
+
+Siguen el mismo patrón existente (use-cases como funciones, servicios en `infrastructure`, pantallas en `app/`):
+
+- **`application/metrics/`** — `computeMetrics.ts`, `computeSplits.ts`, `computeZones.ts`: funciones **puras** sobre `Route[]`/`GpsPoint[]` (métricas, parciales, clustering de zonas). Sin BD ni red.
+- **`presentation/hooks/usePersonalMetrics.ts`** — lee el store y memoiza las métricas.
+- **`infrastructure/services/OneEuroFilter.ts`** — suavizado adaptativo (lo usa `GpsFilter`).
+- **`infrastructure/services/OfflineTilesService.ts`** — envuelve `OfflineManager` de MapLibre (descarga de tiles offline).
+- **`shared/utils/geometry.ts`** — añadido `simplifyLngLat` (Douglas-Peucker).
+- **`shared/utils/plannedRoute.ts`** — puente en memoria Planificador → pre-grabación.
+- Pantallas: `app/metrics/progress.tsx`, `app/metrics/places.tsx`, `app/map-offline.tsx`, `app/routes/plan/index.tsx`, `app/routes/map/[id].tsx`, `app/routes/postal/[id].tsx`.
+- Componentes: `InteractiveElevationChart`, `SplitsTable`, `PersonalHeatmap`, `ClusterMap`, `RoutePostalCard`, `LocationPickerModal`.
+
+Nota: persiste la deuda arquitectónica descrita arriba (presentación que llama infra directa, sin DI). Estos módulos no la agravan ni la resuelven.
