@@ -58,6 +58,7 @@ export async function downloadOfflineRegion(
   onError: (message: string) => void,
 ): Promise<void> {
   const styleURL = await writeStyleFile(input.layer);
+  console.warn('[Offline] createPack', JSON.stringify({ styleURL, bounds: [input.bounds.ne, input.bounds.sw], minZoom: input.minZoom, maxZoom: input.maxZoom }));
   // El límite por defecto (~6000 tiles) se queda corto para una zona a buen
   // zoom. Se llama aquí (no a nivel de módulo) para que el nativo ya esté listo.
   try { OfflineManager.setTileCountLimit(60000); } catch { /* noop */ }
@@ -82,12 +83,27 @@ export async function downloadOfflineRegion(
   } catch { /* noop */ }
 }
 
-/** Estado actual de un pack (para hacer polling desde la UI). */
-export async function getPackStatus(name: string): Promise<{ percentage: number; tiles: number; bytes: number } | null> {
+export interface PackStatus {
+  percentage: number;
+  tiles: number;
+  bytes: number;
+  /** Recursos que la región calculó que necesita (0 = el style no resolvió tiles). */
+  requiredResources: number;
+  completedResources: number;
+}
+
+/** Estado actual de un pack (para polling + diagnóstico desde la UI). */
+export async function getPackStatus(name: string): Promise<PackStatus | null> {
   const p = await OfflineManager.getPack(name);
   if (!p) return null;
-  const s = await p.status();
-  return { percentage: s.percentage, tiles: s.completedTileCount, bytes: s.completedTileSize };
+  const s: any = await p.status();
+  return {
+    percentage: s.percentage ?? 0,
+    tiles: s.completedTileCount ?? 0,
+    bytes: s.completedTileSize ?? 0,
+    requiredResources: s.requiredResourceCount ?? 0,
+    completedResources: s.completedResourceCount ?? 0,
+  };
 }
 
 export async function listOfflinePacks(): Promise<OfflinePackInfo[]> {

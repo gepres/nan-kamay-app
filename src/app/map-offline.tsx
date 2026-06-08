@@ -43,6 +43,8 @@ export default function MapOfflineScreen() {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dlTiles, setDlTiles] = useState(0);
+  const [diag, setDiag] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [packs, setPacks] = useState<OfflinePackInfo[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -84,6 +86,8 @@ export default function MapOfflineScreen() {
     setDownloading(true);
     setProgress(0);
     setDlTiles(0);
+    setDiag('iniciando…');
+    setError(null);
     const name = `nk-area-${Date.now()}`;
 
     const finish = () => {
@@ -101,6 +105,7 @@ export default function MapOfflineScreen() {
       if (!s) return;
       setProgress(s.percentage);
       setDlTiles(s.tiles);
+      setDiag(`recursos: necesita ${s.requiredResources} · bajados ${s.completedResources} · ${s.tiles} tiles`);
       if (s.percentage >= 100) finish();
     }, 1500);
 
@@ -108,13 +113,15 @@ export default function MapOfflineScreen() {
       await downloadOfflineRegion(
         { name, layer: 'outdoors', bounds: { ne: v.ne, sw: v.sw }, minZoom, maxZoom },
         (pct, tiles) => { setProgress(pct); setDlTiles(tiles); if (pct >= 100) finish(); },
-        (msg) => { stopPoll(); setDownloading(false); showToast(msg, 'error'); },
+        (msg) => { stopPoll(); setDownloading(false); setError(msg); showToast(msg, 'error'); },
       );
       refreshPacks();
     } catch (e) {
       stopPoll();
       setDownloading(false);
-      showToast(e instanceof Error ? e.message : 'No se pudo iniciar la descarga.', 'error');
+      const msg = e instanceof Error ? e.message : 'No se pudo iniciar la descarga.';
+      setError(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -207,6 +214,14 @@ export default function MapOfflineScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        {/* Diagnóstico / error (para entender por qué no baja) */}
+        {error && (
+          <Text style={{ color: colors.danger, fontSize: 11 }} numberOfLines={3}>⚠️ {error}</Text>
+        )}
+        {downloading && !!diag && (
+          <Text style={{ color: colors.textMuted, fontSize: 11 }}>{diag}</Text>
+        )}
 
         {/* Zonas descargadas */}
         {packs.length > 0 && (
