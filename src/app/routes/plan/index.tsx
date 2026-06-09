@@ -51,7 +51,7 @@ export default function RoutePlannerScreen() {
   const [nameDraft, setNameDraft] = useState('Ruta planificada');
 
   // Base del mapa: raster online o vector local (PMTiles) sin señal.
-  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+  const { mapStyleJSON, isOfflineVector } = useBasemap(
     points[0] ? { lng: points[0][0], lat: points[0][1] } : null,
   );
 
@@ -245,7 +245,7 @@ export default function RoutePlannerScreen() {
       <MapView
         ref={mapRef}
         style={{ flex: 1 }}
-        mapStyle={vectorStyleJSON}
+        mapStyle={mapStyleJSON}
         logoEnabled={false}
         attributionEnabled={false}
         onPress={onMapPress}

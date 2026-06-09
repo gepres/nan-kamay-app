@@ -198,7 +198,7 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
 
   // Base del mapa: raster Thunderforest online, o vector local (PMTiles) sin
   // señal si hay una región descargada que cubre la posición actual.
-  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+  const { mapStyleJSON, isOfflineVector } = useBasemap(
     currentPosition ? { lng: currentPosition.longitude, lat: currentPosition.latitude } : null,
   );
 
@@ -206,7 +206,7 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     <View style={StyleSheet.absoluteFill}>
       <MapView
         style={StyleSheet.absoluteFill}
-        mapStyle={vectorStyleJSON}
+        mapStyle={mapStyleJSON}
         logoEnabled={false}
         attributionEnabled={true}
         compassEnabled={false}

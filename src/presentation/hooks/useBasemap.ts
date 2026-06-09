@@ -5,9 +5,17 @@ import {
   type DownloadedRegion,
 } from '@infrastructure/services/OfflineMapsService';
 
+/**
+ * Estilo vacío VÁLIDO para el caso online (la base raster Thunderforest se
+ * dibuja encima como capa hija). Es CLAVE pasar siempre un objeto: si a
+ * `MapView.mapStyle` le llega `undefined`/`null`, maplibre-react-native invoca
+ * `new JSONObject(null)` en el nativo → NullPointerException → crash.
+ */
+const EMPTY_STYLE = { version: 8, sources: {}, layers: [] } as const;
+
 export interface BasemapState {
-  /** Style JSON vector si toca usar el mapa offline; `undefined` = usar raster online. */
-  vectorStyleJSON?: object;
+  /** Style JSON para `MapView.mapStyle`. SIEMPRE válido (vector offline o vacío). */
+  mapStyleJSON: object;
   /** true si se está usando la base vector local (sin conexión + región descargada). */
   isOfflineVector: boolean;
   activeRegion: DownloadedRegion | null;
@@ -40,11 +48,11 @@ export function useBasemap(coord?: { lng: number; lat: number } | null): Basemap
     [isConnected, regions, coord?.lng, coord?.lat],
   );
 
-  const vectorStyleJSON = useMemo(
-    () => (activeRegion ? buildVectorStyle(activeRegion) : undefined),
+  const mapStyleJSON = useMemo(
+    () => (activeRegion ? buildVectorStyle(activeRegion) : EMPTY_STYLE),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeRegion?.id, activeRegion?.filePath],
   );
 
-  return { vectorStyleJSON, isOfflineVector: !!activeRegion, activeRegion };
+  return { mapStyleJSON, isOfflineVector: !!activeRegion, activeRegion };
 }

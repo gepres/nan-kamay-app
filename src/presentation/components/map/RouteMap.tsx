@@ -74,7 +74,7 @@ export default function RouteMap({
         }
       : undefined;
 
-  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+  const { mapStyleJSON, isOfflineVector } = useBasemap(
     coords[0] ? { lng: coords[0][0], lat: coords[0][1] } : null,
   );
 
@@ -82,7 +82,7 @@ export default function RouteMap({
     <View style={StyleSheet.absoluteFill}>
       <MapView
         style={StyleSheet.absoluteFill}
-        mapStyle={vectorStyleJSON}
+        mapStyle={mapStyleJSON}
         logoEnabled={false}
         attributionEnabled={false}
         scrollEnabled={false}

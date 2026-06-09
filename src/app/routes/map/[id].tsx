@@ -169,7 +169,7 @@ export default function RouteMapScreen() {
   }, [userPos]);
 
   const firstCoord = coords[0];
-  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+  const { mapStyleJSON, isOfflineVector } = useBasemap(
     firstCoord ? { lng: firstCoord[0], lat: firstCoord[1] } : null,
   );
 
@@ -190,7 +190,7 @@ export default function RouteMapScreen() {
 
       <MapView
         style={StyleSheet.absoluteFill}
-        mapStyle={vectorStyleJSON}
+        mapStyle={mapStyleJSON}
         logoEnabled={false}
         attributionEnabled={false}
         onPress={() => setSelectedWp(null)}
