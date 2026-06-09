@@ -23,6 +23,7 @@ export function rowToRoute(row: Record<string, unknown>): Route {
     isPublic: row.is_public === 1,
     isSynced: row.is_synced === 1,
     isDraft: row.is_draft === 1,
+    isPlanned: row.is_planned === 1,
     parentRouteId: (row.parent_route_id as string | null) ?? undefined,
     createdAt: new Date(row.created_at as string),
   });
@@ -51,6 +52,7 @@ export function routeToRow(route: Route): Record<string, unknown> {
     is_public: p.isPublic ? 1 : 0,
     is_synced: p.isSynced ? 1 : 0,
     is_draft: p.isDraft ? 1 : 0,
+    is_planned: p.isPlanned ? 1 : 0,
     parent_route_id: p.parentRouteId ?? null,
     created_at: p.createdAt.toISOString(),
   };
@@ -78,6 +80,7 @@ export function supabaseToRoute(row: Record<string, unknown>): Route {
     isPublic: row.is_public === true,
     isSynced: true,
     isDraft: false,
+    isPlanned: false,
     parentRouteId: (row.parent_route_id as string | null) ?? undefined,
     createdAt: new Date(row.created_at as string),
   });

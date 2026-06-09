@@ -8,6 +8,8 @@ export interface IRouteRepository {
   appendGpsPoint(point: GpsPoint): Promise<void>;
   appendWaypoint(wp: Waypoint): Promise<void>;
   getActiveDraft(userId: string): Promise<Route | null>;
+  savePlannedRoute(route: Route, points: { latitude: number; longitude: number }[]): Promise<void>;
+  getPlannedRoutes(userId: string): Promise<Route[]>;
   getAll(userId: string): Promise<Route[]>;
   getById(id: string): Promise<Route | null>;
   getGpsPoints(routeId: string): Promise<GpsPoint[]>;

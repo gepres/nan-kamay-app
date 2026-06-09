@@ -14,6 +14,7 @@ async function runMigrations(): Promise<void> {
     `ALTER TABLE routes ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE routes ADD COLUMN min_elevation_meters REAL NOT NULL DEFAULT 0`,
     `ALTER TABLE routes ADD COLUMN parent_route_id TEXT`,
+    `ALTER TABLE routes ADD COLUMN is_planned INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE waypoints ADD COLUMN type TEXT`,
     `ALTER TABLE waypoints ADD COLUMN media TEXT NOT NULL DEFAULT '[]'`,
   ];
@@ -84,6 +85,7 @@ export async function initDatabase(): Promise<void> {
       is_public INTEGER NOT NULL DEFAULT 0,
       is_synced INTEGER NOT NULL DEFAULT 0,
       is_draft INTEGER NOT NULL DEFAULT 0,
+      is_planned INTEGER NOT NULL DEFAULT 0,
       parent_route_id TEXT,
       created_at TEXT NOT NULL
     );

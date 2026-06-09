@@ -23,6 +23,12 @@ export interface RouteProps {
   /** true mientras la grabación está en curso (no finalizada/guardada). */
   isDraft?: boolean;
   /**
+   * true si la ruta fue creada en el planificador (dibujada en el mapa) y NO
+   * grabada con GPS. Es una guía reutilizable: se excluye de listados, métricas,
+   * heatmap y sincronización (es un artefacto de planificación, no una actividad).
+   */
+  isPlanned?: boolean;
+  /**
    * Si esta ruta fue grabada mientras se "seguía" otra (feature Seguir Ruta),
    * referencia a la ruta-padre que se estaba usando como guía. Solo
    * informativo: no cascada, no FK enforced en SQLite. Puede ser una ruta
@@ -67,6 +73,7 @@ export class Route {
   get isPublic() { return this.props.isPublic; }
   get isSynced() { return this.props.isSynced; }
   get isDraft() { return this.props.isDraft ?? false; }
+  get isPlanned() { return this.props.isPlanned ?? false; }
   get parentRouteId() { return this.props.parentRouteId; }
   get createdAt() { return this.props.createdAt; }
 

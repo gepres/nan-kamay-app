@@ -118,6 +118,47 @@ export function distanceToPolylineMeters(
   return min;
 }
 
+/**
+ * Segmento más cercano de una polilínea `[lon, lat][]` a un punto `[lon, lat]`,
+ * con el punto proyectado (pie de la perpendicular, recortado a los extremos).
+ * `index` = i significa el segmento entre `path[i]` y `path[i+1]`.
+ * Devuelve null si la polilínea tiene menos de 2 vértices.
+ *
+ * Para "insertar un punto en un tramo": proyecta el toque al segmento más
+ * cercano y se inserta en `index + 1`.
+ */
+export function nearestSegmentOnPath(
+  lon: number, lat: number,
+  path: [number, number][],
+): { index: number; distanceMeters: number; point: [number, number] } | null {
+  if (path.length < 2) return null;
+
+  const lat0 = path[0][1];
+  const lon0 = path[0][0];
+  const mLat = 111320;
+  const mLon = 111320 * Math.cos((lat0 * Math.PI) / 180);
+  const toXY = (lo: number, la: number) => ({ x: (lo - lon0) * mLon, y: (la - lat0) * mLat });
+  const toLngLat = (x: number, y: number): [number, number] => [lon0 + x / mLon, lat0 + y / mLat];
+
+  const p = toXY(lon, lat);
+  let bestIdx = -1;
+  let bestDist = Infinity;
+  let bestPt: [number, number] = path[0];
+
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = toXY(path[i][0], path[i][1]);
+    const b = toXY(path[i + 1][0], path[i + 1][1]);
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const projX = a.x + t * dx, projY = a.y + t * dy;
+    const d = Math.hypot(p.x - projX, p.y - projY);
+    if (d < bestDist) { bestDist = d; bestIdx = i; bestPt = toLngLat(projX, projY); }
+  }
+  return { index: bestIdx, distanceMeters: bestDist, point: bestPt };
+}
+
 function distanceToSegment(
   p: { x: number; y: number },
   a: { x: number; y: number },

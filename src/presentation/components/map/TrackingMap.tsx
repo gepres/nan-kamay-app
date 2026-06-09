@@ -4,8 +4,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   MapView,
   Camera,
-  RasterSource,
-  RasterLayer,
   ShapeSource,
   LineLayer,
   CircleLayer,
@@ -14,9 +12,10 @@ import {
   type CameraRef,
 } from '@maplibre/maplibre-react-native';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
-import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { simplifyLngLat } from '@shared/utils/geometry';
+import { useBasemap } from '@presentation/hooks/useBasemap';
 import { colors } from '@presentation/theme/colors';
+import { Basemap } from './Basemap';
 import MissingTileKeyBanner from './MissingTileKeyBanner';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
@@ -197,12 +196,17 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     });
   }, [currentPosition, followUser]);
 
-  const tileUrls = thunderforestTileUrls(mapLayer);
+  // Base del mapa: raster Thunderforest online, o vector local (PMTiles) sin
+  // señal si hay una región descargada que cubre la posición actual.
+  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+    currentPosition ? { lng: currentPosition.longitude, lat: currentPosition.latitude } : null,
+  );
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <MapView
         style={StyleSheet.absoluteFill}
+        mapStyle={vectorStyleJSON}
         logoEnabled={false}
         attributionEnabled={true}
         compassEnabled={false}
@@ -220,20 +224,7 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
           }
         }}
       >
-        <RasterSource
-          id={`tiles-${mapLayer}`}
-          key={`tiles-${mapLayer}`}
-          tileUrlTemplates={tileUrls}
-          tileSize={256}
-          maxZoomLevel={18}
-          minZoomLevel={1}
-        >
-          <RasterLayer
-            id={`layer-${mapLayer}`}
-            sourceID={`tiles-${mapLayer}`}
-            style={{ rasterOpacity: 1 }}
-          />
-        </RasterSource>
+        <Basemap layer={mapLayer} offlineVector={isOfflineVector} />
 
         <Camera
           ref={cameraRef}

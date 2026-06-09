@@ -9,6 +9,7 @@ import { rowToGpsPoint, gpsPointToRow } from '@infrastructure/mappers/GpsPointMa
 import { rowToWaypoint, waypointToRow } from '@infrastructure/mappers/WaypointMapper';
 import { downsampleElevation } from '@shared/utils/elevation';
 import { simplifyLngLat } from '@shared/utils/geometry';
+import { uuidv4 } from '@shared/utils/uuid';
 
 export class RouteRepositoryImpl implements IRouteRepository {
   /**
@@ -26,8 +27,8 @@ export class RouteRepositoryImpl implements IRouteRepository {
            distance_meters, duration_seconds,
            elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
            avg_speed_kmh, max_speed_kmh,
-           started_at, finished_at, is_public, is_synced, is_draft, parent_route_id, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           started_at, finished_at, is_public, is_synced, is_draft, is_planned, parent_route_id, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           routeRow.id, routeRow.user_id, routeRow.name, routeRow.description,
           routeRow.activity_type, routeRow.difficulty,
@@ -36,7 +37,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
           routeRow.max_elevation_meters, routeRow.min_elevation_meters,
           routeRow.avg_speed_kmh, routeRow.max_speed_kmh,
           routeRow.started_at, routeRow.finished_at,
-          routeRow.is_public, routeRow.is_synced, routeRow.is_draft,
+          routeRow.is_public, routeRow.is_synced, routeRow.is_draft, routeRow.is_planned,
           routeRow.parent_route_id, routeRow.created_at,
         ] as (string | number | null)[]
       );
@@ -84,8 +85,8 @@ export class RouteRepositoryImpl implements IRouteRepository {
          distance_meters, duration_seconds,
          elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
          avg_speed_kmh, max_speed_kmh,
-         started_at, finished_at, is_public, is_synced, is_draft, parent_route_id, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+         started_at, finished_at, is_public, is_synced, is_draft, is_planned, parent_route_id, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,0,?,?)`,
       [
         r.id, r.user_id, r.name, r.description, r.activity_type, r.difficulty,
         r.distance_meters, r.duration_seconds,
@@ -130,9 +131,58 @@ export class RouteRepositoryImpl implements IRouteRepository {
     return row ? rowToRoute(row) : null;
   }
 
+  /**
+   * Persiste (o reemplaza) una ruta planificada: la fila `routes` con
+   * is_planned=1 + los puntos dibujados como `gps_points`. No lleva stats de
+   * grabación (las que trae la entidad: distancia estimada). INSERT OR REPLACE
+   * sobre la ruta dispara el CASCADE que borra los puntos viejos (caso edición)
+   * antes de reinsertar.
+   */
+  async savePlannedRoute(route: Route, points: { latitude: number; longitude: number }[]): Promise<void> {
+    const r = routeToRow(route);
+    const ts = route.createdAt.toISOString();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO routes
+          (id, user_id, name, description, activity_type, difficulty,
+           distance_meters, duration_seconds,
+           elevation_gain_meters, elevation_loss_meters, max_elevation_meters, min_elevation_meters,
+           avg_speed_kmh, max_speed_kmh,
+           started_at, finished_at, is_public, is_synced, is_draft, is_planned, parent_route_id, created_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,1,?,?)`,
+        [
+          r.id, r.user_id, r.name, r.description, r.activity_type, r.difficulty,
+          r.distance_meters, r.duration_seconds,
+          r.elevation_gain_meters, r.elevation_loss_meters, r.max_elevation_meters, r.min_elevation_meters,
+          r.avg_speed_kmh, r.max_speed_kmh,
+          r.started_at, r.finished_at, r.is_public, r.is_synced,
+          r.parent_route_id, r.created_at,
+        ] as (string | number | null)[]
+      );
+      // El CASCADE del REPLACE ya borró los puntos previos; reinsertamos.
+      for (let i = 0; i < points.length; i++) {
+        await db.runAsync(
+          `INSERT OR IGNORE INTO gps_points
+            (id, route_id, latitude, longitude, altitude, accuracy, speed, recorded_at, sequence_index)
+           VALUES (?,?,?,?,?,?,?,?,?)`,
+          [uuidv4(), r.id as string, points[i].latitude, points[i].longitude, null, null, null, ts, i] as (string | number | null)[]
+        );
+      }
+    });
+  }
+
+  /** Rutas planificadas (dibujadas, no grabadas) del usuario, más recientes primero. */
+  async getPlannedRoutes(userId: string): Promise<Route[]> {
+    const rows = await db.getAllAsync<Record<string, unknown>>(
+      'SELECT * FROM routes WHERE user_id = ? AND is_planned = 1 ORDER BY created_at DESC',
+      [userId]
+    );
+    return rows.map(rowToRoute);
+  }
+
   async getAll(userId: string): Promise<Route[]> {
     const rows = await db.getAllAsync<Record<string, unknown>>(
-      'SELECT * FROM routes WHERE user_id = ? AND is_draft = 0 ORDER BY created_at DESC',
+      'SELECT * FROM routes WHERE user_id = ? AND is_draft = 0 AND is_planned = 0 ORDER BY created_at DESC',
       [userId]
     );
     return rows.map(rowToRoute);
@@ -188,7 +238,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
     const rows = await db.getAllAsync<{ route_id: string; longitude: number; latitude: number }>(
       `SELECT g.route_id, g.longitude, g.latitude
          FROM gps_points g JOIN routes r ON r.id = g.route_id
-        WHERE r.user_id = ? AND r.is_draft = 0
+        WHERE r.user_id = ? AND r.is_draft = 0 AND r.is_planned = 0
         ORDER BY g.route_id, g.sequence_index ASC`,
       [userId]
     );
@@ -218,7 +268,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
               (SELECT latitude  FROM gps_points WHERE route_id = r.id ORDER BY sequence_index LIMIT 1) AS lat,
               (SELECT longitude FROM gps_points WHERE route_id = r.id ORDER BY sequence_index LIMIT 1) AS lon
          FROM routes r
-        WHERE r.user_id = ? AND r.is_draft = 0`,
+        WHERE r.user_id = ? AND r.is_draft = 0 AND r.is_planned = 0`,
       [userId]
     );
     return rows
@@ -234,7 +284,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
     const rows = await db.getAllAsync<{ title: string; type: string | null; latitude: number; longitude: number }>(
       `SELECT w.title, w.type, w.latitude, w.longitude
          FROM waypoints w JOIN routes r ON r.id = w.route_id
-        WHERE r.user_id = ? AND r.is_draft = 0`,
+        WHERE r.user_id = ? AND r.is_draft = 0 AND r.is_planned = 0`,
       [userId]
     );
     return rows.map((r) => ({ title: r.title, type: r.type ?? undefined, lat: r.latitude, lon: r.longitude }));
@@ -283,7 +333,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
 
   async getUnsyncedRoutes(userId: string): Promise<Route[]> {
     const rows = await db.getAllAsync<Record<string, unknown>>(
-      'SELECT * FROM routes WHERE user_id = ? AND is_synced = 0 AND is_draft = 0 ORDER BY created_at ASC',
+      'SELECT * FROM routes WHERE user_id = ? AND is_synced = 0 AND is_draft = 0 AND is_planned = 0 ORDER BY created_at ASC',
       [userId]
     );
     return rows.map(rowToRoute);

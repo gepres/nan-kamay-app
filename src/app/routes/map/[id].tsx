@@ -7,12 +7,11 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import {
-  MapView, Camera, RasterSource, RasterLayer,
+  MapView, Camera,
   ShapeSource, LineLayer, CircleLayer, MarkerView,
   setAccessToken, Logger,
   type CameraRef,
 } from '@maplibre/maplibre-react-native';
-import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
 import { getPublicRouteDetailUseCase } from '@application/routes/GetPublicRouteDetailUseCase';
 import { Route } from '@core/entities/Route';
@@ -24,6 +23,8 @@ import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import WaypointDetailCard from '@presentation/components/routes/WaypointDetailCard';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
 import LayerSelectorModal from '@presentation/components/map/LayerSelectorModal';
+import { Basemap } from '@presentation/components/map/Basemap';
+import { useBasemap } from '@presentation/hooks/useBasemap';
 import { colors } from '@presentation/theme/colors';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
@@ -167,6 +168,11 @@ export default function RouteMapScreen() {
     });
   }, [userPos]);
 
+  const firstCoord = coords[0];
+  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+    firstCoord ? { lng: firstCoord[0], lat: firstCoord[1] } : null,
+  );
+
   if (loading || !route) {
     return (
       <View style={[styles.fill, { backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center' }]}>
@@ -184,20 +190,12 @@ export default function RouteMapScreen() {
 
       <MapView
         style={StyleSheet.absoluteFill}
+        mapStyle={vectorStyleJSON}
         logoEnabled={false}
         attributionEnabled={false}
         onPress={() => setSelectedWp(null)}
       >
-        <RasterSource
-          key={layer}
-          id="route-map-tiles"
-          tileUrlTemplates={thunderforestTileUrls(layer)}
-          tileSize={256}
-          maxZoomLevel={18}
-          minZoomLevel={1}
-        >
-          <RasterLayer id="route-map-tile-layer" sourceID="route-map-tiles" style={{ rasterOpacity: 1 }} />
-        </RasterSource>
+        <Basemap layer={layer} offlineVector={isOfflineVector} />
 
         <Camera
           ref={cameraRef}

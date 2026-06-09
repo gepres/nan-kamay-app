@@ -2,19 +2,18 @@ import { StyleSheet, View } from 'react-native';
 import {
   MapView,
   Camera,
-  RasterSource,
-  RasterLayer,
   ShapeSource,
   LineLayer,
   CircleLayer,
   setAccessToken,
   Logger,
 } from '@maplibre/maplibre-react-native';
-import { thunderforestTileUrls } from '@infrastructure/config/env';
 import { simplifyLngLat } from '@shared/utils/geometry';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
+import { useBasemap } from '@presentation/hooks/useBasemap';
 import { colors } from '@presentation/theme/colors';
+import { Basemap } from './Basemap';
 import MissingTileKeyBanner from './MissingTileKeyBanner';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
@@ -75,31 +74,22 @@ export default function RouteMap({
         }
       : undefined;
 
-  const tileUrls = thunderforestTileUrls();
+  const { vectorStyleJSON, isOfflineVector } = useBasemap(
+    coords[0] ? { lng: coords[0][0], lat: coords[0][1] } : null,
+  );
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <MapView
         style={StyleSheet.absoluteFill}
+        mapStyle={vectorStyleJSON}
         logoEnabled={false}
         attributionEnabled={false}
         scrollEnabled={false}
         zoomEnabled={false}
         rotateEnabled={false}
       >
-        <RasterSource
-          id="thunderforest-route"
-          tileUrlTemplates={tileUrls}
-          tileSize={256}
-          maxZoomLevel={18}
-          minZoomLevel={1}
-        >
-          <RasterLayer
-            id="thunderforest-route-layer"
-            sourceID="thunderforest-route"
-            style={{ rasterOpacity: 1 }}
-          />
-        </RasterSource>
+        <Basemap offlineVector={isOfflineVector} />
 
         <Camera
           {...(bounds

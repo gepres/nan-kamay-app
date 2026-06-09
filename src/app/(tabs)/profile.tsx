@@ -191,13 +191,30 @@ export default function ProfileScreen() {
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 12,
             backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
-            borderWidth: 1, borderColor: colors.accent + '60', marginBottom: 24,
+            borderWidth: 1, borderColor: colors.accent + '60', marginBottom: 12,
           }}
         >
           <Ionicons name="git-branch-outline" size={22} color={colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Planificar ruta</Text>
             <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Dibuja una ruta en el mapa y síguela</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        {/* Mis rutas planificadas */}
+        <TouchableOpacity
+          onPress={() => router.push('/routes/planned')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.border, marginBottom: 24,
+          }}
+        >
+          <Ionicons name="bookmarks-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Mis rutas planificadas</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Edita o sigue las rutas que guardaste</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
