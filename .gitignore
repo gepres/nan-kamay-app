@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# Artefactos de mapas offline (se hostean, no se commitean)
+offline-build/
+
 # Expo
 .expo/
 dist/

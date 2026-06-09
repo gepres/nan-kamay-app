@@ -104,7 +104,7 @@ export async function ensureAssetsPack(
   const entries = Object.values(zip.files);
   for (const entry of entries) {
     if (entry.dir) continue;
-    const rel = entry.name.replace(/^\/+/, '');
+    const rel = entry.name.replace(/\\/g, '/').replace(/^\/+/, '');
     const outPath = ASSETS_DIR + rel;
     const parent = outPath.slice(0, outPath.lastIndexOf('/') + 1);
     const pInfo = await getInfoAsync(parent);

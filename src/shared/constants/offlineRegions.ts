@@ -27,7 +27,7 @@ export interface OfflineRegionCatalogItem {
  * regiones. Se descarga una sola vez la primera vez que bajas una zona.
  * ⚠️ Reemplazar por la URL real de Supabase Storage tras subir el zip.
  */
-export const OFFLINE_ASSETS_PACK_URL = '';
+export const OFFLINE_ASSETS_PACK_URL = 'https://xyemkrcqpbqpaujifjpp.supabase.co/storage/v1/object/public/nk-maps/assets-pack.zip';
 
 /** Rutas relativas dentro del assets pack (ajustar si tu zip difiere). */
 export const OFFLINE_GLYPHS_TEMPLATE = 'fonts/{fontstack}/{range}.pbf';
@@ -38,11 +38,12 @@ export const OFFLINE_SPRITE_PATH = 'sprites/v4/light';
  * Ejemplo (descomentar y ajustar):
  */
 export const OFFLINE_REGION_CATALOG: OfflineRegionCatalogItem[] = [
-  // {
-  //   id: 'huanuco',
-  //   name: 'Huánuco y alrededores',
-  //   bbox: [-76.4, -10.1, -75.6, -9.4],
-  //   url: 'https://<proj>.supabase.co/storage/v1/object/public/nk-maps/huanuco.pmtiles',
-  //   sizeBytes: 45_000_000,
-  // },
+  {
+    id: 'cusco-centro',
+    name: 'Cusco — Centro histórico',
+    // [oeste, sur, este, norte] usado al generar el .pmtiles (Plaza de Armas, San Blas y alrededores).
+    bbox: [-72.01, -13.55, -71.94, -13.49],
+    url: 'https://xyemkrcqpbqpaujifjpp.supabase.co/storage/v1/object/public/nk-maps/cusco-centro.pmtiles',
+    sizeBytes: 1_817_559,
+  },
 ];
