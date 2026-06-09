@@ -26,6 +26,12 @@ export default function HomeScreen() {
   // Monitorea red y actualiza uiStore
   useNetworkStatus();
 
+  // Grabación en curso: si saliste de la pantalla activa con "atrás", la
+  // grabación sigue viva en background. Mostramos un acceso para volver a ella.
+  const trackingStatus = useTrackingStore((s) => s.status);
+  const trackingName = useTrackingStore((s) => s.routeName);
+  const isRecordingActive = trackingStatus === 'recording' || trackingStatus === 'paused';
+
   // Perfiles de elevación (firma de las cards) — una sola query al cambiar la lista.
   const [profiles, setProfiles] = useState<Record<string, number[]>>({});
   const routeIdsKey = routes.map((r) => r.id).join(',');
@@ -144,6 +150,30 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       {/* Barra offline animada */}
       <OfflineBanner visible={isOffline} />
+
+      {/* Acceso a la grabación en curso (si saliste con "atrás") */}
+      {isRecordingActive && (
+        <TouchableOpacity
+          onPress={() => router.push('/tracking/active')}
+          activeOpacity={0.85}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 10,
+            marginHorizontal: 16, marginTop: 12, paddingHorizontal: 16, paddingVertical: 12,
+            backgroundColor: colors.accent, borderRadius: 14,
+          }}
+        >
+          <Ionicons name="radio-button-on" size={18} color="#0D1B12" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#0D1B12', fontSize: 14, fontWeight: '800' }}>
+              {trackingStatus === 'paused' ? 'Grabación en pausa' : 'Grabación en curso'}
+            </Text>
+            <Text style={{ color: '#0D1B12CC', fontSize: 12 }} numberOfLines={1}>
+              {trackingName || 'Ruta sin nombre'} · toca para volver
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#0D1B12" />
+        </TouchableOpacity>
+      )}
 
       {/* Header */}
       <View style={{
