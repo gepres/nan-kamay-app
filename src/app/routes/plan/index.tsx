@@ -46,6 +46,11 @@ export default function RoutePlannerScreen() {
   const [editId, setEditId] = useState<string | undefined>(edit);
   const editCreatedAt = useRef<Date | null>(null);
 
+  // Si el screen se reutiliza con un ?edit distinto sin desmontar, re-sincroniza
+  // editId (si no, Guardar reemplazaría la ruta equivocada). Solo corre cuando
+  // el parámetro cambia, no cuando setEditId se llama tras un Guardar nuevo.
+  useEffect(() => { setEditId(edit); }, [edit]);
+
   const [saving, setSaving] = useState(false);
   const [nameModal, setNameModal] = useState(false);
   const [nameDraft, setNameDraft] = useState('Ruta planificada');

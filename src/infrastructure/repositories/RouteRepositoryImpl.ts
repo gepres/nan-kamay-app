@@ -159,7 +159,11 @@ export class RouteRepositoryImpl implements IRouteRepository {
           r.parent_route_id, r.created_at,
         ] as (string | number | null)[]
       );
-      // El CASCADE del REPLACE ya borró los puntos previos; reinsertamos.
+      // Borrado EXPLÍCITO de los puntos previos (caso edición). El REPLACE de
+      // arriba ya dispara el ON DELETE CASCADE, pero no dependemos de que el
+      // PRAGMA foreign_keys esté activo: si estuviera off, editar una ruta a
+      // MENOS puntos dejaría huérfanos con sequence_index alto → guía corrupta.
+      await db.runAsync('DELETE FROM gps_points WHERE route_id = ?', [r.id as string]);
       for (let i = 0; i < points.length; i++) {
         await db.runAsync(
           `INSERT OR IGNORE INTO gps_points

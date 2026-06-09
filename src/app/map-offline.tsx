@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  listDownloadedRegions, deleteRegion, downloadRegion, isAssetsReady,
+  listDownloadedRegions, deleteRegion, downloadRegion, ensureAssetsPack, isAssetsReady,
   type DownloadedRegion,
 } from '@infrastructure/services/OfflineMapsService';
 import { OFFLINE_REGION_CATALOG, OFFLINE_ASSETS_PACK_URL } from '@shared/constants/offlineRegions';
@@ -21,6 +21,7 @@ export default function MapOfflineScreen() {
   const [assetsReady, setAssetsReady] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [preparing, setPreparing] = useState(false);
 
   const refresh = useCallback(() => {
     listDownloadedRegions().then(setDownloaded).catch(() => {});
@@ -34,14 +35,32 @@ export default function MapOfflineScreen() {
     if (downloadingId) return;
     setDownloadingId(item.id);
     setProgress(0);
+    setPreparing(false);
+    let inAssets = false;
     try {
       await downloadRegion(item, (pct) => setProgress(pct));
+      // Fuentes/sprite (una sola vez). Se asegura aquí —no dentro de
+      // downloadRegion— para mostrar su progreso y no ocultar un fallo: sin el
+      // pack el mapa offline saldría sin etiquetas.
+      inAssets = true;
+      setPreparing(true);
+      await ensureAssetsPack((pct) => setProgress(pct));
       showToast('Zona descargada para usar sin conexión.', 'success');
       refresh();
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo descargar la zona.', 'error');
+      // La región pudo quedar descargada aunque fallaran las fuentes: refresca
+      // igual para que aparezca en la lista, pero avisa del fallo real.
+      refresh();
+      const msg = e instanceof Error ? e.message : 'error';
+      showToast(
+        inAssets
+          ? `Zona descargada, pero faltan las fuentes (mapa sin etiquetas): ${msg}`
+          : `No se pudo descargar la zona: ${msg}`,
+        'error',
+      );
     } finally {
       setDownloadingId(null);
+      setPreparing(false);
     }
   };
 
@@ -127,7 +146,7 @@ export default function MapOfflineScreen() {
                   <TouchableOpacity onPress={() => handleDownload(item)} disabled={!!downloadingId}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.accent, paddingHorizontal: 14, height: 38, borderRadius: 19, opacity: downloadingId && !busy ? 0.5 : 1 }}>
                     {busy ? <ActivityIndicator color="#0D1B12" size="small" /> : <Ionicons name="download" size={16} color="#0D1B12" />}
-                    <Text style={{ color: '#0D1B12', fontSize: 13, fontWeight: '700' }}>{busy ? `${Math.round(progress)}%` : 'Descargar'}</Text>
+                    <Text style={{ color: '#0D1B12', fontSize: 13, fontWeight: '700' }}>{busy ? (preparing ? `Fuentes ${Math.round(progress)}%` : `${Math.round(progress)}%`) : 'Descargar'}</Text>
                   </TouchableOpacity>
                 )}
               </View>

@@ -70,7 +70,10 @@ export async function listDownloadedRegions(): Promise<DownloadedRegion[]> {
 
 /** ¿Está el assets pack (fonts + sprite) ya descargado y descomprimido? */
 export async function isAssetsReady(): Promise<boolean> {
-  const info = await getInfoAsync(ASSETS_DIR + 'fonts');
+  // Marcador escrito SOLO al terminar de descomprimir todo el pack. Comprobar la
+  // carpeta `fonts` no basta: un unzip interrumpido la deja a medias y nunca se
+  // repararía (isAssetsReady devolvería true con archivos faltantes).
+  const info = await getInfoAsync(ASSETS_DIR + '.ready');
   return info.exists;
 }
 
@@ -113,6 +116,8 @@ export async function ensureAssetsPack(
     await writeAsStringAsync(outPath, data, { encoding: 'base64' });
   }
   await deleteAsync(ASSETS_ZIP, { idempotent: true });
+  // Marca de completado: solo aquí, tras escribir TODAS las entradas.
+  await writeAsStringAsync(ASSETS_DIR + '.ready', '1', { encoding: 'utf8' });
 }
 
 /**
@@ -151,10 +156,9 @@ export async function downloadRegion(
   const next = [entry, ...list.filter((r) => r.id !== item.id)];
   await writeManifest(next);
 
-  // Fuentes/sprite (idempotente). Si falla, la región queda igualmente
-  // descargada; el mapa se verá sin etiquetas hasta tener el pack.
-  try { await ensureAssetsPack(); } catch { /* surfaced elsewhere */ }
-
+  // El assets pack (fuentes/sprite) lo asegura el LLAMADOR por separado, para
+  // poder mostrar su progreso y NO ocultar un fallo (si fallara aquí en
+  // silencio, el toast diría "descargada" pero el mapa saldría sin etiquetas).
   return entry;
 }
 
