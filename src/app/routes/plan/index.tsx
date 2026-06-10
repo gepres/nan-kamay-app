@@ -21,9 +21,12 @@ import { useBasemap } from '@presentation/hooks/useBasemap';
 import { colors } from '@presentation/theme/colors';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
+// DIAGNÓSTICO (temporal): NO silenciar; volcar todos los mensajes de MapLibre a
+// la consola RN (visibles en `adb logcat`) para ver por qué no renderizan los
+// tiles del .pmtiles local. Revertir a silenciar tras diagnosticar.
+try { (Logger as any).setLogLevel?.('verbose'); } catch { /* noop */ }
 Logger.setLogCallback((log) => {
-  if (log.message?.includes('Failed to load tile')) return true;
-  if (log.message?.includes('permanent error: Canceled')) return true;
+  console.warn('[mbgl]', (log as any).level ?? '', (log as any).tag ?? '', log.message ?? '');
   return false;
 });
 
@@ -56,7 +59,7 @@ export default function RoutePlannerScreen() {
   const [nameDraft, setNameDraft] = useState('Ruta planificada');
 
   // Base del mapa: raster online o vector local (PMTiles) sin señal.
-  const { mapStyleJSON, isOfflineVector } = useBasemap(
+  const { mapStyleJSON, isOfflineVector, activeRegion } = useBasemap(
     points[0] ? { lng: points[0][0], lat: points[0][1] } : null,
   );
 
@@ -72,6 +75,15 @@ export default function RoutePlannerScreen() {
       }
     })().catch(() => {});
   }, [edit]);
+
+  // Sin señal: centrar en la región descargada (centro de su bbox) para ver el
+  // mapa offline aunque la última ubicación caiga fuera de la cobertura.
+  useEffect(() => {
+    if (!isOfflineVector || !activeRegion || !cameraRef.current) return;
+    const [w, s, e, n] = activeRegion.bbox;
+    cameraRef.current.setCamera({ centerCoordinate: [(w + e) / 2, (s + n) / 2], zoomLevel: 14, animationDuration: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOfflineVector, activeRegion?.id]);
 
   // Cargar una ruta planificada existente para seguir editándola.
   useEffect(() => {

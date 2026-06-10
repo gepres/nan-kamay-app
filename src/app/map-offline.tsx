@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   listDownloadedRegions, deleteRegion, downloadRegion, ensureAssetsPack, isAssetsReady,
+  getOfflineDiagnostics,
   type DownloadedRegion,
 } from '@infrastructure/services/OfflineMapsService';
 import { OFFLINE_REGION_CATALOG, OFFLINE_ASSETS_PACK_URL } from '@shared/constants/offlineRegions';
@@ -77,6 +78,15 @@ export default function MapOfflineScreen() {
     ]);
   };
 
+  const handleDiag = async () => {
+    try {
+      const txt = await getOfflineDiagnostics();
+      Alert.alert('Diagnóstico offline', txt, [{ text: 'OK' }]);
+    } catch (e) {
+      Alert.alert('Diagnóstico offline', `Error: ${e instanceof Error ? e.message : 'desconocido'}`);
+    }
+  };
+
   const notConfigured = OFFLINE_REGION_CATALOG.length === 0 || !OFFLINE_ASSETS_PACK_URL;
 
   return (
@@ -89,6 +99,9 @@ export default function MapOfflineScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '800', flex: 1 }}>Mapas sin conexión</Text>
+        <TouchableOpacity onPress={handleDiag} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
+          <Ionicons name="bug-outline" size={20} color={colors.accent} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24, gap: 14 }}>

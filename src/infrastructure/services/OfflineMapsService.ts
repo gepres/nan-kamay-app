@@ -172,6 +172,43 @@ export async function deleteRegion(id: string): Promise<void> {
   await writeManifest(list.filter((r) => r.id !== id));
 }
 
+/**
+ * Diagnóstico legible EN LA APP (sin necesidad de adb/logcat): comprueba que el
+ * `.pmtiles` se descargó completo y válido, que las fuentes están, y muestra la
+ * URL exacta. Si todo esto está OK pero el mapa sale negro, el problema es el
+ * render nativo de PMTiles local (no la descarga ni el path).
+ */
+export async function getOfflineDiagnostics(): Promise<string> {
+  const L: string[] = [];
+  const ready = (await getInfoAsync(ASSETS_DIR + '.ready')).exists;
+  const font = (await getInfoAsync(ASSETS_DIR + 'fonts/NotoSans-Regular/0-255.pbf')).exists;
+  L.push(`assets .ready: ${ready ? 'SÍ' : 'NO'}`);
+  L.push(`fuente NotoSans-Regular: ${font ? 'SÍ' : 'NO'}`);
+
+  const regions = await readManifest();
+  L.push(`regiones en manifest: ${regions.length}`);
+  const r = regions[0];
+  if (!r) { L.push('⚠️ NO hay región descargada'); return L.join('\n'); }
+
+  L.push(`región: ${r.id}`);
+  const info = await getInfoAsync(r.filePath);
+  const size = info.exists && 'size' in info ? (info.size as number) : -1;
+  L.push(`archivo existe: ${info.exists ? 'SÍ' : 'NO'}`);
+  L.push(`tamaño: ${size} bytes (esperado ~1.8M)`);
+
+  // Magic PMTiles v3: los primeros bytes ASCII "PMT…" → base64 empieza con "UE1U".
+  // Si NO, lo descargado no es un .pmtiles (p.ej. página de error / HTML).
+  try {
+    const head = await readAsStringAsync(r.filePath, { encoding: 'base64', position: 0, length: 12 });
+    L.push(`magic PMTiles: ${head.startsWith('UE1U') ? 'SÍ' : `NO (head=${head.slice(0, 12)})`}`);
+  } catch (e) {
+    L.push(`no se pudo leer el archivo: ${e instanceof Error ? e.message : 'error'}`);
+  }
+
+  L.push(`URL: pmtiles://${r.filePath}`);
+  return L.join('\n');
+}
+
 /** Región cuyo bbox contiene la coordenada (o null). */
 export function findRegionForCoord(
   lng: number, lat: number, regions: DownloadedRegion[],
@@ -204,16 +241,16 @@ export function pickActiveRegion(
  * a `MapView.mapStyle`.
  */
 export function buildVectorStyle(region: DownloadedRegion): object {
+  const sourceUrl = `pmtiles://${region.filePath}`;
+  const glyphs = ASSETS_DIR + OFFLINE_GLYPHS_TEMPLATE;
+  const sprite = ASSETS_DIR + OFFLINE_SPRITE_PATH;
+  // DIAGNÓSTICO (temporal): ver la URL exacta que recibe MapLibre.
+  console.warn('[offline] vector style →', JSON.stringify({ sourceUrl, glyphs, sprite }));
   return {
     version: 8,
-    glyphs: ASSETS_DIR + OFFLINE_GLYPHS_TEMPLATE,
-    sprite: ASSETS_DIR + OFFLINE_SPRITE_PATH,
-    sources: {
-      [PROTOMAPS_SOURCE_NAME]: {
-        type: 'vector',
-        url: `pmtiles://${region.filePath}`,
-      },
-    },
+    glyphs,
+    sprite,
+    sources: { [PROTOMAPS_SOURCE_NAME]: { type: 'vector', url: sourceUrl } },
     layers: PROTOMAPS_VECTOR_LAYERS,
   };
 }
