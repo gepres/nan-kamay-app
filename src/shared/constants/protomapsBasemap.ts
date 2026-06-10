@@ -1,11 +1,11 @@
 /**
  * Capas de estilo vector Protomaps (esquema basemaps v4) — GENERADO.
- * Fuente: protomaps-themes-base@4.5.0  ->  layers('protomaps','light') + labels(...).
- * Regenerar:  node scripts/gen-protomaps-style.js  (ver OfflineMapsService).
+ * Fuente: protomaps-themes-base  ->  layers('protomaps','light') + labels(...).
+ * Regenerar:  node scripts/gen-protomaps-style.js
  *
  * Estas capas referencian el source vector 'protomaps' (un .pmtiles local).
- * Las etiquetas usan las fuentes: Noto Sans Regular / Medium / Italic, que el
- * assets pack offline debe incluir como glyphs.
+ * Las etiquetas usan NotoSans-Regular / -Medium / -Italic (sin espacios, para
+ * que la ruta file:// de glyphs resuelva). El assets pack debe traer esas carpetas.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2149,7 +2149,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
     "layout": {
       "symbol-placement": "point",
       "text-font": [
-        "Noto Sans Italic"
+        "NotoSans-Italic"
       ],
       "text-field": [
         "get",
@@ -2178,7 +2178,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
     "layout": {
       "symbol-placement": "line",
       "text-font": [
-        "Noto Sans Italic"
+        "NotoSans-Italic"
       ],
       "text-field": [
         "case",
@@ -2318,7 +2318,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -2441,7 +2441,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -2479,7 +2479,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -2542,7 +2542,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -2599,7 +2599,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -2664,7 +2664,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -2702,7 +2702,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -2740,7 +2740,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -2806,7 +2806,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -2844,7 +2844,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -2908,7 +2908,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -2946,7 +2946,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3003,7 +3003,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3041,7 +3041,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3079,7 +3079,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ],
       "symbol-placement": "line",
       "text-font": [
-        "Noto Sans Regular"
+        "NotoSans-Regular"
       ],
       "text-field": [
         "case",
@@ -3219,7 +3219,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3342,7 +3342,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -3380,7 +3380,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -3443,7 +3443,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3500,7 +3500,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3565,7 +3565,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -3603,7 +3603,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -3641,7 +3641,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -3707,7 +3707,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3745,7 +3745,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3809,7 +3809,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3847,7 +3847,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3904,7 +3904,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3942,7 +3942,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -3975,7 +3975,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
     ],
     "layout": {
       "text-font": [
-        "Noto Sans Italic"
+        "NotoSans-Italic"
       ],
       "text-field": [
         "case",
@@ -4115,7 +4115,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4238,7 +4238,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -4276,7 +4276,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -4339,7 +4339,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4396,7 +4396,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4461,7 +4461,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -4499,7 +4499,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -4537,7 +4537,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -4603,7 +4603,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4641,7 +4641,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4705,7 +4705,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4743,7 +4743,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4800,7 +4800,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4838,7 +4838,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -4883,7 +4883,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
     ],
     "layout": {
       "text-font": [
-        "Noto Sans Italic"
+        "NotoSans-Italic"
       ],
       "text-field": [
         "case",
@@ -5023,7 +5023,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5146,7 +5146,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -5184,7 +5184,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -5247,7 +5247,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5304,7 +5304,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5369,7 +5369,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -5407,7 +5407,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -5445,7 +5445,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -5511,7 +5511,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5549,7 +5549,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5613,7 +5613,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5651,7 +5651,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5708,7 +5708,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5746,7 +5746,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -5798,7 +5798,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ],
       "symbol-placement": "line",
       "text-font": [
-        "Noto Sans Regular"
+        "NotoSans-Regular"
       ],
       "text-field": [
         "case",
@@ -5938,7 +5938,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6061,7 +6061,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -6099,7 +6099,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -6162,7 +6162,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6219,7 +6219,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6284,7 +6284,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -6322,7 +6322,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -6360,7 +6360,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -6426,7 +6426,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6464,7 +6464,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6528,7 +6528,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6566,7 +6566,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6623,7 +6623,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6661,7 +6661,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -6746,7 +6746,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         ]
       ],
       "text-font": [
-        "Noto Sans Regular"
+        "NotoSans-Regular"
       ],
       "text-justify": "auto",
       "text-field": [
@@ -6887,7 +6887,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7010,7 +7010,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -7048,7 +7048,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -7111,7 +7111,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7168,7 +7168,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7233,7 +7233,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -7271,7 +7271,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -7309,7 +7309,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -7375,7 +7375,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7413,7 +7413,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7477,7 +7477,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7515,7 +7515,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7572,7 +7572,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7610,7 +7610,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7862,7 +7862,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -7985,7 +7985,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -8023,7 +8023,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -8086,7 +8086,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8143,7 +8143,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8208,7 +8208,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -8246,7 +8246,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -8284,7 +8284,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -8350,7 +8350,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8388,7 +8388,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8452,7 +8452,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8490,7 +8490,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8547,7 +8547,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8585,7 +8585,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8595,7 +8595,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         ]
       ],
       "text-font": [
-        "Noto Sans Regular"
+        "NotoSans-Regular"
       ],
       "text-max-width": 7,
       "text-letter-spacing": 0.1,
@@ -8799,7 +8799,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -8922,7 +8922,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -8960,7 +8960,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -9023,7 +9023,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9080,7 +9080,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9145,7 +9145,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -9183,7 +9183,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -9221,7 +9221,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 [
                   "literal",
                   [
-                    "Noto Sans Regular"
+                    "NotoSans-Regular"
                   ]
                 ]
               ]
@@ -9287,7 +9287,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9325,7 +9325,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9389,7 +9389,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9427,7 +9427,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9484,7 +9484,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9522,7 +9522,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -9544,13 +9544,13 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         [
           "literal",
           [
-            "Noto Sans Medium"
+            "NotoSans-Medium"
           ]
         ],
         [
           "literal",
           [
-            "Noto Sans Regular"
+            "NotoSans-Regular"
           ]
         ]
       ],
@@ -9916,7 +9916,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10039,7 +10039,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -10077,7 +10077,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -10140,7 +10140,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10197,7 +10197,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10262,7 +10262,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -10300,7 +10300,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -10338,7 +10338,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   [
                     "literal",
                     [
-                      "Noto Sans Regular"
+                      "NotoSans-Regular"
                     ]
                   ]
                 ]
@@ -10404,7 +10404,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10442,7 +10442,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10506,7 +10506,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10544,7 +10544,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10601,7 +10601,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10639,7 +10639,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     [
                       "literal",
                       [
-                        "Noto Sans Regular"
+                        "NotoSans-Regular"
                       ]
                     ]
                   ]
@@ -10650,7 +10650,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         ]
       ],
       "text-font": [
-        "Noto Sans Regular"
+        "NotoSans-Regular"
       ],
       "text-size": [
         "interpolate",
@@ -10706,7 +10706,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         {}
       ],
       "text-font": [
-        "Noto Sans Medium"
+        "NotoSans-Medium"
       ],
       "text-size": [
         "interpolate",
@@ -10822,4 +10822,4 @@ export const PROTOMAPS_SOURCE_NAME = "protomaps";
 export const PROTOMAPS_THEME = "light";
 
 /** Fuentes (fontstacks) que el assets pack offline debe traer como glyphs. */
-export const PROTOMAPS_REQUIRED_FONTS = ["Noto Sans Regular", "Noto Sans Medium", "Noto Sans Italic"];
+export const PROTOMAPS_REQUIRED_FONTS = ["NotoSans-Regular","NotoSans-Medium","NotoSans-Italic"];

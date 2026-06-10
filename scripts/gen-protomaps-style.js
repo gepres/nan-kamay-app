@@ -17,17 +17,32 @@ const base = m.layers(SOURCE, THEME);
 const labels = m.labels(SOURCE, THEME);
 const all = [...base, ...labels];
 
+// Renombrar las fuentes a versiones SIN ESPACIOS. MapLibre nativo construye la
+// URL de glyphs sustituyendo {fontstack} con el nombre de la fuente; con
+// espacios ("Noto Sans Regular") el file:// resultante puede no resolver. Con
+// nombres sin espacios la ruta `fonts/<fuente>/<rango>.pbf` es inequívoca. El
+// assets pack debe traer las carpetas con ESTOS mismos nombres.
+const FONT_RENAME = {
+  'Noto Sans Regular': 'NotoSans-Regular',
+  'Noto Sans Medium': 'NotoSans-Medium',
+  'Noto Sans Italic': 'NotoSans-Italic',
+};
+let allJson = JSON.stringify(all, null, 2);
+for (const [from, to] of Object.entries(FONT_RENAME)) allJson = allJson.split(from).join(to);
+const RENAMED_FONTS = JSON.stringify(Object.values(FONT_RENAME));
+
 const out = `/**
  * Capas de estilo vector Protomaps (esquema basemaps v4) — GENERADO.
  * Fuente: protomaps-themes-base  ->  layers('${SOURCE}','${THEME}') + labels(...).
  * Regenerar:  node scripts/gen-protomaps-style.js
  *
  * Estas capas referencian el source vector '${SOURCE}' (un .pmtiles local).
- * Las etiquetas usan Noto Sans Regular / Medium / Italic (glyphs del assets pack).
+ * Las etiquetas usan NotoSans-Regular / -Medium / -Italic (sin espacios, para
+ * que la ruta file:// de glyphs resuelva). El assets pack debe traer esas carpetas.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const PROTOMAPS_VECTOR_LAYERS: any[] = ${JSON.stringify(all, null, 2)};
+export const PROTOMAPS_VECTOR_LAYERS: any[] = ${allJson};
 
 /** Nombre del source vector que esperan las capas de arriba. */
 export const PROTOMAPS_SOURCE_NAME = ${JSON.stringify(SOURCE)};
@@ -36,7 +51,7 @@ export const PROTOMAPS_SOURCE_NAME = ${JSON.stringify(SOURCE)};
 export const PROTOMAPS_THEME = ${JSON.stringify(THEME)};
 
 /** Fuentes (fontstacks) que el assets pack offline debe traer como glyphs. */
-export const PROTOMAPS_REQUIRED_FONTS = ["Noto Sans Regular", "Noto Sans Medium", "Noto Sans Italic"];
+export const PROTOMAPS_REQUIRED_FONTS = ${RENAMED_FONTS};
 `;
 
 fs.writeFileSync(path.join(__dirname, '..', 'src', 'shared', 'constants', 'protomapsBasemap.ts'), out);
