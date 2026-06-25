@@ -12,6 +12,7 @@ import { IExportService, ExportFormat } from '@core/ports/services/IExportServic
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
+import { simplifyIndices } from '@shared/utils/geometry';
 
 /** Mapa waypointId → rutas relativas de imágenes embebidas en el KMZ. */
 type EmbeddedImages = Record<string, string[]>;
@@ -150,6 +151,20 @@ function cdataSafe(str: string): string {
 
 // ── Generadores de formato ───────────────────────────────────────
 
+/**
+ * Reduce el track con RDP (epsilon por defecto ≈ error GPS) conservando los
+ * GpsPoint completos (altitud/tiempo/velocidad de los vértices que sobreviven).
+ * Solo para los formatos de VISUALIZACIÓN (GPX/KML/KMZ): colapsa el serpenteo
+ * lateral de baja frecuencia que el suavizado en tiempo real no puede quitar.
+ * El CSV de diagnóstico NO se simplifica (necesita todos los puntos), y los
+ * gps_points guardados/sincronizados quedan intactos (fidelidad de backup).
+ */
+function simplifyTrack(points: GpsPoint[]): GpsPoint[] {
+  if (points.length <= 2) return points;
+  const coords = points.map((p) => [p.longitude, p.latitude] as [number, number]);
+  return simplifyIndices(coords).map((i) => points[i]);
+}
+
 function buildGpx(route: Route, gpsPoints: GpsPoint[], waypoints: Waypoint[]): string {
   const wptTags = waypoints
     .map(
@@ -164,7 +179,7 @@ function buildGpx(route: Route, gpsPoints: GpsPoint[], waypoints: Waypoint[]): s
     )
     .join('\n');
 
-  const trkptTags = gpsPoints
+  const trkptTags = simplifyTrack(gpsPoints)
     .map(
       (p) =>
         `      <trkpt lat="${num(p.latitude)}" lon="${num(p.longitude)}">
@@ -200,7 +215,7 @@ function buildKml(
   waypoints: Waypoint[],
   embedded?: EmbeddedImages,
 ): string {
-  const coordsTrack = gpsPoints
+  const coordsTrack = simplifyTrack(gpsPoints)
     .map((p) => `${num(p.longitude)},${num(p.latitude)},${num(p.altitude)}`)
     .join('\n          ');
 

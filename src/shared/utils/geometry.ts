@@ -15,20 +15,21 @@ const R_EARTH_M = 6371000;
 export const ROUTE_SIMPLIFY_EPSILON_M = 5;
 
 /**
- * Simplifica una polilínea `[lon, lat][]` con Ramer–Douglas–Peucker.
- * Elimina los desvíos laterales menores a `epsilonMeters` (jitter del GPS que
- * produce el serpenteo en línea recta) y CONSERVA los vértices reales y los
- * extremos (inicio/fin intactos → el cierre de un loop no cambia).
+ * Índices de los puntos que conserva Ramer–Douglas–Peucker sobre `coords`
+ * `[lon, lat][]` con tolerancia `epsilonMeters`. Devolver índices (en vez de
+ * las coords) permite al llamador conservar el resto de campos del punto
+ * original (altitud, tiempo, velocidad) al simplificar — necesario para
+ * exportar un track GPX/KML sin perder esos datos en los vértices que viven.
  *
  * Iterativo (sin recursión) para soportar trazas largas. Proyección a plano
  * local métrico centrado en el primer punto (válido para rutas < ~100 km).
  */
-export function simplifyLngLat(
+export function simplifyIndices(
   coords: [number, number][],
   epsilonMeters: number = ROUTE_SIMPLIFY_EPSILON_M,
-): [number, number][] {
+): number[] {
   const n = coords.length;
-  if (n <= 2) return coords.slice();
+  if (n <= 2) return coords.map((_, i) => i);
 
   const lat0 = coords[0][1];
   const mLat = 111320;
@@ -63,9 +64,22 @@ export function simplifyLngLat(
     }
   }
 
-  const out: [number, number][] = [];
-  for (let i = 0; i < n; i++) if (keep[i]) out.push(coords[i]);
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) if (keep[i]) out.push(i);
   return out;
+}
+
+/**
+ * Simplifica una polilínea `[lon, lat][]` con Ramer–Douglas–Peucker.
+ * Elimina los desvíos laterales menores a `epsilonMeters` (jitter del GPS que
+ * produce el serpenteo en línea recta) y CONSERVA los vértices reales y los
+ * extremos (inicio/fin intactos → el cierre de un loop no cambia).
+ */
+export function simplifyLngLat(
+  coords: [number, number][],
+  epsilonMeters: number = ROUTE_SIMPLIFY_EPSILON_M,
+): [number, number][] {
+  return simplifyIndices(coords, epsilonMeters).map((i) => coords[i]);
 }
 
 /** Distancia rápida en metros entre dos coords (equirectangular). */

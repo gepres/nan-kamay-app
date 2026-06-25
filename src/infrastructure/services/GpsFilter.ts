@@ -61,8 +61,13 @@ export class GpsFilter {
   private slowCount = 0;
   private isStationary = false;
 
-  // Último punto aceptado (coords ya suavizadas)
+  // Último punto aceptado (coords ya suavizadas) — base del ancla estacionaria.
   private lastAccepted: { lat: number; lon: number; time: number } | null = null;
+  // Último fix CRUDO aceptado. El gate de desplazamiento mínimo (etapa 5) se
+  // mide contra ESTO, no contra la coord suavizada: One Euro introduce lag y, al
+  // bajar la velocidad (curvas/cuestas), el desplazamiento suavizado caía bajo el
+  // umbral y descartaba fixes intermedios reales → la polilínea cortaba curvas.
+  private lastAcceptedRaw: { lat: number; lon: number } | null = null;
   // Último fix crudo (para velocidad calculada y anti-teleport)
   private lastRaw: { lat: number; lon: number; time: number } | null = null;
   // Ancla estacionaria (posición fija mientras está parado)
@@ -241,11 +246,15 @@ export class GpsFilter {
     const outLat = smoothed.lat;
     const outLon = smoothed.lon;
 
-    // ── 5. Desplazamiento mínimo (anti-jitter) sobre la coord SUAVIZADA ──
-    if (this.lastAccepted) {
+    // ── 5. Desplazamiento mínimo (anti-jitter) sobre el fix CRUDO ──
+    // Medir el avance REAL del sensor, no la coord suavizada: el lag de One Euro
+    // reducía el desplazamiento entre salidas consecutivas y, en tramos lentos,
+    // mataba puntos que SÍ eran movimiento real (cortando curvas). La salida
+    // sigue siendo la coord suavizada; solo la DECISIÓN de aceptar usa el crudo.
+    if (this.lastAcceptedRaw) {
       const dist = fastDistance(
-        this.lastAccepted.lat, this.lastAccepted.lon,
-        outLat, outLon,
+        this.lastAcceptedRaw.lat, this.lastAcceptedRaw.lon,
+        latitude, longitude,
       );
       if (dist < this.MIN_DISPLACEMENT) {
         return null;
@@ -253,6 +262,7 @@ export class GpsFilter {
     }
 
     this.lastAccepted = { lat: outLat, lon: outLon, time: now };
+    this.lastAcceptedRaw = { lat: latitude, lon: longitude };
 
     return {
       latitude: outLat,
@@ -293,6 +303,7 @@ export class GpsFilter {
     this.isStationary = false;
     this.stationaryAnchor = null;
     this.lastAccepted = null;
+    this.lastAcceptedRaw = null;
     this.lastRaw = null;
     this.rawWindow = [];
   }
@@ -330,6 +341,7 @@ export class GpsFilter {
     this.euroX.seed(0, t);
     this.euroY.seed(0, t);
     this.lastAccepted = { lat: latitude, lon: longitude, time: t };
+    this.lastAcceptedRaw = { lat: latitude, lon: longitude };
     this.lastRaw = { lat: latitude, lon: longitude, time: t };
     this.slowCount = 0;
     this.isStationary = false;
