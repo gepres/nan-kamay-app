@@ -30,8 +30,18 @@ async function pushRoute(route: Route, userId: string): Promise<void> {
     .upsert(routeToSupabase(route), { onConflict: 'id' });
   if (routeErr) throw new Error(`Route: ${routeErr.message}`);
 
-  // 2. GPS points (en lotes de 500 para no superar el límite de Supabase)
+  // 2. GPS points — DELETE-all remoto + reinsert para RECONCILIAR ediciones del
+  //    trazado. Un upsert es append-only: si el editor quitó puntos (recortar/
+  //    suavizar/quitar tramo), los viejos sobrevivirían en la nube y resucitarían
+  //    al re-bajar en otro dispositivo. Se evita `NOT IN (...ids)` (200+ uuids
+  //    revientan el largo de URL de PostgREST). Ventana sub-segundo con 0 puntos
+  //    remotos: es un backup personal, aceptable sin RPC transaccional.
   const gpsPoints = await routeRepository.getGpsPoints(route.id);
+  const { error: gpsDelErr } = await supabase
+    .from(NK_TABLES.gpsPoints)
+    .delete()
+    .eq('route_id', route.id);
+  if (gpsDelErr) throw new Error(`GPS points (limpieza): ${gpsDelErr.message}`);
   const BATCH = 500;
   for (let i = 0; i < gpsPoints.length; i += BATCH) {
     const batch = gpsPoints.slice(i, i + BATCH).map(gpsPointToSupabase);
@@ -48,9 +58,14 @@ async function pushRoute(route: Route, userId: string): Promise<void> {
     const remoteMedia = await uploadWaypointMedia(wp.media, userId, wp.id);
 
     // Persistir las URLs remotas en SQLite → un re-sync no las re-sube.
-    const changed = remoteMedia.some(
-      (m, i) => m.uri !== wp.media[i]?.uri || m.thumbnailUri !== wp.media[i]?.thumbnailUri,
-    );
+    // Persistir si cambió algo: URLs remotas nuevas O media podada (un archivo
+    // local ausente se descarta en uploadWaypointMedia → la lista queda más
+    // corta; sin el chequeo de longitud no se guardaría y se reintentaría siempre).
+    const changed =
+      remoteMedia.length !== wp.media.length ||
+      remoteMedia.some(
+        (m, i) => m.uri !== wp.media[i]?.uri || m.thumbnailUri !== wp.media[i]?.thumbnailUri,
+      );
     if (changed) {
       await routeRepository.updateWaypointMedia(wp.id, remoteMedia);
     }
@@ -78,6 +93,18 @@ async function pushRoute(route: Route, userId: string): Promise<void> {
       const { error: mErr } = await supabase.from(NK_TABLES.waypointMedia).insert(rows);
       if (mErr) throw new Error(`Waypoint media: ${mErr.message}`);
     }
+  }
+
+  // 4. Reconciliar waypoints borrados: eliminar en remoto los que ya no existen
+  //    localmente (con limpieza de su Storage). El upsert de arriba solo cubre
+  //    los que quedan; sin esto, un waypoint borrado resucitaría al re-bajar.
+  const localWpIds = new Set(waypoints.map((w) => w.id));
+  const { data: remoteWps } = await supabase
+    .from(NK_TABLES.waypoints)
+    .select('id')
+    .eq('route_id', route.id);
+  for (const rw of remoteWps ?? []) {
+    if (!localWpIds.has(rw.id as string)) await deleteRemoteWaypoint(rw.id as string);
   }
 }
 
@@ -253,4 +280,40 @@ export async function deleteRemoteRoute(routeId: string): Promise<void> {
   // 2. Borrar la ruta (CASCADE elimina gps/waypoints/images en Postgres).
   const { error } = await supabase.from(NK_TABLES.routes).delete().eq('id', routeId);
   if (error) throw new Error(`Borrado remoto: ${error.message}`);
+}
+
+/**
+ * Borra UN waypoint en Supabase, limpiando antes su media de Storage (el CASCADE
+ * de Postgres elimina las filas hijas pero NO los objetos de Storage). Molde de
+ * `deleteRemoteRoute`, acotado a un solo waypoint.
+ */
+export async function deleteRemoteWaypoint(waypointId: string): Promise<void> {
+  try {
+    // Legacy: imágenes en nk_waypoint_images.
+    const { data: imgs } = await supabase
+      .from(NK_TABLES.waypointImages)
+      .select('storage_path')
+      .eq('waypoint_id', waypointId);
+    const imgKeys = (imgs ?? [])
+      .map((i) => String(i.storage_path).split(`/${NK_BUCKET}/`)[1])
+      .filter((k): k is string => !!k);
+    if (imgKeys.length > 0) await supabase.storage.from(NK_BUCKET).remove(imgKeys);
+
+    // Media nueva (archivo + miniatura) en nk_waypoint_media.
+    const { data: mediaRows } = await supabase
+      .from(NK_TABLES.waypointMedia)
+      .select('storage_path, thumbnail_path')
+      .eq('waypoint_id', waypointId);
+    const mediaKeys = (mediaRows ?? [])
+      .flatMap((m) => [m.storage_path, m.thumbnail_path])
+      .filter((p): p is string => !!p)
+      .map((p) => String(p).split(`/${NK_MEDIA_BUCKET}/`)[1])
+      .filter((k): k is string => !!k);
+    if (mediaKeys.length > 0) await supabase.storage.from(NK_MEDIA_BUCKET).remove(mediaKeys);
+  } catch (e) {
+    console.warn('[sync] no se pudieron limpiar archivos de Storage del waypoint', e);
+  }
+
+  const { error } = await supabase.from(NK_TABLES.waypoints).delete().eq('id', waypointId);
+  if (error) throw new Error(`Borrado remoto de waypoint: ${error.message}`);
 }

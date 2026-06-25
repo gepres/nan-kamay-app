@@ -334,6 +334,31 @@ export default function RouteDetailScreen() {
           </View>
         )}
 
+        {/* Editar trazado: limpiar/recortar el track grabado (zigzag GPS). */}
+        {gpsPoints.length > 1 && (
+          <TouchableOpacity
+            onPress={() => router.push(`/routes/refine/${route.id}`)}
+            style={{
+              backgroundColor: colors.bgCard,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.accent + '60',
+              paddingVertical: 14,
+              paddingHorizontal: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="brush-outline" size={18} color={colors.accent} />
+            <Text style={{ color: colors.accent, fontWeight: '700', fontSize: 14 }}>
+              Editar trazado
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Compartir postal (editor estilo Strava: traza + stats) */}
         {gpsPoints.length > 1 && (
           <TouchableOpacity

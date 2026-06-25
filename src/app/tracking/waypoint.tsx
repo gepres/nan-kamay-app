@@ -22,6 +22,7 @@ import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import LocationPickerModal from '@presentation/components/map/LocationPickerModal';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { Waypoint, WaypointMedia } from '@core/entities/Waypoint';
+import { persistWaypointMedia } from '@shared/utils/waypointMedia';
 import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
 import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
 import { appendDraftWaypoint } from '@application/tracking/DraftRouteUseCase';
@@ -121,7 +122,12 @@ export default function WaypointScreen() {
     addToRecents(label);
   };
 
-  const addMedia = (item: WaypointMedia) => setMedia((prev) => [...prev, item]);
+  // Persiste la media a almacenamiento estable ANTES de añadirla: la URI del
+  // picker/grabador es de cache efímero y puede desaparecer antes del sync.
+  const addMedia = async (item: WaypointMedia) => {
+    const persisted = await persistWaypointMedia(item);
+    setMedia((prev) => [...prev, persisted]);
+  };
   const removeMedia = (uri: string) => setMedia((prev) => prev.filter((m) => m.uri !== uri));
 
   // ── Fotos (cámara/galería) ──

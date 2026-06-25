@@ -1,4 +1,4 @@
-import { uploadAsync, FileSystemUploadType } from 'expo-file-system/legacy';
+import { uploadAsync, getInfoAsync, FileSystemUploadType } from 'expo-file-system/legacy';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { NK_MEDIA_BUCKET } from '@infrastructure/supabase/tables';
 import { ENV } from '@infrastructure/config/env';
@@ -65,17 +65,35 @@ export async function uploadWaypointMedia(
       out.push(m); // ya subido
       continue;
     }
+
+    // Resiliencia: la URI local puede haber desaparecido. ImagePicker guarda en
+    // el cache efímero (`cache/ImagePicker/...`), que Android purga sin aviso; si
+    // el archivo ya no existe, `uploadAsync` lanzaba IOException y tumbaba el sync
+    // de TODA la ruta. Si falta, descartamos esa media (ya es irrecuperable) y
+    // seguimos: la ruta y el resto de media sí suben. Al caer de `out`, el caller
+    // la poda de SQLite y deja de reintentarla.
+    const info = await getInfoAsync(m.uri);
+    if (!info.exists) {
+      console.warn(`[media] archivo local ausente, se omite del sync: ${m.uri}`);
+      continue;
+    }
+
     const ext = extFromUri(m.uri, m.type === 'image' ? 'jpg' : m.type === 'video' ? 'mp4' : 'm4a');
     const stamp = `${i}_${userId.slice(0, 8)}`;
     const path = `${userId}/${waypointId}/${m.type}_${stamp}.${ext}`;
     const url = await uploadFile(m.uri, path, mimeFor(m.type, ext));
 
-    // Miniatura de video (si es local).
+    // Miniatura de video (si es local y todavía existe).
     let thumbnailUri = m.thumbnailUri;
     if (m.type === 'video' && thumbnailUri && !thumbnailUri.startsWith('http')) {
-      const tExt = extFromUri(thumbnailUri, 'jpg');
-      const tPath = `${userId}/${waypointId}/thumb_${stamp}.${tExt}`;
-      thumbnailUri = await uploadFile(thumbnailUri, tPath, 'image/jpeg');
+      const tInfo = await getInfoAsync(thumbnailUri);
+      if (tInfo.exists) {
+        const tExt = extFromUri(thumbnailUri, 'jpg');
+        const tPath = `${userId}/${waypointId}/thumb_${stamp}.${tExt}`;
+        thumbnailUri = await uploadFile(thumbnailUri, tPath, 'image/jpeg');
+      } else {
+        thumbnailUri = undefined;
+      }
     }
 
     out.push({ ...m, uri: url, thumbnailUri });

@@ -3,6 +3,7 @@ import { Route } from '@core/entities/Route';
 import { Difficulty } from '@core/value-objects/Difficulty';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint, WaypointMedia } from '@core/entities/Waypoint';
+import { RouteStats } from '@core/rules/StatsCalculator';
 import { db } from '@infrastructure/database/sqliteDb';
 import { rowToRoute, routeToRow } from '@infrastructure/mappers/RouteMapper';
 import { rowToGpsPoint, gpsPointToRow } from '@infrastructure/mappers/GpsPointMapper';
@@ -417,6 +418,67 @@ export class RouteRepositoryImpl implements IRouteRepository {
       'UPDATE waypoints SET media = ?, image_uris = ? WHERE id = ?',
       [JSON.stringify(media), JSON.stringify(imageUris), waypointId]
     );
+  }
+
+  /**
+   * Reemplaza TODOS los gps_points de una ruta por `points` (editor de trazado).
+   * DELETE-all + INSERT re-secuenciado 0..n-1 PRESERVANDO id/altitud/accuracy/
+   * speed/recordedAt de cada punto (a diferencia de `savePlannedRoute`, que los
+   * nula): los supervivientes conservan su id; los redibujados traen uuid nuevo.
+   *
+   * SIEMPRE DELETE-all + reinsert; NUNCA UPDATE de `sequence_index`: hay un
+   * UNIQUE INDEX (route_id, sequence_index) que colisionaría transitoriamente al
+   * reordenar dentro de la transacción.
+   */
+  async replaceGpsPoints(routeId: string, points: GpsPoint[]): Promise<void> {
+    await db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM gps_points WHERE route_id = ?', [routeId]);
+      const BATCH = 100;
+      for (let i = 0; i < points.length; i += BATCH) {
+        const batch = points.slice(i, i + BATCH);
+        for (let j = 0; j < batch.length; j++) {
+          const r = gpsPointToRow(batch[j]);
+          await db.runAsync(
+            `INSERT OR IGNORE INTO gps_points
+              (id, route_id, latitude, longitude, altitude, accuracy, speed, recorded_at, sequence_index)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [r.id, routeId, r.latitude, r.longitude,
+             r.altitude, r.accuracy, r.speed, r.recorded_at, i + j] as (string | number | null)[]
+          );
+        }
+      }
+    });
+  }
+
+  /**
+   * Reescribe TODAS las stats de una ruta (tras editar el trazado): distancia,
+   * duración, velocidad y elevación. (`updateRouteElevation` solo toca las 4 de
+   * elevación, para el ajuste por DEM.)
+   */
+  async updateRouteStats(routeId: string, stats: RouteStats): Promise<void> {
+    await db.runAsync(
+      `UPDATE routes SET
+         distance_meters = ?, duration_seconds = ?,
+         elevation_gain_meters = ?, elevation_loss_meters = ?,
+         max_elevation_meters = ?, min_elevation_meters = ?,
+         avg_speed_kmh = ?, max_speed_kmh = ?
+       WHERE id = ?`,
+      [stats.distanceMeters, stats.durationSeconds,
+       stats.elevationGainMeters, stats.elevationLossMeters,
+       stats.maxElevationMeters, stats.minElevationMeters,
+       stats.avgSpeedKmh, stats.maxSpeedKmh, routeId]
+    );
+  }
+
+  /**
+   * Borra un waypoint y marca su ruta para re-sync. El push reconcilia el
+   * borrado remoto (limpia Storage y elimina la fila en Supabase).
+   */
+  async deleteWaypoint(id: string): Promise<void> {
+    const wp = await this.getWaypointById(id);
+    if (!wp) return;
+    await db.runAsync('DELETE FROM waypoints WHERE id = ?', [id]);
+    await this.markUnsynced(wp.routeId);
   }
 }
 

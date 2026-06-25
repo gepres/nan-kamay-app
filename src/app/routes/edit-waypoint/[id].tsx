@@ -14,10 +14,12 @@ import { useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import WaypointIcon from '@presentation/components/ui/WaypointIcon';
 import LocationPickerModal from '@presentation/components/map/LocationPickerModal';
 import { WaypointMedia } from '@core/entities/Waypoint';
+import { persistWaypointMedia } from '@shared/utils/waypointMedia';
 import { getWaypointTypeInfo, type WaypointTypeInfo } from '@shared/constants/waypointTypes';
 import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
 import { editWaypointUseCase } from '@application/routes/EditWaypointUseCase';
+import { deleteWaypointUseCase } from '@application/routes/DeleteWaypointUseCase';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { colors } from '@presentation/theme/colors';
 
@@ -56,6 +58,7 @@ export default function EditWaypointScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [found, setFound] = useState(true);
   const [coords, setCoords] = useState<{ lat: number; lon: number; alt: number | null } | null>(null);
   const [locationChanged, setLocationChanged] = useState(false);
@@ -121,7 +124,12 @@ export default function EditWaypointScreen() {
   };
 
   const handleSelectType = (label: string) => { setWaypointType(label); addToRecents(label); };
-  const addMedia = (item: WaypointMedia) => setMedia((prev) => [...prev, item]);
+  // Persiste la media a almacenamiento estable ANTES de añadirla: la URI del
+  // picker/grabador es de cache efímero y puede desaparecer antes del sync.
+  const addMedia = async (item: WaypointMedia) => {
+    const persisted = await persistWaypointMedia(item);
+    setMedia((prev) => [...prev, persisted]);
+  };
   const removeMedia = (uri: string) => setMedia((prev) => prev.filter((m) => m.uri !== uri));
 
   // ── Fotos ──
@@ -230,6 +238,29 @@ export default function EditWaypointScreen() {
       showToast(err instanceof Error ? err.message : 'No se pudo guardar el punto.', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!id || saving || deleting) return;
+    Alert.alert(
+      'Eliminar punto',
+      '¿Seguro que quieres eliminar este punto? Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: doDelete },
+      ],
+    );
+  };
+  const doDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteWaypointUseCase(id);
+      showToast('Punto eliminado.', 'success');
+      router.back();
+    } catch {
+      showToast('No se pudo eliminar el punto.', 'error');
+      setDeleting(false);
     }
   };
 
@@ -474,6 +505,26 @@ export default function EditWaypointScreen() {
               <Text style={{ color: title.trim() ? colors.bgPrimary : colors.textMuted, fontSize: 16, fontWeight: '700' }}>
                 Guardar cambios
               </Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Eliminar punto (cierra el CRUD de waypoint). */}
+          <TouchableOpacity
+            onPress={handleDelete}
+            disabled={saving || deleting}
+            style={{
+              borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4,
+              flexDirection: 'row', justifyContent: 'center', gap: 8,
+              backgroundColor: colors.danger + '18', borderWidth: 1, borderColor: colors.danger + '60',
+            }}
+          >
+            {deleting ? (
+              <ActivityIndicator color={colors.danger} />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                <Text style={{ color: colors.danger, fontSize: 15, fontWeight: '700' }}>Eliminar punto</Text>
+              </>
             )}
           </TouchableOpacity>
         </ScrollView>
