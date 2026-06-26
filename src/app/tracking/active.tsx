@@ -10,9 +10,15 @@ import Animated, {
 import { Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as SMS from 'expo-sms';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { useUiStore } from '@presentation/stores/uiStore';
+import { useAuthStore } from '@presentation/stores/authStore';
+import { useLiveShareStore } from '@presentation/stores/liveShareStore';
 import { useTracking } from '@presentation/hooks/useTracking';
+import { startLiveShare, endLiveShare } from '@application/live/liveShareUseCases';
+import { composeFollowMessage } from '@application/safety/buildLocationShare';
+import { getTrustedContacts } from '@shared/utils/trustedContacts';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import TrackingMap from '@presentation/components/map/TrackingMap';
@@ -29,6 +35,7 @@ export default function ActiveTrackingScreen() {
   const insets = useSafeAreaInsets();
   const {
     status,
+    routeId,
     routeName,
     liveStats,
     gpsPoints,
@@ -39,7 +46,8 @@ export default function ActiveTrackingScreen() {
     resumeRecording,
     finishRecording,
   } = useTrackingStore();
-  const { audioCues, setAudioCues } = useUiStore();
+  const { audioCues, setAudioCues, showToast } = useUiStore();
+  const liveActive = useLiveShareStore((s) => s.active);
 
   // Distancia a la traza guía (solo si estamos siguiendo una ruta).
   // Se recalcula cada vez que cambia la posición o la guía — barato porque
@@ -126,6 +134,13 @@ export default function ActiveTrackingScreen() {
             } catch (e) {
               console.error(e);
             }
+            // Cerrar el seguimiento en vivo explícitamente (mismo motivo que el
+            // GPS: no depender del efecto al desmontar).
+            const live = useLiveShareStore.getState();
+            if (live.active && live.session) {
+              endLiveShare(live.session.id).catch(() => {});
+              live.clear();
+            }
             finishRecording();
             router.replace('/tracking/summary');
           },
@@ -152,6 +167,59 @@ export default function ActiveTrackingScreen() {
 
   const handleToggleLayer = () => {
     setLayerModalVisible(true);
+  };
+
+  // Enviar el enlace de seguimiento en vivo a los contactos de confianza (PR2).
+  const sendFollowSms = async (token: string, ownerName: string) => {
+    try {
+      const contacts = await getTrustedContacts();
+      if (contacts.length === 0) {
+        showToast('Agrega contactos en Perfil › Seguridad.', 'info');
+        return;
+      }
+      if (!(await SMS.isAvailableAsync())) {
+        showToast('Este dispositivo no puede enviar SMS.', 'error');
+        return;
+      }
+      await SMS.sendSMSAsync(contacts.map((c) => c.phone), composeFollowMessage(token, ownerName));
+    } catch {
+      showToast('No se pudo preparar el SMS.', 'error');
+    }
+  };
+
+  // Encender/apagar el "Compartir en vivo" (PR2). Al encender, crea la sesión y
+  // ofrece mandar el enlace por SMS; al apagar, la cierra (el visor verá "finalizó").
+  const handleToggleLiveShare = async () => {
+    const live = useLiveShareStore.getState();
+    if (live.active) {
+      if (live.session) endLiveShare(live.session.id).catch(() => {});
+      live.clear();
+      showToast('Dejaste de compartir en vivo.', 'info');
+      return;
+    }
+    const u = useAuthStore.getState().user;
+    if (!u) { showToast('Inicia sesión para compartir en vivo.', 'error'); return; }
+    const ownerName = u.fullName || 'Tu contacto';
+    try {
+      const handle = await startLiveShare({
+        userId: u.id,
+        routeId,
+        ownerName,
+        distanceMeters: liveStats.distanceMeters,
+      });
+      useLiveShareStore.getState().setSession(handle);
+      showToast('Compartir en vivo activado.', 'success');
+      Alert.alert(
+        'Compartir en vivo',
+        'Envía el enlace a tus contactos para que te sigan en tiempo real.',
+        [
+          { text: 'Ahora no', style: 'cancel' },
+          { text: 'Enviar por SMS', onPress: () => sendFollowSms(handle.token, ownerName) },
+        ],
+      );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo iniciar el vivo.', 'error');
+    }
   };
 
   return (
@@ -345,6 +413,26 @@ export default function ActiveTrackingScreen() {
         }}
       >
         <Ionicons name="shield-checkmark" size={20} color={colors.danger} />
+      </TouchableOpacity>
+
+      {/* Compartir en vivo (toggle) — transmite tu posición a contactos por SMS */}
+      <TouchableOpacity
+        onPress={handleToggleLiveShare}
+        style={{
+          position: 'absolute',
+          top: insets.top + 408,
+          right: 16,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          backgroundColor: liveActive ? colors.accentSoft : '#0D1B12E6',
+          borderWidth: 1,
+          borderColor: liveActive ? colors.accent : '#2D6A4F80',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons name={liveActive ? 'radio' : 'radio-outline'} size={20} color={liveActive ? colors.accent : colors.textPrimary} />
       </TouchableOpacity>
 
       {/* Controles inferiores */}

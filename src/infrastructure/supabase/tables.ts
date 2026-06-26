@@ -16,6 +16,8 @@ export const NK_TABLES = {
   waypointImages: 'nk_waypoint_images',
   /** Media unificada de waypoints (fotos, videos, notas de voz). */
   waypointMedia: 'nk_waypoint_media',
+  /** Sesiones de seguimiento en vivo (link "sígueme"). Última posición in-place. */
+  liveSessions: 'nk_live_sessions',
 } as const;
 
 /** Bucket de Storage para imágenes de waypoints (prefijo para no colisionar). */

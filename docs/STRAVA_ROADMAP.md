@@ -158,9 +158,24 @@ no aplica al offline** (online se mantiene raster Thunderforest). `OfflineTilesS
 
 ---
 
-## Fase 5 — "Seguridad" (ubicación en vivo / check-in) 🔴 · esfuerzo L · riesgo ALTO
+## Fase 5 — "Seguridad" (ubicación en vivo / check-in) ✅ cliente hecho (2026-06-26)
 **Por qué casi al final:** alto valor para trekking solo, pero es la más compleja
 (backend + permisos + caso offline real).
+
+> **Estado (2026-06-26):**
+> - **PR1 — Check-in/S.O.S. por SMS** ✅ (validado en campo). `safety/` + `trustedContacts`
+>   (AsyncStorage, solo en el dispositivo) + `buildLocationShare` (mejor fix + link de Maps).
+>   Funciona **offline** (SMS por red de voz; GPS sin datos). Entrada en Perfil y atajo en grabación.
+> - **PR2 — Seguimiento en vivo (link "sígueme"), in-app + Supabase** ✅. Tabla `nk_live_sessions`
+>   (última posición in-place), RLS **solo-dueño** + RPC `nk_get_live_session(token)` **SECURITY
+>   DEFINER** (capacidad por token, sin enumeración) + **trigger que fuerza el TTL de 12 h** en el
+>   servidor. Emisor: toggle "Compartir en vivo" en la grabación → sube posición cada ~10 s
+>   (`useTracking`) → comparte el enlace por el **mismo SMS de PR1**. Visor: **la misma app**
+>   (`/seguir/[token]` + pantalla de pegar enlace `/seguir`), polling cada 10 s, mapa con punto vivo.
+>   Pasó `security-review` (H1/M1/L2/L3 corregidos; rate-limit y token CSPRNG documentados como
+>   endurecimiento futuro). Requiere **aplicar `supabase/schema.sql`**.
+> - **Pendiente (PR3, futuro):** **visor web** para contactos **sin** la app (GRANT a `anon` +
+>   página https → enlace one-tap en SMS); historial/trail en el visor; rate-limit en Dashboard.
 
 **Alcance:**
 - Compartir ubicación en vivo con contactos de confianza (link).
@@ -237,7 +252,7 @@ Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
 - [ ] **Métricas — desnivel por zona/recap desde DEM** + **nombres de zona** vía reverse-geocode (hoy la zona se etiqueta con el nombre de la ruta más larga del clúster). (M)
 
 ### 🟢 Fases grandes (necesitan backend Supabase)
-- [ ] **Fase 5 — Seguridad / ubicación en vivo** — sin código aún (confirmado). Tabla `nk_live_sessions` + RLS, `expo-sms` como fallback sin datos, pantalla `safety/`. Diseño Pencil listo. **(siguiente — plan en §Fase 5)**
+- [x] **Fase 5 — Seguridad / ubicación en vivo** — **cliente hecho (2026-06-26)**: PR1 (SMS check-in/S.O.S., offline) + PR2 (seguimiento en vivo in-app + Supabase: `nk_live_sessions`, RLS solo-dueño + RPC SECURITY DEFINER por token, TTL 12 h por trigger). Falta **PR3** (visor web para quien no tiene la app). Ver §Fase 5. Requiere aplicar `supabase/schema.sql`.
 - [ ] **Fase 6 — Social ligero** — sin código aún (confirmado). Kudos + comentarios en rutas públicas; `nk_route_kudos`, `nk_route_comments` + RLS. Diseño Pencil listo.
 
 ### 🔴 Validación de campo (no es código)

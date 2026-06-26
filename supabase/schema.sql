@@ -238,6 +238,118 @@ CREATE POLICY "nk_wp_media_delete" ON public.nk_waypoint_media FOR DELETE
     WHERE wp.id = waypoint_id AND r.user_id = auth.uid()
   ));
 
+-- ── Sesiones de seguimiento en vivo (link "sígueme") ─────────
+-- Una fila por sesión; guarda la ÚLTIMA posición (se actualiza in-place, sin
+-- historial). El emisor (dueño) escribe; el visor lee SOLO vía la función
+-- nk_get_live_session(token) de abajo (SECURITY DEFINER), presentando el token
+-- de capacidad que recibió por SMS. `route_id` NO es FK: al grabar, la ruta es
+-- un borrador local que aún no existe en nk_routes.
+CREATE TABLE IF NOT EXISTS public.nk_live_sessions (
+  id              UUID PRIMARY KEY,
+  user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token           TEXT NOT NULL UNIQUE,
+  route_id        UUID,
+  owner_name      TEXT,
+  status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','ended')),
+  last_lat        DOUBLE PRECISION,
+  last_lon        DOUBLE PRECISION,
+  last_altitude   DOUBLE PRECISION,
+  last_accuracy   DOUBLE PRECISION,
+  last_speed      DOUBLE PRECISION,
+  last_at         TIMESTAMPTZ,
+  distance_meters FLOAT NOT NULL DEFAULT 0,
+  started_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at        TIMESTAMPTZ,
+  expires_at      TIMESTAMPTZ NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_nk_live_sessions_token ON public.nk_live_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_nk_live_sessions_user  ON public.nk_live_sessions(user_id);
+
+ALTER TABLE public.nk_live_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Solo el dueño ve/escribe su sesión. El visor NO usa estas policies: entra por
+-- la función SECURITY DEFINER de abajo (con el token). Así nadie autenticado
+-- puede enumerar las ubicaciones en vivo de los demás.
+DROP POLICY IF EXISTS "nk_live_sessions_select" ON public.nk_live_sessions;
+CREATE POLICY "nk_live_sessions_select" ON public.nk_live_sessions FOR SELECT
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "nk_live_sessions_insert" ON public.nk_live_sessions;
+CREATE POLICY "nk_live_sessions_insert" ON public.nk_live_sessions FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "nk_live_sessions_update" ON public.nk_live_sessions;
+CREATE POLICY "nk_live_sessions_update" ON public.nk_live_sessions FOR UPDATE
+  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "nk_live_sessions_delete" ON public.nk_live_sessions;
+CREATE POLICY "nk_live_sessions_delete" ON public.nk_live_sessions FOR DELETE
+  USING (user_id = auth.uid());
+
+-- Lectura del visor: presenta el token; devuelve solo la posición en vivo (sin
+-- user_id ni token) y solo si la sesión no expiró. SECURITY DEFINER salta RLS,
+-- pero el filtro por token EXACTO evita enumeración. Concedida solo a usuarios
+-- autenticados (el visor es la misma app, con sesión iniciada).
+CREATE OR REPLACE FUNCTION public.nk_get_live_session(p_token text)
+RETURNS TABLE (
+  owner_name      text,
+  status          text,
+  last_lat        double precision,
+  last_lon        double precision,
+  last_altitude   double precision,
+  last_accuracy   double precision,
+  last_speed      double precision,
+  last_at         timestamptz,
+  distance_meters double precision,
+  started_at      timestamptz,
+  ended_at        timestamptz
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT owner_name, status, last_lat, last_lon, last_altitude, last_accuracy,
+         last_speed, last_at, distance_meters, started_at, ended_at
+  FROM public.nk_live_sessions
+  WHERE token = p_token AND expires_at > now()
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public.nk_get_live_session(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.nk_get_live_session(text) TO authenticated;
+
+-- TTL forzado en el servidor: el cliente NO controla expires_at/created_at (ni
+-- puede reasignar dueño o token). Sin esto, un cliente modificado podría fijar
+-- un expires_at lejano y volver el token (capacidad) casi permanente, rompiendo
+-- la revocación por expiración. El token vive 12 h desde su creación.
+CREATE OR REPLACE FUNCTION public.nk_live_sessions_enforce_ttl()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF (TG_OP = 'INSERT') THEN
+    NEW.created_at := now();
+    NEW.expires_at := now() + INTERVAL '12 hours';
+  ELSE  -- UPDATE: estos campos son inmutables desde el cliente
+    NEW.created_at := OLD.created_at;
+    NEW.expires_at := OLD.expires_at;
+    NEW.user_id    := OLD.user_id;
+    NEW.token      := OLD.token;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_nk_live_sessions_ttl ON public.nk_live_sessions;
+CREATE TRIGGER trg_nk_live_sessions_ttl
+  BEFORE INSERT OR UPDATE ON public.nk_live_sessions
+  FOR EACH ROW EXECUTE FUNCTION public.nk_live_sessions_enforce_ttl();
+
+-- Limpieza de filas viejas (privacidad). La RPC ya oculta las expiradas y
+-- startLiveShare borra las propias vencidas al crear una nueva sesión. Para un
+-- purgado total, habilita pg_cron (Dashboard → Database → Extensions) y descomenta:
+-- SELECT cron.schedule('purge_nk_live_sessions', '0 3 * * *',
+--   $$DELETE FROM public.nk_live_sessions WHERE expires_at < now() - INTERVAL '7 days'$$);
+
 -- ── Storage bucket para imágenes (LEGACY) ─────────────────────
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('nk-waypoint-images', 'nk-waypoint-images', true)

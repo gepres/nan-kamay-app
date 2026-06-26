@@ -7,7 +7,12 @@ import { GpsPoint } from '@core/entities/GpsPoint';
 import { GpsUpdate } from '@core/ports/services/IGpsService';
 import { GpsFilter } from '@infrastructure/services/GpsFilter';
 import { appendDraftGpsPoint } from '@application/tracking/DraftRouteUseCase';
+import { pushLivePosition, endLiveShare } from '@application/live/liveShareUseCases';
+import { useLiveShareStore } from '@presentation/stores/liveShareStore';
 import { formatDistance, formatDuration } from '@shared/utils/formatters';
+
+/** Cadencia mínima entre subidas de posición en vivo (ms). */
+const LIVE_PUSH_INTERVAL_MS = 10000;
 
 /** Segundos sin punto aceptado (filtro estacionario lo corta todo) → auto-pausa. */
 const AUTO_PAUSE_SEC = 30;
@@ -54,6 +59,8 @@ export function useTracking() {
   const lastAcceptedAtRef = useRef(Date.now());
   // Último km ya anunciado por audio (evita repetir).
   const lastAnnouncedKmRef = useRef(0);
+  // Marca de tiempo de la última subida de posición en vivo (throttle).
+  const lastLivePushRef = useRef(0);
 
   // Callback que recibe cada update de GPS
   const handleGpsUpdate = useCallback(
@@ -127,6 +134,12 @@ export function useTracking() {
       });
     } else if (status === 'finished' || status === 'idle') {
       gpsService.stopTracking().catch(console.error);
+      // Cerrar el seguimiento en vivo si quedó activo (PR2): el visor verá "finalizó".
+      const live = useLiveShareStore.getState();
+      if (live.active && live.session) {
+        endLiveShare(live.session.id).catch(() => {});
+        live.clear();
+      }
     }
 
     return () => {
@@ -211,6 +224,19 @@ export function useTracking() {
         gpsService.updateTrackingNotification(
           `${dist} · ${dur}${statusText}`,
         ).catch(() => {});
+
+        // Seguimiento en vivo (PR2): subir la última posición cada ~10 s si está
+        // activo. Falla en silencio si no hay datos y reintenta al siguiente tick.
+        const live = useLiveShareStore.getState();
+        if (live.active && live.session && state.currentPosition &&
+            Date.now() - lastLivePushRef.current >= LIVE_PUSH_INTERVAL_MS) {
+          lastLivePushRef.current = Date.now();
+          pushLivePosition({
+            sessionId: live.session.id,
+            coords: state.currentPosition,
+            distanceMeters: state.liveStats.distanceMeters,
+          }).catch(() => {});
+        }
       }, 5000);
     }
 

@@ -189,6 +189,19 @@ export default function SafetyScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Seguir a un contacto (recibir un enlace de seguimiento en vivo) */}
+          <TouchableOpacity
+            onPress={() => router.push('/seguir')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, marginTop: 4 }}
+          >
+            <Ionicons name="radio" size={20} color={colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>Seguir a un contacto</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>¿Te compartieron un enlace en vivo? Pégalo aquí.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+
           {/* Nota */}
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 4, marginTop: 2 }}>
             <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} style={{ marginTop: 1 }} />
