@@ -20,6 +20,7 @@ import { consumePendingWaypointType } from '@shared/utils/waypointSelection';
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
 import { editWaypointUseCase } from '@application/routes/EditWaypointUseCase';
 import { deleteWaypointUseCase } from '@application/routes/DeleteWaypointUseCase';
+import { addWaypointUseCase } from '@application/routes/AddWaypointUseCase';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { colors } from '@presentation/theme/colors';
 
@@ -53,7 +54,8 @@ function RemoveBtn({ onPress }: { onPress: () => void }) {
 }
 
 export default function EditWaypointScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, routeId } = useLocalSearchParams<{ id: string; routeId?: string }>();
+  const creating = id === 'new'; // alta de waypoint sobre una ruta ya guardada
   const { showToast } = useUiStore();
 
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,9 @@ export default function EditWaypointScreen() {
   const [coords, setCoords] = useState<{ lat: number; lon: number; alt: number | null } | null>(null);
   const [locationChanged, setLocationChanged] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  // Guías del picker (solo lectura): traza de la ruta + otros waypoints.
+  const [routePts, setRoutePts] = useState<[number, number][]>([]);
+  const [otherWps, setOtherWps] = useState<{ lat: number; lon: number }[]>([]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -79,9 +84,27 @@ export default function EditWaypointScreen() {
   const videos = media.filter((m) => m.type === 'video');
   const audios = media.filter((m) => m.type === 'audio');
 
-  // Cargar el waypoint a editar.
+  // Cargar el waypoint a editar (o, en modo crear, la ubicación por defecto).
   useEffect(() => {
     if (!id) return;
+    if (creating) {
+      // Sin waypoint que cargar; ubicación inicial = medio del track de la ruta.
+      if (routeId) {
+        routeRepository.getGpsPoints(routeId).then((p) => {
+          if (p.length) {
+            const mid = p[Math.floor(p.length / 2)];
+            setCoords({ lat: mid.latitude, lon: mid.longitude, alt: mid.altitude });
+            setRoutePts(p.map((q) => [q.longitude, q.latitude] as [number, number]));
+          }
+        }).finally(() => setLoading(false));
+        routeRepository.getWaypoints(routeId)
+          .then((wps) => setOtherWps(wps.map((w) => ({ lat: w.latitude, lon: w.longitude }))))
+          .catch(() => {});
+      } else {
+        setLoading(false);
+      }
+      return;
+    }
     routeRepository.getWaypointById(id).then((wp) => {
       if (!wp) { setFound(false); return; }
       setTitle(wp.title);
@@ -89,7 +112,15 @@ export default function EditWaypointScreen() {
       setWaypointType(wp.type ?? 'Waypoint');
       setMedia(wp.media);
       setCoords({ lat: wp.latitude, lon: wp.longitude, alt: wp.altitude });
+      // Contexto (guía) del picker: traza + otros waypoints de su misma ruta.
+      routeRepository.getGpsPoints(wp.routeId)
+        .then((p) => setRoutePts(p.map((q) => [q.longitude, q.latitude] as [number, number])))
+        .catch(() => {});
+      routeRepository.getWaypoints(wp.routeId)
+        .then((wps) => setOtherWps(wps.filter((w) => w.id !== id).map((w) => ({ lat: w.latitude, lon: w.longitude }))))
+        .catch(() => {});
     }).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Tipo elegido en el selector (al volver con router.back).
@@ -228,11 +259,19 @@ export default function EditWaypointScreen() {
     if (!id || !title.trim() || saving) return;
     setSaving(true);
     try {
-      await editWaypointUseCase(id, {
-        title, description, type: waypointType, media,
-        ...(locationChanged && coords ? { latitude: coords.lat, longitude: coords.lon } : {}),
-      });
-      showToast('Punto actualizado.', 'success');
+      if (creating) {
+        if (!routeId || !coords) { showToast('Falta la ubicación del punto.', 'error'); setSaving(false); return; }
+        await addWaypointUseCase(routeId, {
+          title, description, type: waypointType, media,
+          latitude: coords.lat, longitude: coords.lon, altitude: coords.alt,
+        });
+      } else {
+        await editWaypointUseCase(id, {
+          title, description, type: waypointType, media,
+          ...(locationChanged && coords ? { latitude: coords.lat, longitude: coords.lon } : {}),
+        });
+      }
+      showToast(creating ? 'Punto agregado.' : 'Punto actualizado.', 'success');
       router.back();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'No se pudo guardar el punto.', 'error');
@@ -302,7 +341,7 @@ export default function EditWaypointScreen() {
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           paddingHorizontal: 20, paddingTop: 20, marginBottom: 16,
         }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: '700' }}>Editar Punto</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: '700' }}>{creating ? 'Agregar Punto' : 'Editar Punto'}</Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -337,6 +376,8 @@ export default function EditWaypointScreen() {
             visible={showPicker}
             initial={{ lat: coords.lat, lon: coords.lon }}
             title="Mover punto"
+            routePoints={routePts}
+            otherWaypoints={otherWps}
             onConfirm={(c) => {
               setCoords((prev) => (prev ? { ...prev, lat: c.lat, lon: c.lon } : prev));
               setLocationChanged(true);
@@ -503,12 +544,13 @@ export default function EditWaypointScreen() {
               <ActivityIndicator color={colors.bgPrimary} />
             ) : (
               <Text style={{ color: title.trim() ? colors.bgPrimary : colors.textMuted, fontSize: 16, fontWeight: '700' }}>
-                Guardar cambios
+                {creating ? 'Agregar punto' : 'Guardar cambios'}
               </Text>
             )}
           </TouchableOpacity>
 
-          {/* Eliminar punto (cierra el CRUD de waypoint). */}
+          {/* Eliminar punto (cierra el CRUD de waypoint). Solo al editar. */}
+          {!creating && (
           <TouchableOpacity
             onPress={handleDelete}
             disabled={saving || deleting}
@@ -527,6 +569,7 @@ export default function EditWaypointScreen() {
               </>
             )}
           </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

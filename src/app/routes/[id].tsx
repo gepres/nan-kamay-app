@@ -445,21 +445,37 @@ export default function RouteDetailScreen() {
           </Text>
         </View>
 
-        {/* Waypoints */}
-        {waypoints.length > 0 && (
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '600', marginBottom: 10 }}>
+        {/* Waypoints (siempre visible, con botón de Agregar a la ruta guardada) */}
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: '600' }}>
               Waypoints ({waypoints.length})
             </Text>
-            {waypoints.map((wp) => (
-              <WaypointDetailCard
-                key={wp.id}
-                wp={wp}
-                onEdit={() => router.push(`/routes/edit-waypoint/${wp.id}`)}
-              />
-            ))}
+            <TouchableOpacity
+              onPress={() => router.push(`/routes/edit-waypoint/new?routeId=${route.id}`)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.accent + '60',
+                borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+              }}
+            >
+              <Ionicons name="add" size={16} color={colors.accent} />
+              <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '700' }}>Agregar</Text>
+            </TouchableOpacity>
           </View>
-        )}
+          {waypoints.map((wp) => (
+            <WaypointDetailCard
+              key={wp.id}
+              wp={wp}
+              onEdit={() => router.push(`/routes/edit-waypoint/${wp.id}`)}
+            />
+          ))}
+          {waypoints.length === 0 && (
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+              Aún no hay puntos. Toca "Agregar" para crear uno sobre esta ruta.
+            </Text>
+          )}
+        </View>
 
         {/* Nube: visibilidad pública + sincronización */}
         <View style={{

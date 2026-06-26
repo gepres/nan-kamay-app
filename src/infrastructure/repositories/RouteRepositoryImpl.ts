@@ -111,15 +111,16 @@ export class RouteRepositoryImpl implements IRouteRepository {
     );
   }
 
-  /** Inserta/actualiza un waypoint individual. */
+  /** Inserta/actualiza un waypoint individual (incluye `media`: fotos/videos/
+   *  audio). Antes omitía la columna `media` y se perdían videos/notas de voz. */
   async appendWaypoint(wp: Waypoint): Promise<void> {
     const r = waypointToRow(wp);
     await db.runAsync(
       `INSERT OR REPLACE INTO waypoints
-        (id, route_id, latitude, longitude, altitude, title, description, type, image_uris, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        (id, route_id, latitude, longitude, altitude, title, description, type, image_uris, media, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [r.id, r.route_id, r.latitude, r.longitude,
-       r.altitude, r.title, r.description, r.type, r.image_uris, r.created_at] as (string | number | null)[]
+       r.altitude, r.title, r.description, r.type, r.image_uris, r.media, r.created_at] as (string | number | null)[]
     );
   }
 
