@@ -5,10 +5,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  MapView, Camera, RasterSource, RasterLayer,
+  MapView, Camera, RasterSource, RasterLayer, ShapeSource, LineLayer, CircleLayer,
   setAccessToken, Logger,
 } from '@maplibre/maplibre-react-native';
 import { thunderforestTileUrls } from '@infrastructure/config/env';
+import { simplifyLngLat } from '@shared/utils/geometry';
 import MissingTileKeyBanner from './MissingTileKeyBanner';
 import { colors } from '@presentation/theme/colors';
 
@@ -24,6 +25,10 @@ interface Props {
   /** Centro inicial del mapa. */
   initial: { lat: number; lon: number };
   title?: string;
+  /** Traza de la ruta (lon,lat) mostrada atenuada como guía (NO interactiva). */
+  routePoints?: [number, number][];
+  /** Otros waypoints de la ruta, atenuados como guía (NO interactivos). */
+  otherWaypoints?: { lat: number; lon: number }[];
   onConfirm: (coords: { lat: number; lon: number }) => void;
   onClose: () => void;
 }
@@ -33,8 +38,18 @@ interface Props {
  * bajo un pin fijo en el centro y al confirmar se lee la coordenada central.
  * Más fiable en Android que el pin arrastrable de MapLibre.
  */
-export default function LocationPickerModal({ visible, initial, title = 'Ajustar ubicación', onConfirm, onClose }: Props) {
+export default function LocationPickerModal({ visible, initial, title = 'Ajustar ubicación', routePoints, otherWaypoints, onConfirm, onClose }: Props) {
   const insets = useSafeAreaInsets();
+  // Guías atenuadas (solo lectura): traza de la ruta + otros waypoints, para ubicarse.
+  const guideLine = routePoints && routePoints.length > 1
+    ? { type: 'Feature' as const, geometry: { type: 'LineString' as const, coordinates: simplifyLngLat(routePoints) }, properties: {} }
+    : null;
+  const guideWps = {
+    type: 'FeatureCollection' as const,
+    features: (otherWaypoints ?? []).map((w) => ({
+      type: 'Feature' as const, geometry: { type: 'Point' as const, coordinates: [w.lon, w.lat] }, properties: {},
+    })),
+  };
   // Centro vigente del mapa (se actualiza al mover). Ref para no re-renderizar
   // en cada frame; el texto de coords se refresca con un pequeño estado.
   const centerRef = useRef<{ lat: number; lon: number }>(initial);
@@ -69,6 +84,19 @@ export default function LocationPickerModal({ visible, initial, title = 'Ajustar
           >
             <RasterLayer id="picker-tile-layer" sourceID="picker-tiles" style={{ rasterOpacity: 1 }} />
           </RasterSource>
+
+          {/* Guías atenuadas (no interactivas): ruta grabada + otros waypoints */}
+          {guideLine && (
+            <ShapeSource id="picker-route" shape={guideLine}>
+              <LineLayer id="picker-route-line" style={{ lineColor: colors.accent, lineOpacity: 0.4, lineWidth: 3, lineCap: 'round', lineJoin: 'round' }} />
+            </ShapeSource>
+          )}
+          {guideWps.features.length > 0 && (
+            <ShapeSource id="picker-wps" shape={guideWps}>
+              <CircleLayer id="picker-wps-dots" style={{ circleRadius: 5, circleColor: colors.accent, circleOpacity: 0.45, circleStrokeColor: '#FFFFFF', circleStrokeWidth: 1, circleStrokeOpacity: 0.5 }} />
+            </ShapeSource>
+          )}
+
           <Camera defaultSettings={{ centerCoordinate: startCenter, zoomLevel: validInitial ? 16 : 12 }} />
         </MapView>
 
