@@ -18,6 +18,7 @@
     "expo": "~55.0.26",
     "expo-asset": "~55.0.17",
     "expo-audio": "~55.0.14",
+    "expo-clipboard": "~55.0.14",
     "expo-constants": "~55.0.16",
     "expo-dev-client": "~55.0.35",
     "expo-document-picker": "~55.0.13",
