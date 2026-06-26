@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const APK = path.join(__dirname, '..', 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
-const PORT = 8000;
+const PORT = Number(process.env.APK_PORT) || 8000;
 
 if (!fs.existsSync(APK)) {
   console.error('No existe el APK:', APK);
