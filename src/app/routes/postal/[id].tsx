@@ -14,12 +14,16 @@ import { getPublicRouteDetailUseCase } from '@application/routes/GetPublicRouteD
 import { Route } from '@core/entities/Route';
 import { GpsPoint } from '@core/entities/GpsPoint';
 import { Waypoint } from '@core/entities/Waypoint';
-import RoutePostalCard, { type PostalOptions, type TraceTransform } from '@presentation/components/routes/RoutePostalCard';
+import RoutePostalCard, { type PostalOptions, type PostalTransforms } from '@presentation/components/routes/RoutePostalCard';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { colors } from '@presentation/theme/colors';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const PREVIEW_W = SCREEN_W - 32;
+
+/** Elementos movibles de la postal. */
+type ElKey = 'trace' | 'name' | 'stats' | 'elevation';
+const EL_LABEL: Record<ElKey, string> = { trace: 'Trazo', name: 'Título', stats: 'Stats', elevation: 'Elevación' };
 
 const traceBtnStyle = {
   width: 38, height: 38, borderRadius: 10,
@@ -90,18 +94,39 @@ export default function PostalEditorScreen() {
     showName: true,
     showStats: true,
     showElevation: true,
+    statDistance: true,
+    statDuration: true,
+    statGain: true,
+    statMaxElev: true,
+    statsVertical: false,
+    showRouteName: true,
+    elevationStyle: 'bars',
   });
 
-  // ── Reposicionar/escalar el trazo (arrastrar + zoom) ──
-  const [trace, setTrace] = useState<TraceTransform>({ tx: 0, ty: 0, scale: 1 });
+  // ── Mover cada elemento (trazo, título, stats, elevación): seleccionar + arrastrar ──
+  const [selectedEl, setSelectedEl] = useState<ElKey>('trace');
+  const [transforms, setTransforms] = useState<PostalTransforms>({
+    trace: { tx: 0, ty: 0, scale: 1 },
+    name: { tx: 0, ty: 0 }, stats: { tx: 0, ty: 0 }, elevation: { tx: 0, ty: 0 },
+  });
+  const selRef = useRef<ElKey>('trace');
+  const transformsRef = useRef(transforms);
+  transformsRef.current = transforms;
   const offsetRef = useRef({ x: 0, y: 0 });
+  // Al cambiar de elemento, el arrastre parte de su posición ya aplicada.
+  useEffect(() => {
+    selRef.current = selectedEl;
+    offsetRef.current = { x: transformsRef.current[selectedEl].tx, y: transformsRef.current[selectedEl].ty };
+  }, [selectedEl]);
   const pan = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 2 || Math.abs(g.dy) > 2,
-        onPanResponderMove: (_e, g) =>
-          setTrace((t) => ({ ...t, tx: offsetRef.current.x + g.dx, ty: offsetRef.current.y + g.dy })),
+        onPanResponderMove: (_e, g) => {
+          const k = selRef.current;
+          setTransforms((t) => ({ ...t, [k]: { ...t[k], tx: offsetRef.current.x + g.dx, ty: offsetRef.current.y + g.dy } }));
+        },
         onPanResponderRelease: (_e, g) => {
           offsetRef.current = { x: offsetRef.current.x + g.dx, y: offsetRef.current.y + g.dy };
         },
@@ -109,8 +134,11 @@ export default function PostalEditorScreen() {
     [],
   );
   const zoom = (factor: number) =>
-    setTrace((t) => ({ ...t, scale: Math.max(0.3, Math.min(4, t.scale * factor)) }));
-  const resetTrace = () => { offsetRef.current = { x: 0, y: 0 }; setTrace({ tx: 0, ty: 0, scale: 1 }); };
+    setTransforms((t) => ({ ...t, trace: { ...t.trace, scale: Math.max(0.3, Math.min(4, t.trace.scale * factor)) } }));
+  const resetAll = () => {
+    offsetRef.current = { x: 0, y: 0 };
+    setTransforms({ trace: { tx: 0, ty: 0, scale: 1 }, name: { tx: 0, ty: 0 }, stats: { tx: 0, ty: 0 }, elevation: { tx: 0, ty: 0 } });
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -249,17 +277,36 @@ export default function PostalEditorScreen() {
               options={options}
               width={PREVIEW_W}
               backgroundUri={backgroundUri}
-              traceTransform={trace}
+              transforms={transforms}
             />
           </View>
         </View>
 
-        {/* Controles del trazo: arrastrar (gesto) + zoom + reset */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+        {/* Elemento a mover: lo seleccionado se arrastra en el preview */}
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 12 }}>
+          {(Object.keys(EL_LABEL) as ElKey[]).map((k) => (
+            <TouchableOpacity
+              key={k}
+              onPress={() => setSelectedEl(k)}
+              style={{
+                flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                backgroundColor: selectedEl === k ? colors.accentSoft : colors.bgCard,
+                borderWidth: 1, borderColor: selectedEl === k ? colors.accent : colors.border,
+              }}
+            >
+              <Text style={{ color: selectedEl === k ? colors.accent : colors.textSecondary, fontSize: 12, fontWeight: '700' }}>
+                {EL_LABEL[k]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Arrastrar (gesto) + zoom del trazo + reset de todo */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
             <Ionicons name="move-outline" size={15} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-              Arrastra el trazo para moverlo
+              Arrastra para mover «{EL_LABEL[selectedEl]}» · ± escala el trazo
             </Text>
           </View>
           <TouchableOpacity onPress={() => zoom(1 / 1.2)} style={traceBtnStyle}>
@@ -268,7 +315,7 @@ export default function PostalEditorScreen() {
           <TouchableOpacity onPress={() => zoom(1.2)} style={traceBtnStyle}>
             <Ionicons name="add" size={18} color={colors.accent} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={resetTrace} style={traceBtnStyle}>
+          <TouchableOpacity onPress={resetAll} style={traceBtnStyle}>
             <Ionicons name="refresh" size={16} color={colors.accent} />
           </TouchableOpacity>
         </View>
@@ -367,9 +414,40 @@ export default function PostalEditorScreen() {
           CONTENIDO
         </Text>
         <View style={{ gap: 10 }}>
-          <Toggle icon="text-outline" label="Nombre de la ruta" value={options.showName} onToggle={() => set({ showName: !options.showName })} />
+          <Toggle icon="text-outline" label="Título" value={options.showName} onToggle={() => set({ showName: !options.showName })} />
+          {options.showName && (
+            <View style={{ marginLeft: 10, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: colors.border }}>
+              <Toggle icon="trail-sign-outline" label="Nombre de la ruta" value={options.showRouteName} onToggle={() => set({ showRouteName: !options.showRouteName })} />
+              <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>Apágalo para dejar solo «ÑAN KAMAY».</Text>
+            </View>
+          )}
+
           <Toggle icon="stats-chart-outline" label="Estadísticas" value={options.showStats} onToggle={() => set({ showStats: !options.showStats })} />
+
+          {/* Sub-opciones de estadísticas: disposición + qué datos mostrar */}
+          {options.showStats && (
+            <View style={{ gap: 8, marginLeft: 10, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: colors.border }}>
+              <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600' }}>DISPOSICIÓN</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <StyleChip label="De costado" sub="2 columnas" icon="grid-outline" active={!options.statsVertical} onPress={() => set({ statsVertical: false })} />
+                <StyleChip label="Vertical" sub="Apiladas" icon="reorder-four-outline" active={options.statsVertical} onPress={() => set({ statsVertical: true })} />
+              </View>
+              <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '600', marginTop: 4 }}>QUÉ DATOS</Text>
+              <Toggle icon="navigate-outline" label="Distancia" value={options.statDistance} onToggle={() => set({ statDistance: !options.statDistance })} />
+              <Toggle icon="time-outline" label="Duración" value={options.statDuration} onToggle={() => set({ statDuration: !options.statDuration })} />
+              <Toggle icon="trending-up-outline" label="Subida" value={options.statGain} onToggle={() => set({ statGain: !options.statGain })} />
+              <Toggle icon="triangle-outline" label="Elevación máx." value={options.statMaxElev} onToggle={() => set({ statMaxElev: !options.statMaxElev })} />
+            </View>
+          )}
+
           <Toggle icon="trending-up-outline" label="Perfil de elevación" value={options.showElevation} onToggle={() => set({ showElevation: !options.showElevation })} />
+          {options.showElevation && (
+            <View style={{ flexDirection: 'row', gap: 8, marginLeft: 10, paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: colors.border }}>
+              <StyleChip label="Barras" sub="" icon="stats-chart-outline" active={options.elevationStyle === 'bars'} onPress={() => set({ elevationStyle: 'bars' })} />
+              <StyleChip label="Contorno" sub="" icon="pulse-outline" active={options.elevationStyle === 'outline'} onPress={() => set({ elevationStyle: 'outline' })} />
+              <StyleChip label="Área" sub="" icon="triangle-outline" active={options.elevationStyle === 'area'} onPress={() => set({ elevationStyle: 'area' })} />
+            </View>
+          )}
         </View>
       </ScrollView>
 

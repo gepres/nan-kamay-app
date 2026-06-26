@@ -14,6 +14,17 @@ export interface PostalOptions {
   showName: boolean;
   showStats: boolean;
   showElevation: boolean;
+  /** Visibilidad por estadística. */
+  statDistance: boolean;
+  statDuration: boolean;
+  statGain: boolean;
+  statMaxElev: boolean;
+  /** Disposición de las estadísticas: apiladas en vertical vs 2 columnas. */
+  statsVertical: boolean;
+  /** Mostrar el nombre de la ruta (si false, queda solo la marca "ÑAN KAMAY"). */
+  showRouteName: boolean;
+  /** Estilo del perfil de elevación. */
+  elevationStyle: 'bars' | 'outline' | 'area';
 }
 
 /** Reposicionamiento/escala del trazo dentro del lienzo (lo controla el usuario). */
@@ -21,6 +32,15 @@ export interface TraceTransform {
   tx: number;
   ty: number;
   scale: number;
+}
+/** Desplazamiento simple (x,y) de un elemento movible. */
+export interface Offset { tx: number; ty: number; }
+/** Transform por elemento movible de la postal (trazo, título, stats, elevación). */
+export interface PostalTransforms {
+  trace: TraceTransform;
+  name: Offset;
+  stats: Offset;
+  elevation: Offset;
 }
 
 interface Props {
@@ -31,8 +51,8 @@ interface Props {
   width: number;
   /** Foto de fondo opcional (galería o de un waypoint). Activa el modo "foto". */
   backgroundUri?: string | null;
-  /** Desplazamiento/escala del trazo aplicado por el usuario. */
-  traceTransform?: TraceTransform;
+  /** Desplazamiento/escala de cada elemento movible. */
+  transforms?: PostalTransforms;
 }
 
 /** Proyecta lon/lat a coordenadas de lienzo preservando el aspecto (corrección
@@ -109,25 +129,52 @@ function TraceSvg({ gpsPoints, w, h, pad, halo }: { gpsPoints: GpsPoint[]; w: nu
   );
 }
 
+/** Perfil de elevación como silueta SVG: contorno (outline) o área rellena. */
+function ElevationPath({ bars, width, height, filled, overlay }: { bars: number[]; width: number; height: number; filled: boolean; overlay: boolean }) {
+  if (bars.length < 2) return null;
+  const pad = 2;
+  const usableH = height - pad;
+  const pts = bars.map((v, i) => [
+    (i / (bars.length - 1)) * width,
+    pad + (1 - v) * (usableH - pad),
+  ] as [number, number]);
+  const line = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  return (
+    <Svg width={width} height={height}>
+      {filled && (
+        <Path d={`${line} L${width.toFixed(1)} ${height} L0 ${height} Z`} fill={colors.accent} fillOpacity={overlay ? 0.45 : 0.3} />
+      )}
+      <Path d={line} stroke={colors.accent} strokeWidth={filled ? 2 : 2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 /**
  * Tarjeta "postal" de una ruta. Dibuja la traza con SVG (sin tiles), por lo que
  * funciona sobre fondo transparente (estilo Strava), tarjeta sólida o sobre una
  * FOTO de fondo (galería o de un waypoint). Pensada para capturarse con view-shot.
  */
-export default function RoutePostalCard({ route, gpsPoints, options, width, backgroundUri, traceTransform }: Props) {
-  const { transparent, showName, showStats, showElevation } = options;
+const DEFAULT_TRANSFORMS: PostalTransforms = {
+  trace: { tx: 0, ty: 0, scale: 1 }, name: { tx: 0, ty: 0 }, stats: { tx: 0, ty: 0 }, elevation: { tx: 0, ty: 0 },
+};
+
+export default function RoutePostalCard({ route, gpsPoints, options, width, backgroundUri, transforms }: Props) {
+  const { transparent, showName, showRouteName, showStats, showElevation, statsVertical, elevationStyle } = options;
   const W = width;
   const photoMode = !!backgroundUri;
-  const tt = traceTransform ?? { tx: 0, ty: 0, scale: 1 };
-  const traceStyle = { transform: [{ translateX: tt.tx }, { translateY: tt.ty }, { scale: tt.scale }] };
+  const tr = transforms ?? DEFAULT_TRANSFORMS;
+  const traceStyle = { transform: [{ translateX: tr.trace.tx }, { translateY: tr.trace.ty }, { scale: tr.trace.scale }] };
+  const nameStyle = { transform: [{ translateX: tr.name.tx }, { translateY: tr.name.ty }] };
+  const statsStyle = { transform: [{ translateX: tr.stats.tx }, { translateY: tr.stats.ty }] };
+  const elevStyle = { transform: [{ translateX: tr.elevation.tx }, { translateY: tr.elevation.ty }] };
   const bars = useMemo(() => (showElevation ? buildElevationBars(gpsPoints) : []), [gpsPoints, showElevation]);
 
   const stats = [
-    { label: 'Distancia', value: formatDistance(route.distanceMeters) },
-    { label: 'Duración', value: formatDuration(route.durationSeconds) },
-    { label: 'Subida', value: formatElevation(route.elevationGainMeters) },
-    { label: 'Elev. máx.', value: formatElevation(route.maxElevationMeters, false) },
-  ];
+    options.statDistance && { label: 'Distancia', value: formatDistance(route.distanceMeters) },
+    options.statDuration && { label: 'Duración', value: formatDuration(route.durationSeconds) },
+    options.statGain && { label: 'Subida', value: formatElevation(route.elevationGainMeters) },
+    options.statMaxElev && { label: 'Elev. máx.', value: formatElevation(route.maxElevationMeters, false) },
+  ].filter(Boolean) as { label: string; value: string }[];
 
   // Texto sobre overlay (foto o transparente) → blanco con sombra.
   const overlayText = photoMode || transparent;
@@ -137,26 +184,28 @@ export default function RoutePostalCard({ route, gpsPoints, options, width, back
   const Footer = (
     <>
       {showName && (
-        <View style={{ paddingHorizontal: 20, marginTop: photoMode ? 0 : (transparent ? 4 : -4) }}>
+        <View style={[{ paddingHorizontal: 20, marginTop: photoMode ? 0 : (transparent ? 4 : -4) }, nameStyle]}>
           <Text style={[{ color: colors.accent, fontSize: 11, fontWeight: '700', letterSpacing: 2 }, textShadow]}>
             ÑAN KAMAY
           </Text>
-          <Text style={[{ color: '#FFFFFF', fontSize: 24, fontWeight: '800' }, textShadow]} numberOfLines={2}>
-            {route.name}
-          </Text>
+          {showRouteName && (
+            <Text style={[{ color: '#FFFFFF', fontSize: 24, fontWeight: '800' }, textShadow]} numberOfLines={2}>
+              {route.name}
+            </Text>
+          )}
         </View>
       )}
 
-      {showStats && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, marginTop: 14, gap: overlayText ? 0 : 12 }}>
+      {showStats && stats.length > 0 && (
+        <View style={[{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, marginTop: 14, gap: overlayText ? 0 : 12 }, statsStyle]}>
           {stats.map((s) => (
             <View
               key={s.label}
               style={
                 overlayText
-                  ? { width: '50%', paddingVertical: 6 }
+                  ? { width: statsVertical ? '100%' : '50%', paddingVertical: 6 }
                   : {
-                      width: (W - 40 - 12) / 2,
+                      width: statsVertical ? (W - 40) : (W - 40 - 12) / 2,
                       backgroundColor: colors.bgCard,
                       borderRadius: 12, padding: 14,
                       borderWidth: 1, borderColor: colors.border,
@@ -171,10 +220,16 @@ export default function RoutePostalCard({ route, gpsPoints, options, width, back
       )}
 
       {showElevation && bars.length > 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 48, gap: 2, paddingHorizontal: 20, marginTop: 16 }}>
-          {bars.map((v, i) => (
-            <View key={i} style={{ flex: 1, height: 8 + v * 36, borderRadius: 1, backgroundColor: colors.accent, opacity: overlayText ? 0.95 : 1 }} />
-          ))}
+        <View style={[{ paddingHorizontal: 20, marginTop: 16 }, elevStyle]}>
+          {elevationStyle === 'bars' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 48, gap: 2 }}>
+              {bars.map((v, i) => (
+                <View key={i} style={{ flex: 1, height: 8 + v * 36, borderRadius: 1, backgroundColor: colors.accent, opacity: overlayText ? 0.95 : 1 }} />
+              ))}
+            </View>
+          ) : (
+            <ElevationPath bars={bars} width={W - 40} height={48} filled={elevationStyle === 'area'} overlay={overlayText} />
+          )}
         </View>
       )}
     </>
