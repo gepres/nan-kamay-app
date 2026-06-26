@@ -38,15 +38,16 @@ Logger.setLogCallback((log) => {
  *  La raíz es el touchable y conserva un tamaño FIJO (60×64) para que el anclaje
  *  de MarkerView (anchor y:1 → la punta sobre la coordenada) sea exacto. Envolver
  *  el pin en un touchable externo desalineaba el pin respecto a su punto. */
-function WaypointMapPin({ waypoint, active, onPress }: { waypoint: Waypoint; active: boolean; onPress: () => void }) {
+function WaypointMapPin({ waypoint, active }: { waypoint: Waypoint; active: boolean }) {
   const info = waypoint.type ? getWaypointTypeInfo(waypoint.type) : undefined;
   const iconName = info?.icon ?? 'MapPin';
   const bg = info?.iconColor ?? colors.accent;
   const size = active ? 40 : 30;
+  // Solo visual: los toques se manejan con la capa de impacto (ShapeSource.onPress),
+  // porque el onPress de MarkerView se traga los toques en Android.
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={onPress}
+    <View
+      pointerEvents="none"
       style={{ width: 60, height: 64, alignItems: 'center', justifyContent: 'flex-end' }}
     >
       <View
@@ -69,7 +70,7 @@ function WaypointMapPin({ waypoint, active, onPress }: { waypoint: Waypoint; act
           marginTop: -1,
         }}
       />
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -78,6 +79,7 @@ export default function RouteMapScreen() {
   const isPublic = publicParam === '1';
   const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraRef>(null);
+  const lastWpTapRef = useRef(0); // anti-rebote: evita que el onPress del mapa deseleccione tras tocar un waypoint
 
   const [route, setRoute] = useState<Route | null>(null);
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
@@ -140,6 +142,19 @@ export default function RouteMapScreen() {
     [coords],
   );
 
+  // Puntos de impacto para tocar los waypoints (capa de mapa fiable; ver WaypointMapPin).
+  const waypointsHitGeoJson = useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(
+    () => ({
+      type: 'FeatureCollection',
+      features: waypoints.map((wp) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [wp.longitude, wp.latitude] },
+        properties: { id: wp.id },
+      })),
+    }),
+    [waypoints],
+  );
+
   const fitRoute = useCallback(() => {
     if (coords.length < 2) return;
     const lons = coords.map((c) => c[0]);
@@ -193,7 +208,11 @@ export default function RouteMapScreen() {
         mapStyle={mapStyleJSON}
         logoEnabled={false}
         attributionEnabled={false}
-        onPress={() => setSelectedWp(null)}
+        onPress={() => {
+          // Si se acaba de tocar un waypoint (capa de impacto), no deseleccionar.
+          if (Date.now() - lastWpTapRef.current < 350) return;
+          setSelectedWp(null);
+        }}
       >
         <Basemap layer={layer} offlineVector={isOfflineVector} />
 
@@ -240,10 +259,28 @@ export default function RouteMapScreen() {
           </ShapeSource>
         )}
 
-        {/* Waypoints (pin con icono, tap para detalle) */}
+        {/* Capa de impacto para tocar waypoints (debajo de los pines; radio generoso) */}
+        {waypoints.length > 0 && (
+          <ShapeSource
+            id="route-map-waypoints-hit"
+            shape={waypointsHitGeoJson}
+            onPress={(e: any) => {
+              const wpId = e?.features?.[0]?.properties?.id;
+              const wp = waypoints.find((w) => w.id === wpId);
+              if (wp) { lastWpTapRef.current = Date.now(); setSelectedWp(wp); }
+            }}
+          >
+            <CircleLayer
+              id="route-map-waypoints-hit-layer"
+              style={{ circleRadius: 22, circleColor: '#000000', circleOpacity: 0.01 }}
+            />
+          </ShapeSource>
+        )}
+
+        {/* Waypoints (pin con icono; solo visual, el toque lo capta la capa de impacto) */}
         {waypoints.map((wp) => (
           <MarkerView key={wp.id} coordinate={[wp.longitude, wp.latitude]} anchor={{ x: 0.5, y: 1 }} allowOverlap>
-            <WaypointMapPin waypoint={wp} active={selectedWp?.id === wp.id} onPress={() => setSelectedWp(wp)} />
+            <WaypointMapPin waypoint={wp} active={selectedWp?.id === wp.id} />
           </MarkerView>
         ))}
       </MapView>
