@@ -327,6 +327,26 @@ export default function ActiveTrackingScreen() {
         <Ionicons name={audioCues ? 'volume-high' : 'volume-mute'} size={20} color={audioCues ? colors.accent : colors.textPrimary} />
       </TouchableOpacity>
 
+      {/* Seguridad — avisar ubicación a contactos (SMS, funciona offline) */}
+      <TouchableOpacity
+        onPress={() => router.push('/safety')}
+        style={{
+          position: 'absolute',
+          top: insets.top + 356,
+          right: 16,
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          backgroundColor: '#0D1B12E6',
+          borderWidth: 1,
+          borderColor: '#2D6A4F80',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Ionicons name="shield-checkmark" size={20} color={colors.danger} />
+      </TouchableOpacity>
+
       {/* Controles inferiores */}
       <Animated.View style={[{
         position: 'absolute',

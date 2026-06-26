@@ -219,6 +219,23 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
+        {/* Seguridad */}
+        <TouchableOpacity
+          onPress={() => router.push('/safety')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.border, marginBottom: 24,
+          }}
+        >
+          <Ionicons name="shield-checkmark-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Seguridad</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Comparte tu ubicación con contactos por SMS</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Sincronización */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 12,
