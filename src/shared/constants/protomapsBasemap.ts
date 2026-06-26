@@ -13,7 +13,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
   {
     "id": "background",
     "type": "background",
-    "paint": {}
+    "paint": {
+      "background-color": "#cccccc"
+    }
   },
   {
     "id": "earth",
@@ -25,7 +27,50 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
     ],
     "source": "protomaps",
     "source-layer": "earth",
-    "paint": {}
+    "paint": {
+      "fill-color": "#e2dfda"
+    }
+  },
+  {
+    "id": "landcover",
+    "type": "fill",
+    "source": "protomaps",
+    "source-layer": "landcover",
+    "paint": {
+      "fill-color": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        "grassland",
+        "rgba(210, 239, 207, 1)",
+        "barren",
+        "rgba(255, 243, 215, 1)",
+        "urban_area",
+        "rgba(230, 230, 230, 1)",
+        "farmland",
+        "rgba(216, 239, 210, 1)",
+        "glacier",
+        "rgba(255, 255, 255, 1)",
+        "scrub",
+        "rgba(234, 239, 210, 1)",
+        "rgba(196, 231, 210, 1)"
+      ],
+      "fill-opacity": [
+        "interpolate",
+        [
+          "linear"
+        ],
+        [
+          "zoom"
+        ],
+        5,
+        1,
+        7,
+        0
+      ]
+    }
   },
   {
     "id": "landuse_park",
@@ -87,7 +132,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             ]
           ]
         ],
-        null,
+        "#9cd3b4",
         [
           "in",
           [
@@ -103,7 +148,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             ]
           ]
         ],
-        null,
+        "#a0d9a0",
         [
           "in",
           [
@@ -119,7 +164,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             ]
           ]
         ],
-        null,
+        "#99d2bb",
         [
           "in",
           [
@@ -133,7 +178,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             ]
           ]
         ],
-        null,
+        "#e7e7e7",
         [
           "in",
           [
@@ -147,7 +192,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             ]
           ]
         ],
-        null,
+        "#e2e0d7",
         [
           "in",
           [
@@ -163,8 +208,8 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             ]
           ]
         ],
-        null,
-        null
+        "#c6dcdc",
+        "#e2dfda"
       ]
     }
   },
@@ -181,6 +226,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "playground"
     ],
     "paint": {
+      "fill-color": "#9cd3b4",
       "fill-opacity": 0.7
     }
   },
@@ -194,7 +240,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "hospital"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#e4dad9"
+    }
   },
   {
     "id": "landuse_industrial",
@@ -206,7 +254,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "industrial"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#d1dde1"
+    }
   },
   {
     "id": "landuse_school",
@@ -220,7 +270,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "university",
       "college"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#e4ded7"
+    }
   },
   {
     "id": "landuse_beach",
@@ -232,7 +284,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "beach"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#e8e4d0"
+    }
   },
   {
     "id": "landuse_zoo",
@@ -244,7 +298,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "zoo"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#c6dcdc"
+    }
   },
   {
     "id": "landuse_aerodrome",
@@ -256,7 +312,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "aerodrome"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#dadbdf"
+    }
   },
   {
     "id": "roads_runway",
@@ -269,6 +327,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "runway"
     ],
     "paint": {
+      "line-color": "#e9e9ed",
       "line-width": [
         "interpolate",
         [
@@ -299,6 +358,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "taxiway"
     ],
     "paint": {
+      "line-color": "#e9e9ed",
       "line-width": [
         "interpolate",
         [
@@ -331,7 +391,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         "taxiway"
       ]
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#e9e9ed"
+    }
   },
   {
     "id": "water",
@@ -343,7 +405,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
     ],
     "source": "protomaps",
     "source-layer": "water",
-    "paint": {}
+    "paint": {
+      "fill-color": "#80deea"
+    }
   },
   {
     "id": "water_stream",
@@ -357,6 +421,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "stream"
     ],
     "paint": {
+      "line-color": "#80deea",
       "line-width": 0.5
     }
   },
@@ -372,6 +437,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "river"
     ],
     "paint": {
+      "line-color": "#80deea",
       "line-width": [
         "interpolate",
         [
@@ -400,7 +466,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "pedestrian"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#e3e0d4"
+    }
   },
   {
     "id": "landuse_pier",
@@ -412,7 +480,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "kind",
       "pier"
     ],
-    "paint": {}
+    "paint": {
+      "fill-color": "#e0e0e0"
+    }
   },
   {
     "id": "roads_tunnels_other_casing",
@@ -433,6 +503,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -467,6 +538,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-dasharray": [
         3,
         2
@@ -522,6 +594,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-dasharray": [
         3,
         2
@@ -580,6 +653,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-dasharray": [
         3,
         2
@@ -642,6 +716,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-dasharray": [
         6,
         0.5
@@ -699,6 +774,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#d5d5d5",
       "line-dasharray": [
         4.5,
         0.5
@@ -737,6 +813,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#d5d5d5",
       "line-width": [
         "interpolate",
         [
@@ -774,6 +851,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#d5d5d5",
       "line-width": [
         "interpolate",
         [
@@ -810,6 +888,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#d5d5d5",
       "line-width": [
         "interpolate",
         [
@@ -858,6 +937,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#d5d5d5",
       "line-width": [
         "interpolate",
         [
@@ -892,6 +972,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "building_part"
     ],
     "paint": {
+      "fill-color": "#cccccc",
       "fill-opacity": 0.5
     }
   },
@@ -906,6 +987,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "pier"
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-width": [
         "interpolate",
         [
@@ -952,6 +1034,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1009,6 +1092,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1054,6 +1138,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "is_link"
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1109,6 +1194,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1170,6 +1256,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1232,6 +1319,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ebebeb",
       "line-dasharray": [
         3,
         1
@@ -1262,6 +1350,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       "is_link"
     ],
     "paint": {
+      "line-color": "#ffffff",
       "line-width": [
         "interpolate",
         [
@@ -1307,6 +1396,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ebebeb",
       "line-width": [
         "interpolate",
         [
@@ -1360,9 +1450,9 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
           "zoom"
         ],
         11,
-        null,
+        "#ebebeb",
         16,
-        null
+        "#ffffff"
       ],
       "line-width": [
         "interpolate",
@@ -1407,6 +1497,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1461,6 +1552,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ffffff",
       "line-width": [
         "interpolate",
         [
@@ -1508,6 +1600,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1566,6 +1659,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ffffff",
       "line-width": [
         "interpolate",
         [
@@ -1604,6 +1698,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
         0.75
       ],
       "line-opacity": 0.5,
+      "line-color": "#a7b1b3",
       "line-width": [
         "interpolate",
         [
@@ -1633,6 +1728,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       2
     ],
     "paint": {
+      "line-color": "#adadad",
       "line-width": 0.7,
       "line-dasharray": [
         "step",
@@ -1667,6 +1763,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       2
     ],
     "paint": {
+      "line-color": "#adadad",
       "line-width": 0.4,
       "line-dasharray": [
         "step",
@@ -1710,6 +1807,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1744,6 +1842,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1795,6 +1894,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1848,6 +1948,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -1900,6 +2001,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ebebeb",
       "line-dasharray": [
         2,
         1
@@ -1939,6 +2041,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ffffff",
       "line-width": [
         "interpolate",
         [
@@ -1977,6 +2080,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ffffff",
       "line-width": [
         "interpolate",
         [
@@ -2014,6 +2118,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#f5f5f5",
       "line-width": [
         "interpolate",
         [
@@ -2057,6 +2162,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#e0e0e0",
       "line-gap-width": [
         "interpolate",
         [
@@ -2113,6 +2219,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
       ]
     ],
     "paint": {
+      "line-color": "#ffffff",
       "line-width": [
         "interpolate",
         [
@@ -2252,7 +2359,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -2270,7 +2377,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -2335,7 +2442,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -2405,7 +2512,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -2497,7 +2604,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -2554,7 +2661,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -2628,7 +2735,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -2761,7 +2868,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -2863,7 +2970,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -2958,7 +3065,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -3153,7 +3260,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -3171,7 +3278,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -3236,7 +3343,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -3306,7 +3413,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -3398,7 +3505,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -3455,7 +3562,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -3529,7 +3636,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -3662,7 +3769,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -3764,7 +3871,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -3859,7 +3966,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4049,7 +4156,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4067,7 +4174,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -4132,7 +4239,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -4202,7 +4309,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -4294,7 +4401,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4351,7 +4458,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4425,7 +4532,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -4558,7 +4665,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4660,7 +4767,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4755,7 +4862,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4957,7 +5064,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -4975,7 +5082,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -5040,7 +5147,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -5110,7 +5217,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -5202,7 +5309,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -5259,7 +5366,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -5333,7 +5440,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -5466,7 +5573,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -5568,7 +5675,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -5663,7 +5770,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -5872,7 +5979,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -5890,7 +5997,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -5955,7 +6062,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -6025,7 +6132,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -6117,7 +6224,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -6174,7 +6281,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -6248,7 +6355,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -6381,7 +6488,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -6483,7 +6590,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -6578,7 +6685,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -6821,7 +6928,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -6839,7 +6946,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -6904,7 +7011,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -6974,7 +7081,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -7066,7 +7173,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -7123,7 +7230,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -7197,7 +7304,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -7330,7 +7437,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -7432,7 +7539,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -7527,7 +7634,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -7796,7 +7903,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -7814,7 +7921,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -7879,7 +7986,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -7949,7 +8056,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -8041,7 +8148,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -8098,7 +8205,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -8172,7 +8279,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -8305,7 +8412,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -8407,7 +8514,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -8502,7 +8609,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -8733,7 +8840,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -8751,7 +8858,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                     "!",
                     [
                       "has",
-                      "name:undefined"
+                      "name:es"
                     ]
                   ],
                   [
@@ -8816,7 +8923,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "coalesce",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               [
                 "get",
@@ -8886,7 +8993,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -8978,7 +9085,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -9035,7 +9142,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -9109,7 +9216,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
             "format",
             [
               "get",
-              "name:undefined"
+              "name:es"
             ],
             {},
             "\n",
@@ -9242,7 +9349,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -9344,7 +9451,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -9439,7 +9546,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -9850,7 +9957,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   "coalesce",
                   [
                     "get",
-                    "name:undefined"
+                    "name:es"
                   ],
                   [
                     "get",
@@ -9868,7 +9975,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                       "!",
                       [
                         "has",
-                        "name:undefined"
+                        "name:es"
                       ]
                     ],
                     [
@@ -9933,7 +10040,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                 "coalesce",
                 [
                   "get",
-                  "name:undefined"
+                  "name:es"
                 ],
                 [
                   "get",
@@ -10003,7 +10110,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "format",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               {},
               "\n",
@@ -10095,7 +10202,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   "coalesce",
                   [
                     "get",
-                    "name:undefined"
+                    "name:es"
                   ],
                   [
                     "get",
@@ -10152,7 +10259,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   "coalesce",
                   [
                     "get",
-                    "name:undefined"
+                    "name:es"
                   ],
                   [
                     "get",
@@ -10226,7 +10333,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
               "format",
               [
                 "get",
-                "name:undefined"
+                "name:es"
               ],
               {},
               "\n",
@@ -10359,7 +10466,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   "coalesce",
                   [
                     "get",
-                    "name:undefined"
+                    "name:es"
                   ],
                   [
                     "get",
@@ -10461,7 +10568,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   "coalesce",
                   [
                     "get",
-                    "name:undefined"
+                    "name:es"
                   ],
                   [
                     "get",
@@ -10556,7 +10663,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
                   "coalesce",
                   [
                     "get",
-                    "name:undefined"
+                    "name:es"
                   ],
                   [
                     "get",
@@ -10696,7 +10803,7 @@ export const PROTOMAPS_VECTOR_LAYERS: any[] = [
           "coalesce",
           [
             "get",
-            "name:undefined"
+            "name:es"
           ],
           [
             "get",

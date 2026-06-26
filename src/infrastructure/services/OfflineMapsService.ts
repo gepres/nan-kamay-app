@@ -10,6 +10,7 @@ import {
   OFFLINE_ASSETS_PACK_URL, OFFLINE_GLYPHS_TEMPLATE, OFFLINE_SPRITE_PATH,
   type OfflineRegionCatalogItem,
 } from '@shared/constants/offlineRegions';
+import { recordMapLog, getRecentMapLog } from '@shared/utils/mapLogger';
 
 /**
  * Mapas OFFLINE basados en PMTiles (Fase 3).
@@ -27,6 +28,21 @@ const REGIONS_DIR = ROOT + 'regions/';
 const ASSETS_DIR = ROOT + 'assets/';
 const ASSETS_ZIP = ROOT + 'assets-pack.zip';
 const MANIFEST = ROOT + 'manifest.json';
+
+/**
+ * El estilo Protomaps referencia las fuentes SIN espacios (NotoSans-Regular/
+ * -Medium/-Italic) para que la URL file:// de glyphs resuelva en MapLibre nativo
+ * (con espacios el path se URL-encodea a %20 y no abre). El assets pack las trae
+ * con espacios ("Noto Sans Regular"); las renombramos AL EXTRAER para que la ruta
+ * `fonts/<fuente>/<rango>.pbf` coincida con la que pide el estilo.
+ */
+const FONT_RENAME: Record<string, string> = {
+  'Noto Sans Regular': 'NotoSans-Regular',
+  'Noto Sans Medium': 'NotoSans-Medium',
+  'Noto Sans Italic': 'NotoSans-Italic',
+};
+/** Glyph que el estilo realmente pide; su existencia define "assets listos". */
+const REQUIRED_GLYPH = 'fonts/NotoSans-Regular/0-255.pbf';
 
 export interface DownloadedRegion {
   id: string;
@@ -74,7 +90,12 @@ export async function isAssetsReady(): Promise<boolean> {
   // carpeta `fonts` no basta: un unzip interrumpido la deja a medias y nunca se
   // repararía (isAssetsReady devolvería true con archivos faltantes).
   const info = await getInfoAsync(ASSETS_DIR + '.ready');
-  return info.exists;
+  if (!info.exists) return false;
+  // Y el glyph que el estilo pide debe existir con el nombre SIN espacios. Un
+  // pack viejo extraído como "Noto Sans Regular" pasa el marcador pero el mapa
+  // sale sin etiquetas → devolvemos false para forzar la re-extracción (renombrada).
+  const glyph = await getInfoAsync(ASSETS_DIR + REQUIRED_GLYPH);
+  return glyph.exists;
 }
 
 /**
@@ -107,7 +128,10 @@ export async function ensureAssetsPack(
   const entries = Object.values(zip.files);
   for (const entry of entries) {
     if (entry.dir) continue;
-    const rel = entry.name.replace(/\\/g, '/').replace(/^\/+/, '');
+    let rel = entry.name.replace(/\\/g, '/').replace(/^\/+/, '');
+    // Renombra "Noto Sans Regular" → "NotoSans-Regular" (etc.) para que la ruta
+    // coincida con los fontstacks del estilo (sin espacios).
+    for (const [from, to] of Object.entries(FONT_RENAME)) rel = rel.split(from).join(to);
     const outPath = ASSETS_DIR + rel;
     const parent = outPath.slice(0, outPath.lastIndexOf('/') + 1);
     const pInfo = await getInfoAsync(parent);
@@ -206,6 +230,14 @@ export async function getOfflineDiagnostics(): Promise<string> {
   }
 
   L.push(`URL: pmtiles://${r.filePath}`);
+
+  // Logs nativos de MapLibre capturados (incluye el motivo real de un tile que
+  // no carga). Si está vacío: abre una ruta EN MODO AVIÓN antes de venir aquí.
+  const logs = getRecentMapLog();
+  L.push('', '— logs MapLibre (últimos) —');
+  if (logs.length === 0) L.push('(ninguno: abre una ruta en modo avión y vuelve)');
+  else for (const ln of logs.slice(-16)) L.push(ln.length > 140 ? ln.slice(0, 140) + '…' : ln);
+
   return L.join('\n');
 }
 
@@ -244,8 +276,9 @@ export function buildVectorStyle(region: DownloadedRegion): object {
   const sourceUrl = `pmtiles://${region.filePath}`;
   const glyphs = ASSETS_DIR + OFFLINE_GLYPHS_TEMPLATE;
   const sprite = ASSETS_DIR + OFFLINE_SPRITE_PATH;
-  // DIAGNÓSTICO (temporal): ver la URL exacta que recibe MapLibre.
-  console.warn('[offline] vector style →', JSON.stringify({ sourceUrl, glyphs, sprite }));
+  // DIAGNÓSTICO: registra la URL EXACTA que recibe MapLibre. Va al buffer del
+  // mapLogger para verla en el diagnóstico de la app (también en release).
+  recordMapLog('[style] ' + JSON.stringify({ sourceUrl, glyphs, sprite }));
   return {
     version: 8,
     glyphs,

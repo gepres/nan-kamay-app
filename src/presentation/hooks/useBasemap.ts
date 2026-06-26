@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNetworkStatus } from './useNetworkStatus';
 import {
   listDownloadedRegions, pickActiveRegion, buildVectorStyle,
   type DownloadedRegion,
 } from '@infrastructure/services/OfflineMapsService';
+import { installMapLogger } from '@shared/utils/mapLogger';
 
 /**
  * Estilo vacío VÁLIDO para el caso online (la base raster Thunderforest se
@@ -31,6 +32,11 @@ export interface BasemapState {
 export function useBasemap(coord?: { lng: number; lat: number } | null): BasemapState {
   const isConnected = useNetworkStatus();
   const [regions, setRegions] = useState<DownloadedRegion[]>([]);
+
+  // Reafirma el logger de MapLibre con buffer (para el diagnóstico) al montar un
+  // mapa offline-capaz, por encima de cualquier callback inline que ganara antes.
+  const loggerInstalled = useRef(false);
+  if (!loggerInstalled.current) { loggerInstalled.current = true; installMapLogger(); }
 
   useEffect(() => {
     let alive = true;

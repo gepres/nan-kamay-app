@@ -13,8 +13,14 @@ const SOURCE = 'protomaps';
 const THEME = 'light'; // temas: light | dark | white | grayscale | black ...
 const m = require('protomaps-themes-base');
 
-const base = m.layers(SOURCE, THEME);
-const labels = m.labels(SOURCE, THEME);
+// ⚠️ protomaps-themes-base v4: layers() espera el OBJETO Theme, NO el string del
+// tema. Hay que convertir el nombre con namedTheme(); si se pasa el string, la
+// función lee theme.background/earth/water… como undefined y las capas salen
+// SIN color → mapa NEGRO por defecto. labels() sí toma la key string + idioma.
+const LANG = 'es';
+const theme = m.namedTheme(THEME);
+const base = m.layers(SOURCE, theme);
+const labels = m.labels(SOURCE, THEME, LANG);
 const all = [...base, ...labels];
 
 // Renombrar las fuentes a versiones SIN ESPACIOS. MapLibre nativo construye la
