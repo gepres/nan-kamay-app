@@ -8,6 +8,8 @@
 
 **Leyenda esfuerzo:** S (≤1 día) · M (2–4 días) · L (1–2 semanas).
 
+> **Actualizado 2026-06-26 (validado contra el código).** Fases 1–4 **completas y validadas en dispositivo**. La **Fase 3 (offline)** se reimplementó con **PMTiles vector (Protomaps/OSM, ODbL)** — NO con el `OfflineManager.createPack`/Thunderforest del spike original (queda como histórico abajo); por eso la *licencia Thunderforest ya no aplica al offline*. El **planificador 4.2 (persistir, `is_planned`)** también está hecho. Lista real al día en §"Pendientes por implementar". Además se entregó el **editor de trazado post-grabación + CRUD de waypoint** (fuera del roadmap Strava; ver `ARCHITECTURE.md`/memoria).
+
 ---
 
 ## Fase 0 — Calidad de grabación ✅ (hecha)
@@ -87,20 +89,22 @@ sobre datos que ya existen en SQLite — sin backend, sin permisos, sin nativo.
 
 ---
 
-## Fase 3 — "Mapas offline" (tiles) 🟦 v1 HECHA · pendiente validación en dispositivo + licencia
+## Fase 3 — "Mapas offline" ✅ HECHA y validada en dispositivo (2026-06-26) — **PMTiles vector**
 **Por qué crítica:** es lo más alineado con el dominio (montaña sin señal). Sin esto,
 "seguir ruta" y "ver mapa" fallan donde más se necesitan.
 
-**Spike resuelto:** MapLibre `OfflineManager.createPack` con un **style JSON local** que
-referencia el raster Thunderforest. La app ya pide esas mismas URLs → el MapView las
-sirve del caché offline. (`OfflineTilesService` + pantalla `/map-offline`.)
+**Enfoque final (reemplazó al spike de `createPack`):** mapas **vector PMTiles** (Protomaps/OSM,
+ODbL). El `.pmtiles` local **ES** el dato offline (MapLibre nativo 11.12.1 lee `pmtiles://file://`),
+sin `createPack` y **sin depender de Thunderforest para offline** → la **licencia Thunderforest ya
+no aplica al offline** (online se mantiene raster Thunderforest). `OfflineTilesService` fue
+**eliminado** y sustituido por `OfflineMapsService`.
 
-**Entregado (v1):**
-- [x] `OfflineTilesService` (createPack/list/delete + estimación de tiles, `setTileCountLimit`).
-- [x] Pantalla `/map-offline`: encuadrar zona (viewport), nivel de detalle (zoom), tamaño estimado, descarga con progreso, lista de zonas + borrar. Acceso desde Perfil.
-- [ ] **Validar en dispositivo real** (descargar zona → modo avión → abrir "Ver mapa").
-- [ ] ⚠️ **Licencia Thunderforest**: el caché/descarga masiva puede no estar permitido en el plan gratuito — revisar antes de publicar.
-- [ ] (futuro) política de almacenamiento / aviso de tamaño grande.
+**Entregado y validado en dispositivo (2026-06-26):**
+- [x] `OfflineMapsService` (descarga `.pmtiles` + assets pack de fuentes/sprite + `manifest.json`; `buildVectorStyle`; `useBasemap`/`Basemap` conmutan online↔offline según `useNetworkStatus`).
+- [x] Catálogo de **8 regiones** (Cusco centro/provincia, Valle Sagrado, Machu Picchu, Salkantay, Ausangate-Vinicunca, Colca, Huaraz). 3 en Supabase `nk-maps`; 5 en GitHub Releases `gepres/nan-kamay-maps` (tag `maps-v1`).
+- [x] Pantalla `/map-offline` **didáctica**: buscador (geocoding Nominatim/OSM), mapa de previsualización con regiones tocables, sugeridas por cercanía (GPS), descarga con progreso y borrar; diagnóstico in-app (🐞) con botón **Copiar** (`expo-clipboard`).
+- [x] **Render validado**: corregido el mapa **negro** (color via `namedTheme`) y los **glyphs** (fuentes sin espacios + auto-reparación del pack). Diagnóstico con buffer de logs MapLibre (`shared/utils/mapLogger.ts`). Ver memoria `offline-maps-pmtiles-direction`.
+- [ ] (futuro) auto-extracción de **cualquier área** (servidor con go-pmtiles, u on-device) — hoy catálogo curado.
 
 **Alcance:**
 - Seleccionar una zona en el mapa (recuadro) y **descargar** los tiles para uso offline.
@@ -133,8 +137,8 @@ sirve del caché offline. (`OfflineTilesService` + pantalla `/map-offline`.)
 - [x] Pantalla `/routes/plan`: tocar el mapa para añadir puntos, tocar un punto para quitarlo, deshacer/limpiar; distancia + tiempo estimado (4 km/h) + nº puntos.
 - [x] **Seguir ahora**: pasa la guía dibujada (en memoria, `plannedRoute.ts`) a la pre-grabación (`?planned=1`) → reusa toda la infra de *Seguir Ruta* (banner de desvío, línea guía). Sin tocar el esquema.
 - [x] Acceso desde Perfil → "Planificar ruta".
-- [ ] **4.2 (futuro): persistir** la ruta planificada para reusarla — requiere flag `is_planned` (excluirla de métricas/listado) + guardarla como ruta seguible.
-- [ ] (futuro) *snap* a senderos (routing externo); v1 usa tramos rectos.
+- [x] **4.2 persistir** la ruta planificada — HECHO: flag `is_planned` (columna SQLite + mapper + entidad), `savePlannedRoute`, pantalla `routes/planned.tsx` (lista) y acceso en Perfil. Excluida de métricas/listado.
+- [ ] (futuro) *snap* a senderos; v1 usa tramos rectos. Ya existe snap por OSM en el **editor** (`OsmPathsService` "Pegar al mapa") → reusarlo aquí.
 
 **Alcance:**
 - Dibujar/editar una ruta tocando el mapa (añadir/mover/borrar puntos).
@@ -208,9 +212,9 @@ no aportan al producto individual offline-first. Reconsiderar solo si el product
 ```
 Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
                   │
-                  └── Fase 3 ✅v1 ── Fase 4 ✅v1
-                                          │
-                   Fase 5 (seguridad) ────┘   Fase 6 (social) [independiente]   ← SIGUIENTE
+                  └── Fase 3 ✅ ── Fase 4 ✅
+                                       │
+                   Fase 5 (seguridad) ─┘   Fase 6 (social) [independiente]   ← SIGUIENTE
 ```
 - **1 y 2** no dependen de nada → arrancar ya (riesgo bajo, valor alto).
 - **3** habilita el uso real en montaña; **4** se apoya en el mapa.
@@ -225,24 +229,28 @@ Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
 
 ## 📌 Pendientes por implementar (consolidado)
 
-> Lista única de lo que falta, ordenada por prioridad. Actualizar al cerrar cada item.
+> **Validado contra el código el 2026-06-26.** Lo ya hecho se movió a "Cerrado recientemente".
 
-### 🔴 Validación / cierre de lo ya hecho
-- [ ] **Offline (Fase 3) — validar en dispositivo real**: descargar zona → modo avión → "Ver mapa". Tras el fix (`resume()` + polling), confirmar que sube `% · tiles`. Si sigue en 0/0 → `adb logcat` (filtrar `mbgl/offline/style`) para ver el error nativo del *style* local.
-- [ ] **Offline — licencia Thunderforest**: el cacheo/descarga masiva puede no estar permitido en el plan gratuito. Revisar términos / plan antes de publicar (o cambiar de proveedor de tiles con offline permitido).
-- [ ] **GPS — validar reposo con señal pobre**: confirmar que el radio anti-deriva adaptativo reduce el drift (caso v1 de ~17 m junto a edificios). Pasar CSV de diagnóstico.
-- [ ] **Auto-pausa — validar en campo**: confirmar que congela el reloj en paradas y NO pierde puntos al caminar lento.
+### 🟡 Cliente (sin backend) — listos para implementar
+- [ ] **Detalle público → elevación interactiva**: `routes/public/[id].tsx` aún usa el gráfico estático; el detalle privado ya usa `InteractiveElevationChart`. (S)
+- [ ] **Planificador — *snap* a senderos**: hoy traza recta. Ya existe snap por OSM en el editor (`OsmPathsService` "Pegar al mapa") → reusarlo en `routes/plan`. (M)
+- [ ] **Métricas — desnivel por zona/recap desde DEM** + **nombres de zona** vía reverse-geocode (hoy la zona se etiqueta con el nombre de la ruta más larga del clúster). (M)
 
-### 🟡 Mejoras de features ya entregadas
-- [ ] **Planificador 4.2 — persistir** la ruta planificada (hoy solo "seguir ahora", en memoria). Requiere **flag `is_planned`** (columna SQLite + mapper + excluirla de métricas/listado/`getAll`/`getAllTrackPolylines`/anclas de zonas) y guardarla como ruta seguible.
-- [ ] **Planificador — *snap* a senderos** (routing externo). v1 usa tramos rectos.
-- [ ] **Offline — UX**: nombrar la zona, aviso si el área es muy grande (tiles/tamaño), pausar/reanudar descarga, y usar la **capa elegida** (hoy fija a `outdoors`).
-- [ ] **Detalle público** — migrar a la **elevación interactiva** (hoy solo el detalle privado la usa).
-- [ ] **Métricas — desnivel por zona/recap** desde DEM; **nombres de zona** vía reverse-geocode (hoy se etiqueta con el nombre de la ruta más larga del clúster).
+### 🟢 Fases grandes (necesitan backend Supabase)
+- [ ] **Fase 5 — Seguridad / ubicación en vivo** — sin código aún (confirmado). Tabla `nk_live_sessions` + RLS, `expo-sms` como fallback sin datos, pantalla `safety/`. Diseño Pencil listo. **(siguiente — plan en §Fase 5)**
+- [ ] **Fase 6 — Social ligero** — sin código aún (confirmado). Kudos + comentarios en rutas públicas; `nk_route_kudos`, `nk_route_comments` + RLS. Diseño Pencil listo.
 
-### 🟢 Fases pendientes (necesitan backend Supabase)
-- [ ] **Fase 5 — Seguridad / ubicación en vivo** (tabla `nk_live_sessions` + RLS, `expo-sms`, pantalla `safety/`). Diseño Pencil listo.
-- [ ] **Fase 6 — Social ligero** (kudos + comentarios en rutas públicas; `nk_route_kudos`, `nk_route_comments` + RLS). Diseño Pencil listo.
+### 🔴 Validación de campo (no es código)
+- [ ] **GPS en reposo con señal pobre**: confirmar que el radio anti-deriva reduce el drift (~17 m junto a edificios). CSV de diagnóstico.
+- [ ] **Auto-pausa**: confirmar que congela el reloj en paradas y no pierde puntos al caminar lento.
+
+### ✅ Cerrado recientemente (2026-06-26)
+- [x] **Offline Fase 3 validado en dispositivo** (PMTiles vector; corregidos mapa negro y glyphs). Licencia Thunderforest **ya no aplica** al offline (Protomaps/OSM).
+- [x] **Catálogo offline a 8 regiones** + pantalla **didáctica** (buscador/preview/sugeridas) + diagnóstico con **Copiar**. 5 regiones nuevas en GitHub Releases.
+- [x] **Planificador 4.2 — persistir** (`is_planned` + `routes/planned`).
+- [x] **Editor de trazado post-grabación + CRUD de waypoint** (agregar/editar/borrar) + guía visual al reubicar (fuera del roadmap Strava).
+- [x] **Postal**: estilos de stats/elevación, mover elementos, nombre opcional.
+- [x] **Ver mapa**: waypoints seleccionables.
 
 ### ⚪ Deuda / fuera de foco
 - [ ] Deuda arquitectónica (presentación→infra, use-cases no-clase, DI) — deferida a propósito (`ARCHITECTURE.md` §6).

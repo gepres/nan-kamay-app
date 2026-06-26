@@ -6,7 +6,7 @@
 
 ---
 
-## Estado real (actualizado 2026-05-18)
+## Estado real (actualizado 2026-06-26)
 
 **Base de datos COMPARTIDA** con otra plataforma de comunidad de trekking. Ñan Kamay convive con prefijo `nk_` (`nk_routes`, `nk_gps_points`, `nk_waypoints`, `nk_waypoint_images`) y comparte `auth.users`. Nombres centralizados en `src/infrastructure/supabase/tables.ts`. SQLite local mantiene nombres sin prefijo.
 
@@ -26,7 +26,9 @@
 | 🟡 lote final (M16 minElev, M12 recientes, M14 aviso tiles, M17 perfil, A6-ext borrado cross-device + Storage) | ✅ Corregido |
 | GPS — calidad de grabación | ✅ Hecho: One Euro (`OneEuroFilter`), anti-serpenteo RDP (`geometry.simplifyLngLat`), orden timestamps background (`GpsServiceImpl`), **precalentado + gate de señal** y **siembra del filtro** en pre-grabación, **radio anti-deriva por precisión**. Protocolo: `docs/GPS_FIELD_TESTS.md`; análisis: `docs/GPS_RECORDING_REVIEW.md` |
 | Strava **Fase 1** (analítica) + **Fase 2** (grabación pro: parciales/auto-pausa/audio) | ✅ Hecho. Pantallas `/metrics/progress`, `/metrics/places`; perfil con récords/heatmap/recap; `computeMetrics`/`computeSplits`/`computeZones` |
-| Strava **Fase 3** (mapas offline) + **Fase 4** (planificador) | 🟦 v1 (a validar en dispositivo). `OfflineTilesService` + `/map-offline`; `/routes/plan` → "seguir ahora". ⚠️ offline: licencia Thunderforest |
+| Strava **Fase 3** (mapas offline) + **Fase 4** (planificador) | ✅ Validado en dispositivo (2026-06-26). Offline **PMTiles** (Protomaps/OSM): `OfflineMapsService` + `/map-offline` didáctico (buscador/preview/sugeridas, **8 regiones**); planificador con persistencia (`is_planned`, `routes/planned`). Licencia Thunderforest **ya no aplica** al offline |
+| **Editor de trazado post-grabación + CRUD de waypoint** | ✅ Hecho (2026-06-26). `routes/refine` (recortar/quitar/suavizar/redibujar/mover + asistente de limpieza/cerrar lazo/pegar a OSM); agregar/editar/borrar waypoint; guía visual al reubicar. Repo: `replaceGpsPoints`/`updateRouteStats`/`deleteWaypoint` |
+| Diagnóstico de mapas offline in-app | ✅ Hecho (2026-06-26). `shared/utils/mapLogger` (buffer de logs MapLibre, funciona en release) en el botón 🐞 de `/map-offline`, con **Copiar** (`expo-clipboard`) |
 
 **Antes de tocar sync, backend o esquema:** lee `docs/VALIDATION.md`.
 **Antes de planear/seguir features tipo Strava:** lee `docs/STRAVA_ROADMAP.md` (incluye §"Pendientes por implementar").
@@ -49,7 +51,7 @@ Aplicación móvil para registrar rutas de trekking/senderismo con GPS, funciona
 | Estado Global | **Zustand** |
 | Base de Datos | **Supabase** (PostgreSQL) + **expo-sqlite** local |
 | Autenticación | **Supabase Auth** (email; Google OAuth no operativo) |
-| Mapas | **MapLibre GL** (`@maplibre/maplibre-react-native` v10) + **Thunderforest** (9 estilos) |
+| Mapas | **MapLibre GL** (`@maplibre/maplibre-react-native` v10) + **Thunderforest** (9 estilos, online) + **PMTiles** offline (Protomaps/OSM, ODbL) |
 | GPS | **expo-location** (foreground + background via TaskManager) |
 | Notificaciones | **expo-notifications** (persistente con stats en vivo) |
 | Storage Seguro | **expo-secure-store** (tokens, vía adapter de Supabase) |
@@ -348,8 +350,9 @@ SEO (app móvil, no web), Swift/SwiftUI/Liquid Glass/FoundationModels (Swift nat
 - [x] **🟡 final** (2026-05-18): M16 persistir `minElevation`, M12 recientes waypoint (AsyncStorage), M14 aviso de API key de tiles, M17 perfil con stats agregadas, A6-ext borrado cross-device + cleanup Storage.
 - [x] **GPS calidad** (2026-06): One Euro, RDP anti-serpenteo, orden timestamps background, precalentado+gate de señal, siembra del filtro, radio anti-deriva por precisión, auto-pausa, audio por km.
 - [x] **Strava Fases 1–2** (2026-06): analítica local (progreso/lugares/récords/heatmap/recap) + grabación pro (parciales/auto-pausa/audio).
-- [~] **Strava Fases 3–4** (2026-06): mapas offline y planificador en **v1, a validar en dispositivo**.
-- [ ] **Pendientes (lista única y ordenada): ver `docs/STRAVA_ROADMAP.md` §"Pendientes por implementar"** — incluye validación offline + licencia Thunderforest, persistir ruta planificada (flag `is_planned`), Fase 5 (seguridad) y Fase 6 (social).
+- [x] **Strava Fases 3–4** (2026-06): mapas offline (**PMTiles** Protomaps/OSM, **validado en dispositivo 2026-06-26**: corregidos negro+glyphs; 8 regiones, pantalla didáctica con buscador) y planificador (persistencia `is_planned` + `routes/planned`).
+- [x] **Editor de trazado post-grabación + CRUD de waypoint** (2026-06-26): `routes/refine` (recortar/quitar/suavizar/redibujar/mover + limpieza/cerrar lazo/pegar a OSM) + agregar/editar/borrar waypoint + guía al reubicar; Fase 0 datos/sync (`replaceGpsPoints`/`updateRouteStats`/`deleteWaypoint`).
+- [ ] **Pendientes (lista única y ordenada): ver `docs/STRAVA_ROADMAP.md` §"Pendientes por implementar"** — quedan: 🟡 cliente (detalle público con elevación interactiva, *snap* del planner, métricas DEM/nombres de zona), 🟢 backend **Fase 5 (seguridad)** y **Fase 6 (social)**, y validación de campo (GPS reposo, auto-pausa).
 - [ ] Deuda arquitectónica (presentación→infra, use-cases no-clase, DI) — **deferida a propósito** (refactor amplio, alto riesgo, sin ganancia funcional). Ver `ARCHITECTURE.md` §6.
 - [ ] Testing (no hay framework instalado).
 
