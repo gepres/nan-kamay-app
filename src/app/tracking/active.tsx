@@ -18,6 +18,7 @@ import { useTracking } from '@presentation/hooks/useTracking';
 import { startLiveShare, endLiveShare } from '@application/live/liveShareUseCases';
 import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { composeFollowMessage } from '@application/safety/buildLocationShare';
+import { liveFollowUrl } from '@infrastructure/config/env';
 import { getTrustedContacts } from '@shared/utils/trustedContacts';
 import ShareMessageSheet from '@presentation/components/ui/ShareMessageSheet';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
@@ -174,8 +175,8 @@ export default function ActiveTrackingScreen() {
 
   // Construye el mensaje + enlace + teléfonos y abre el bottom sheet de compartir.
   const openLiveShareSheet = async (token: string, ownerName: string) => {
-    const link = `nan-kamay://seguir/${token}`;
-    const message = composeFollowMessage(token, ownerName);
+    const link = liveFollowUrl(token);
+    const message = composeFollowMessage(link, ownerName);
     let phones: string[] = [];
     try { phones = (await getTrustedContacts()).map((c) => c.phone); } catch { /* sin contactos */ }
     setShareInfo({ message, link, phones });

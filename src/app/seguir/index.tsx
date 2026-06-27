@@ -9,10 +9,11 @@ import { useUiStore } from '@presentation/stores/uiStore';
 import { colors } from '@presentation/theme/colors';
 
 /**
- * Entrada al visor de seguimiento en vivo pegando el enlace (PR2). La mayoría de
- * apps de SMS NO enlazan esquemas custom (`nan-kamay://`), así que el contacto
- * copia el enlace del mensaje y lo pega aquí. (Si su SMS sí lo enlaza, tocarlo
- * abre directamente `/seguir/TOKEN`.)
+ * Entrada de RESPALDO al visor de seguimiento en vivo pegando el enlace (PR2). El
+ * camino normal es tocar el App Link https (`/seguir/<token>`), que abre la app
+ * directo. Esta pantalla cubre el caso en que el enlace no se abrió solo (App Link
+ * aún sin verificar, enlace viejo `nan-kamay://`): `extractFollowToken` saca el
+ * token de cualquiera de las dos formas.
  */
 export default function FollowEntryScreen() {
   const insets = useSafeAreaInsets();
@@ -52,14 +53,14 @@ export default function FollowEntryScreen() {
               <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>Pega el enlace que te enviaron</Text>
             </View>
             <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 17 }}>
-              Tu contacto activó "Compartir en vivo" y te mandó un enlace por SMS. Cópialo del mensaje y pégalo aquí para ver su ubicación en tiempo real.
+              ¿Tocaste el enlace y no se abrió solo? Pégalo aquí. Tu contacto activó "Compartir en vivo" para que veas su ubicación en tiempo real.
             </Text>
           </View>
 
           <TextInput
             value={value}
             onChangeText={setValue}
-            placeholder="nan-kamay://seguir/…"
+            placeholder="https://nankamay.trek-peru.com/seguir/…"
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}

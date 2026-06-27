@@ -53,12 +53,12 @@ export function composeSafetyMessage(share: LocationShare, kind: 'checkin' | 'so
 }
 
 /**
- * Mensaje SMS para invitar a seguir en vivo (PR2). Muchos clientes de SMS NO
- * enlazan esquemas custom (`nan-kamay://`), así que se guía al contacto a
- * copiar/pegar el enlace dentro de la app (Perfil › Seguridad › Seguir). Si su
- * SMS sí lo enlaza, tocarlo también abre la app. Requiere tener Ñan Kamay.
+ * Mensaje para invitar a seguir en vivo (PR2). El `link` es un App Link/Universal
+ * Link https (`liveFollowUrl(token)`): al tocarlo abre Ñan Kamay directo en el
+ * seguimiento si está instalada y verificada; si no, abre la web para instalarla.
+ * (Ya no usa el esquema custom, que los SMS/WhatsApp no convertían en enlace.)
  */
-export function composeFollowMessage(token: string, ownerName: string): string {
+export function composeFollowMessage(link: string, ownerName: string): string {
   const who = ownerName?.trim() || 'Tu contacto';
-  return `🔭 Sígueme en vivo (Ñan Kamay)\n${who} comparte su ubicación en tiempo real.\nEn la app Ñan Kamay: Perfil › Seguridad › "Seguir a un contacto" y pega este enlace:\nnan-kamay://seguir/${token}`;
+  return `🔭 Sígueme en vivo (Ñan Kamay)\n${who} comparte su ubicación en tiempo real. Toca para seguirlo en el mapa:\n${link}`;
 }
