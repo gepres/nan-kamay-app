@@ -289,8 +289,10 @@ CREATE POLICY "nk_live_sessions_delete" ON public.nk_live_sessions FOR DELETE
 
 -- Lectura del visor: presenta el token; devuelve solo la posición en vivo (sin
 -- user_id ni token) y solo si la sesión no expiró. SECURITY DEFINER salta RLS,
--- pero el filtro por token EXACTO evita enumeración. Concedida solo a usuarios
--- autenticados (el visor es la misma app, con sesión iniciada).
+-- pero el filtro por token EXACTO evita enumeración. Concedida a authenticated
+-- (visor in-app) y a anon (PR3: visor web para quien no tiene la app); en ambos
+-- casos el token ES la capacidad (sin token exacto no se obtiene nada, y no se
+-- expone user_id/token). Endurecer con rate-limit queda como mejora futura.
 CREATE OR REPLACE FUNCTION public.nk_get_live_session(p_token text)
 RETURNS TABLE (
   owner_name      text,
@@ -318,6 +320,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.nk_get_live_session(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.nk_get_live_session(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.nk_get_live_session(text) TO anon; -- PR3: visor web (capacidad por token)
 
 -- TTL forzado en el servidor: el cliente NO controla expires_at/created_at (ni
 -- puede reasignar dueño o token). Sin esto, un cliente modificado podría fijar
