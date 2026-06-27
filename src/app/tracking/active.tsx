@@ -10,15 +10,13 @@ import Animated, {
 import { Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as SMS from 'expo-sms';
 import { useTrackingStore } from '@presentation/stores/trackingStore';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { useAuthStore } from '@presentation/stores/authStore';
 import { useLiveShareStore } from '@presentation/stores/liveShareStore';
 import { useTracking } from '@presentation/hooks/useTracking';
 import { startLiveShare, endLiveShare } from '@application/live/liveShareUseCases';
-import { composeFollowMessage } from '@application/safety/buildLocationShare';
-import { getTrustedContacts } from '@shared/utils/trustedContacts';
+import ShareLiveLinkModal from '@presentation/components/tracking/ShareLiveLinkModal';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import TrackingMap from '@presentation/components/map/TrackingMap';
@@ -69,6 +67,8 @@ export default function ActiveTrackingScreen() {
   const [mapLayer, setMapLayer] = useState('outdoors');
   const [mapHeading, setMapHeading] = useState(0);
   const [layerModalVisible, setLayerModalVisible] = useState(false);
+  // Bottom sheet para compartir el enlace de seguimiento en vivo (PR2).
+  const [shareInfo, setShareInfo] = useState<{ token: string; ownerName: string } | null>(null);
 
   // Animación de entrada de paneles
   const statsOpacity    = useSharedValue(0);
@@ -169,32 +169,13 @@ export default function ActiveTrackingScreen() {
     setLayerModalVisible(true);
   };
 
-  // Enviar el enlace de seguimiento en vivo a los contactos de confianza (PR2).
-  const sendFollowSms = async (token: string, ownerName: string) => {
-    try {
-      const contacts = await getTrustedContacts();
-      if (contacts.length === 0) {
-        showToast('Agrega contactos en Perfil › Seguridad.', 'info');
-        return;
-      }
-      if (!(await SMS.isAvailableAsync())) {
-        showToast('Este dispositivo no puede enviar SMS.', 'error');
-        return;
-      }
-      await SMS.sendSMSAsync(contacts.map((c) => c.phone), composeFollowMessage(token, ownerName));
-    } catch {
-      showToast('No se pudo preparar el SMS.', 'error');
-    }
-  };
-
-  // Encender/apagar el "Compartir en vivo" (PR2). Al encender, crea la sesión y
-  // ofrece mandar el enlace por SMS; al apagar, la cierra (el visor verá "finalizó").
+  // Botón "Compartir en vivo" (PR2). Si ya está activo, abre el gestor (compartir
+  // por varios canales + dejar de compartir); si no, crea la sesión y lo abre.
   const handleToggleLiveShare = async () => {
     const live = useLiveShareStore.getState();
-    if (live.active) {
-      if (live.session) endLiveShare(live.session.id).catch(() => {});
-      live.clear();
-      showToast('Dejaste de compartir en vivo.', 'info');
+    if (live.active && live.session) {
+      const u = useAuthStore.getState().user;
+      setShareInfo({ token: live.session.token, ownerName: u?.fullName || 'Tu contacto' });
       return;
     }
     const u = useAuthStore.getState().user;
@@ -209,17 +190,18 @@ export default function ActiveTrackingScreen() {
       });
       useLiveShareStore.getState().setSession(handle);
       showToast('Compartir en vivo activado.', 'success');
-      Alert.alert(
-        'Compartir en vivo',
-        'Envía el enlace a tus contactos para que te sigan en tiempo real.',
-        [
-          { text: 'Ahora no', style: 'cancel' },
-          { text: 'Enviar por SMS', onPress: () => sendFollowSms(handle.token, ownerName) },
-        ],
-      );
+      setShareInfo({ token: handle.token, ownerName });
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo iniciar el vivo.', 'error');
     }
+  };
+
+  const stopLiveShare = () => {
+    const live = useLiveShareStore.getState();
+    if (live.session) endLiveShare(live.session.id).catch(() => {});
+    live.clear();
+    setShareInfo(null);
+    showToast('Dejaste de compartir en vivo.', 'info');
   };
 
   return (
@@ -510,6 +492,15 @@ export default function ActiveTrackingScreen() {
           setLayerModalVisible(false);
         }}
         onClose={() => setLayerModalVisible(false)}
+      />
+
+      {/* Compartir enlace en vivo (WhatsApp / SMS / copiar / más) */}
+      <ShareLiveLinkModal
+        visible={shareInfo !== null}
+        token={shareInfo?.token ?? null}
+        ownerName={shareInfo?.ownerName ?? ''}
+        onClose={() => setShareInfo(null)}
+        onStop={stopLiveShare}
       />
     </View>
   );
