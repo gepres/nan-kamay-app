@@ -48,3 +48,5 @@ yarn-error.*
 # local build artifacts
 /build-*.log
 /build-preview.apk
+# APKs para compartir (se generan localmente, no se commitean)
+/nan-kamay-*.apk
