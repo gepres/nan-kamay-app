@@ -16,7 +16,9 @@ import { useAuthStore } from '@presentation/stores/authStore';
 import { useLiveShareStore } from '@presentation/stores/liveShareStore';
 import { useTracking } from '@presentation/hooks/useTracking';
 import { startLiveShare, endLiveShare } from '@application/live/liveShareUseCases';
-import ShareLiveLinkModal from '@presentation/components/tracking/ShareLiveLinkModal';
+import { composeFollowMessage } from '@application/safety/buildLocationShare';
+import { getTrustedContacts } from '@shared/utils/trustedContacts';
+import ShareMessageSheet from '@presentation/components/ui/ShareMessageSheet';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import TrackingMap from '@presentation/components/map/TrackingMap';
@@ -68,7 +70,7 @@ export default function ActiveTrackingScreen() {
   const [mapHeading, setMapHeading] = useState(0);
   const [layerModalVisible, setLayerModalVisible] = useState(false);
   // Bottom sheet para compartir el enlace de seguimiento en vivo (PR2).
-  const [shareInfo, setShareInfo] = useState<{ token: string; ownerName: string } | null>(null);
+  const [shareInfo, setShareInfo] = useState<{ message: string; link: string; phones: string[] } | null>(null);
 
   // Animación de entrada de paneles
   const statsOpacity    = useSharedValue(0);
@@ -169,13 +171,22 @@ export default function ActiveTrackingScreen() {
     setLayerModalVisible(true);
   };
 
+  // Construye el mensaje + enlace + teléfonos y abre el bottom sheet de compartir.
+  const openLiveShareSheet = async (token: string, ownerName: string) => {
+    const link = `nan-kamay://seguir/${token}`;
+    const message = composeFollowMessage(token, ownerName);
+    let phones: string[] = [];
+    try { phones = (await getTrustedContacts()).map((c) => c.phone); } catch { /* sin contactos */ }
+    setShareInfo({ message, link, phones });
+  };
+
   // Botón "Compartir en vivo" (PR2). Si ya está activo, abre el gestor (compartir
   // por varios canales + dejar de compartir); si no, crea la sesión y lo abre.
   const handleToggleLiveShare = async () => {
     const live = useLiveShareStore.getState();
     if (live.active && live.session) {
       const u = useAuthStore.getState().user;
-      setShareInfo({ token: live.session.token, ownerName: u?.fullName || 'Tu contacto' });
+      openLiveShareSheet(live.session.token, u?.fullName || 'Tu contacto');
       return;
     }
     const u = useAuthStore.getState().user;
@@ -190,7 +201,7 @@ export default function ActiveTrackingScreen() {
       });
       useLiveShareStore.getState().setSession(handle);
       showToast('Compartir en vivo activado.', 'success');
-      setShareInfo({ token: handle.token, ownerName });
+      openLiveShareSheet(handle.token, ownerName);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo iniciar el vivo.', 'error');
     }
@@ -495,12 +506,20 @@ export default function ActiveTrackingScreen() {
       />
 
       {/* Compartir enlace en vivo (WhatsApp / SMS / copiar / más) */}
-      <ShareLiveLinkModal
+      <ShareMessageSheet
         visible={shareInfo !== null}
-        token={shareInfo?.token ?? null}
-        ownerName={shareInfo?.ownerName ?? ''}
         onClose={() => setShareInfo(null)}
+        title="Compartir en vivo"
+        subtitle="Tu contacto abre el enlace en Ñan Kamay (Perfil › Seguridad › Seguir a un contacto) y te ve en tiempo real."
+        message={shareInfo?.message ?? ''}
+        smsPhones={shareInfo?.phones ?? []}
+        copyText={shareInfo?.link}
+        copyLabel="Copiar enlace"
+        copySub="Para pegarlo donde quieras"
+        smsLabel="SMS a mis contactos"
+        smsSub="A tus contactos de confianza"
         onStop={stopLiveShare}
+        stopLabel="Dejar de compartir en vivo"
       />
     </View>
   );

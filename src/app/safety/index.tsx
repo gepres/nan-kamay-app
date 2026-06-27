@@ -6,11 +6,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as SMS from 'expo-sms';
 import {
   getTrustedContacts, addTrustedContact, removeTrustedContact, type TrustedContact,
 } from '@shared/utils/trustedContacts';
 import { buildLocationShare, composeSafetyMessage } from '@application/safety/buildLocationShare';
+import ShareMessageSheet from '@presentation/components/ui/ShareMessageSheet';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { colors } from '@presentation/theme/colors';
 
@@ -23,6 +23,8 @@ export default function SafetyScreen() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [sending, setSending] = useState<null | 'checkin' | 'sos'>(null);
+  // Bottom sheet de compartir (WhatsApp / SMS / copiar / más) tras obtener el fix.
+  const [shareData, setShareData] = useState<{ message: string; phones: string[]; copyText: string; title: string } | null>(null);
 
   const load = useCallback(() => {
     getTrustedContacts().then((list) => {
@@ -62,17 +64,17 @@ export default function SafetyScreen() {
     if (phones.length === 0) { showToast('Selecciona al menos un contacto.', 'error'); return; }
     setSending(kind);
     try {
-      if (!(await SMS.isAvailableAsync())) {
-        showToast('Este dispositivo no puede enviar SMS.', 'error');
-        return;
-      }
+      // Obtener el fix primero (puede tardar) y luego ofrecer el canal de envío.
       const share = await buildLocationShare();
       const message = composeSafetyMessage(share, kind);
-      const { result } = await SMS.sendSMSAsync(phones, message);
-      if (result === 'cancelled') showToast('Envío cancelado.', 'info');
-      else showToast('SMS preparado con tu ubicación.', 'success');
+      setShareData({
+        message,
+        phones,
+        copyText: share.mapsUrl,
+        title: kind === 'sos' ? 'S.O.S. — pedir ayuda' : 'Estoy bien — check-in',
+      });
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo preparar el SMS.', 'error');
+      showToast(e instanceof Error ? e.message : 'No se pudo obtener tu ubicación.', 'error');
     } finally {
       setSending(null);
     }
@@ -211,6 +213,21 @@ export default function SafetyScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Compartir la ubicación por WhatsApp / SMS / copiar / más */}
+      <ShareMessageSheet
+        visible={shareData !== null}
+        onClose={() => setShareData(null)}
+        title={shareData?.title ?? 'Compartir ubicación'}
+        subtitle="Comparte tu ubicación actual con quien quieras."
+        message={shareData?.message ?? ''}
+        smsPhones={shareData?.phones ?? []}
+        copyText={shareData?.copyText}
+        copyLabel="Copiar enlace de ubicación"
+        copySub="El enlace de Google Maps"
+        smsLabel="SMS a los seleccionados"
+        smsSub="A los contactos marcados arriba"
+      />
     </View>
   );
 }
