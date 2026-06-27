@@ -264,13 +264,13 @@ export class RouteRepositoryImpl implements IRouteRepository {
   /** Ancla (primer punto GPS) + metadatos de cada ruta no-borrador del usuario.
    *  Para agrupar rutas por zona geográfica. */
   async getRouteAnchors(userId: string): Promise<
-    { routeId: string; name: string; distanceMeters: number; activityType?: string; lat: number; lon: number }[]
+    { routeId: string; name: string; distanceMeters: number; elevationGainMeters: number; activityType?: string; lat: number; lon: number }[]
   > {
     const rows = await db.getAllAsync<{
-      id: string; name: string; distance_meters: number; activity_type: string | null;
-      lat: number | null; lon: number | null;
+      id: string; name: string; distance_meters: number; elevation_gain_meters: number | null;
+      activity_type: string | null; lat: number | null; lon: number | null;
     }>(
-      `SELECT r.id, r.name, r.distance_meters, r.activity_type,
+      `SELECT r.id, r.name, r.distance_meters, r.elevation_gain_meters, r.activity_type,
               (SELECT latitude  FROM gps_points WHERE route_id = r.id ORDER BY sequence_index LIMIT 1) AS lat,
               (SELECT longitude FROM gps_points WHERE route_id = r.id ORDER BY sequence_index LIMIT 1) AS lon
          FROM routes r
@@ -281,6 +281,7 @@ export class RouteRepositoryImpl implements IRouteRepository {
       .filter((r) => r.lat != null && r.lon != null)
       .map((r) => ({
         routeId: r.id, name: r.name, distanceMeters: r.distance_meters,
+        elevationGainMeters: r.elevation_gain_meters ?? 0,
         activityType: r.activity_type ?? undefined, lat: r.lat as number, lon: r.lon as number,
       }));
   }

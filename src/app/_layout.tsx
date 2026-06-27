@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { useAuthStore } from '@presentation/stores/authStore';
@@ -8,6 +8,21 @@ import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { initDatabase } from '@infrastructure/database/sqliteDb';
 import { User } from '@core/entities/User';
 import ToastContainer from '@presentation/components/ui/ToastContainer';
+import { initAnalytics, setCurrentScreen, trackEvent } from '@infrastructure/services/AnalyticsService';
+
+/**
+ * Registra una vista de pantalla en cada cambio de ruta. Usa el PATRÓN de segmento
+ * (p. ej. `/routes/[id]`), nunca el id concreto → sin PII en analítica.
+ */
+function ScreenViewTracker() {
+  const segments = useSegments();
+  const screen = '/' + segments.join('/');
+  useEffect(() => {
+    setCurrentScreen(screen);
+    trackEvent('screen_view');
+  }, [screen]);
+  return null;
+}
 
 async function handleAuthDeepLink(url: string) {
   // Con flowType 'pkce' los links (confirmación de email / OAuth) llegan como
@@ -46,6 +61,9 @@ export default function RootLayout() {
   useEffect(() => {
     // Inicializar base de datos SQLite
     initDatabase().catch(console.error);
+
+    // Inicializar analítica (carga cola persistida + gatillos de flush)
+    initAnalytics().catch(() => {});
 
     // Manejar deep link si la app se abrió desde el email de confirmación
     Linking.getInitialURL().then((url) => {
@@ -107,6 +125,7 @@ export default function RootLayout() {
         />
       </Stack>
       <ToastContainer />
+      <ScreenViewTracker />
     </View>
   );
 }

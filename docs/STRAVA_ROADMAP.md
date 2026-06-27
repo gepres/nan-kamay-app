@@ -247,9 +247,7 @@ Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
 > **Validado contra el código el 2026-06-26.** Lo ya hecho se movió a "Cerrado recientemente".
 
 ### 🟡 Cliente (sin backend) — listos para implementar
-- [ ] **Detalle público → elevación interactiva**: `routes/public/[id].tsx` aún usa el gráfico estático; el detalle privado ya usa `InteractiveElevationChart`. (S)
-- [ ] **Planificador — *snap* a senderos**: hoy traza recta. Ya existe snap por OSM en el editor (`OsmPathsService` "Pegar al mapa") → reusarlo en `routes/plan`. (M)
-- [ ] **Métricas — desnivel por zona/recap desde DEM** + **nombres de zona** vía reverse-geocode (hoy la zona se etiqueta con el nombre de la ruta más larga del clúster). (M)
+- _(vacío — los tres pendientes 🟡 se cerraron el 2026-06-27; ver "Cerrado recientemente")_
 
 ### 🟢 Fases grandes (necesitan backend Supabase)
 - [x] **Fase 5 — Seguridad / ubicación en vivo** — **cliente hecho (2026-06-26)**: PR1 (SMS check-in/S.O.S., offline) + PR2 (seguimiento en vivo in-app + Supabase: `nk_live_sessions`, RLS solo-dueño + RPC SECURITY DEFINER por token, TTL 12 h por trigger). Falta **PR3** (visor web para quien no tiene la app). Ver §Fase 5. Requiere aplicar `supabase/schema.sql`.
@@ -259,7 +257,11 @@ Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
 - [ ] **GPS en reposo con señal pobre**: confirmar que el radio anti-deriva reduce el drift (~17 m junto a edificios). CSV de diagnóstico.
 - [ ] **Auto-pausa**: confirmar que congela el reloj en paradas y no pierde puntos al caminar lento.
 
-### ✅ Cerrado recientemente (2026-06-26)
+### ✅ Cerrado recientemente (2026-06-27)
+- [x] **Detalle público → elevación interactiva** (2026-06-27): `routes/public/[id].tsx` ahora usa `InteractiveElevationChart` (scrub con tooltip + punto resaltado en el mini-mapa vía `highlight`), igual que el detalle privado. Los datos ya venían del `GetPublicRouteDetailUseCase`.
+- [x] **Planificador — *snap* a senderos (OSM)** (2026-06-27): botón "Pegar a senderos (OSM)" en `routes/plan` que reusa `OsmPathsService.fetchPathsForBbox` + `snapCoordsToReference` (mismo motor del editor, tolerancia 25 m, conservador). Online-only; **reversible con Deshacer** (respaldo de un nivel). No es ruteo por grafo (mueve los puntos al sendero más cercano), suficiente para planificar.
+- [x] **Métricas — nombres de zona (reverse-geocode) + desnivel por zona** (2026-06-27): `ReverseGeocodeService` (Nominatim, online, caché memoria+disco ~1 km, en serie por el límite de Nominatim) etiqueta cada zona con un lugar real, con **fallback** al nombre de la ruta más larga si no hay red. Además cada zona suma el **desnivel** de sus rutas (`elevationGainMeters`), DEM-preciso cuando la ruta se ajustó con `refineElevationUseCase` (que ya existe y está expuesto en el detalle privado). No se tocó el flujo de guardado (auto-DEM al guardar sigue diferido por riesgo).
+- [x] **Observabilidad — bug report in-app + analítica de uso (in-house)** — **validado, schema aplicado (2026-06-26)**: decisión documentada (NO Google/Firebase por privacidad de app de ubicación + datos propios). `nk_bug_reports` + bucket privado `nk-bug-shots`; `nk_events` + `AnalyticsService` (cola offline + flush por lotes + opt-out) + `ScreenViewTracker` + ~8 eventos. **Dashboard: proyecto Astro propio** en `D:\projects\nan-kamay-dashboard` (SSR + Chart.js, rol solo-lectura `metabase_ro` vía Session pooler); Metabase como alternativa. Privacidad dura: sin GPS/PII, pantalla = patrón de segmento. Guía `docs/ANALYTICS.md`. **Heatmaps reales diferidos** (requieren grabar pantalla → privacidad). Pendiente solo: generar datos de uso real.
 - [x] **Offline Fase 3 validado en dispositivo** (PMTiles vector; corregidos mapa negro y glyphs). Licencia Thunderforest **ya no aplica** al offline (Protomaps/OSM).
 - [x] **Catálogo offline a 8 regiones** + pantalla **didáctica** (buscador/preview/sugeridas) + diagnóstico con **Copiar**. 5 regiones nuevas en GitHub Releases.
 - [x] **Planificador 4.2 — persistir** (`is_planned` + `routes/planned`).

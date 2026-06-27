@@ -25,6 +25,7 @@ import { thunderforestTileUrls } from '@infrastructure/config/env';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
 import { useNetworkStatus } from '@presentation/hooks/useNetworkStatus';
 import { useUiStore } from '@presentation/stores/uiStore';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { colors } from '@presentation/theme/colors';
 
 if (typeof setAccessToken === 'function') setAccessToken(null);
@@ -250,6 +251,7 @@ export default function MapOfflineScreen() {
       inAssets = true; setPreparing(true);
       await ensureAssetsPack((pct) => setProgress(pct));
       showToast('Zona descargada para usar sin conexión.', 'success');
+      trackEvent('offline_map_downloaded', { region: item.id });
       refresh();
     } catch (e) {
       refresh();

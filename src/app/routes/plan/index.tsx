@@ -9,10 +9,13 @@ import {
   setAccessToken, Logger,
 } from '@maplibre/maplibre-react-native';
 import { fastDistanceMeters, nearestSegmentOnPath } from '@shared/utils/geometry';
+import { snapCoordsToReference } from '@shared/utils/trackEditing';
 import { formatDistance, formatDuration } from '@shared/utils/formatters';
 import { setPlannedGuide } from '@shared/utils/plannedRoute';
 import { Route } from '@core/entities/Route';
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
+import { fetchPathsForBbox, bboxFromCoords } from '@infrastructure/services/OsmPathsService';
 import { useAuthStore } from '@presentation/stores/authStore';
 import { useUiStore } from '@presentation/stores/uiStore';
 import MissingTileKeyBanner from '@presentation/components/map/MissingTileKeyBanner';
@@ -35,7 +38,7 @@ const HIKING_MPS = 4000 / 3600;
 
 export default function RoutePlannerScreen() {
   const insets = useSafeAreaInsets();
-  const { showToast } = useUiStore();
+  const { showToast, isOffline } = useUiStore();
   const user = useAuthStore((s) => s.user);
   const { edit } = useLocalSearchParams<{ edit?: string }>();
 
@@ -44,6 +47,10 @@ export default function RoutePlannerScreen() {
   const [points, setPoints] = useState<[number, number][]>([]); // [lon, lat]
   const [zoom, setZoom] = useState(13);
   const [selected, setSelected] = useState<number | null>(null);
+  const [snapBusy, setSnapBusy] = useState(false);
+  // Respaldo de un nivel para revertir el "pegar a senderos" desde Deshacer,
+  // válido solo mientras los puntos no se hayan tocado desde el snap.
+  const snapBackup = useRef<{ before: [number, number][]; after: [number, number][] } | null>(null);
 
   // Edición de una ruta planificada guardada (?edit=<id>).
   const [editId, setEditId] = useState<string | undefined>(edit);
@@ -165,8 +172,21 @@ export default function RoutePlannerScreen() {
     setSelected(null);
   };
 
-  const undo = () => { setPoints((p) => p.slice(0, -1)); setSelected(null); };
-  const clear = () => { setPoints([]); setSelected(null); };
+  const undo = () => {
+    // Si lo último fue un snap y nada cambió desde entonces, revierte el snap
+    // completo; si no, comportamiento normal (quitar el último punto).
+    const b = snapBackup.current;
+    if (b && sameCoords(b.after, points)) {
+      setPoints(b.before);
+      snapBackup.current = null;
+      setSelected(null);
+      return;
+    }
+    snapBackup.current = null;
+    setPoints((p) => p.slice(0, -1));
+    setSelected(null);
+  };
+  const clear = () => { snapBackup.current = null; setPoints([]); setSelected(null); };
 
   const distanceMeters = useMemo(() => {
     let d = 0;
@@ -235,6 +255,7 @@ export default function RoutePlannerScreen() {
       editCreatedAt.current = route.createdAt;
       setNameModal(false);
       showToast('Ruta planificada guardada.', 'success');
+      trackEvent('planned_route_saved', { points: points.length });
     } catch {
       showToast('No se pudo guardar la ruta.', 'error');
     } finally {
@@ -251,6 +272,31 @@ export default function RoutePlannerScreen() {
       guideWaypoints: [],
     });
     router.push('/tracking/pre-recording?planned=1');
+  };
+
+  // Pega los puntos del plan a senderos/calles reales de OSM (mismo motor que el
+  // editor post-grabación). Conservador: solo mueve puntos a < 25 m de un camino.
+  const handleSnapToOsm = async () => {
+    if (points.length < 2) { showToast('Añade al menos 2 puntos.', 'info'); return; }
+    if (isOffline) { showToast('Sin conexión. Pegar a senderos necesita internet.', 'info'); return; }
+    setSnapBusy(true);
+    try {
+      const refs = await fetchPathsForBbox(bboxFromCoords(points));
+      if (!refs.length) { showToast('No hay senderos OSM en esta zona.', 'info'); return; }
+      const res = snapCoordsToReference(points, refs, 25);
+      if (res.movedCount === 0) {
+        showToast('Ningún punto estaba cerca de un sendero. Sin cambios.', 'info');
+        return;
+      }
+      snapBackup.current = { before: points, after: res.coords };
+      setPoints(res.coords);
+      setSelected(null);
+      showToast(`${res.movedCount} de ${points.length} puntos pegados a senderos. Deshaz para revertir.`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo descargar el mapa de la zona.', 'error');
+    } finally {
+      setSnapBusy(false);
+    }
   };
 
   const hasSelection = selected != null;
@@ -322,7 +368,7 @@ export default function RoutePlannerScreen() {
       </View>
 
       {/* Botón "Añadir punto" (centro), encima del panel */}
-      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', marginBottom: panelHeight(hasSelection) + insets.bottom + 16 }}>
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center', marginBottom: panelHeight(hasSelection, points.length >= 2) + insets.bottom + 16 }}>
         <TouchableOpacity onPress={addAtCenter}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.accent, paddingHorizontal: 18, height: 44, borderRadius: 22, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}>
           <Ionicons name="add" size={20} color="#0D1B12" />
@@ -359,6 +405,17 @@ export default function RoutePlannerScreen() {
               <Text style={{ color: colors.danger, fontSize: 14, fontWeight: '700' }}>Quitar punto</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Pegar a senderos reales (OSM) */}
+        {points.length >= 2 && (
+          <TouchableOpacity onPress={handleSnapToOsm} disabled={snapBusy}
+            style={{ height: 46, borderRadius: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.accent + '60', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: snapBusy ? 0.7 : 1 }}>
+            {snapBusy ? <ActivityIndicator color={colors.accent} /> : <Ionicons name="magnet-outline" size={18} color={colors.accent} />}
+            <Text style={{ color: colors.accent, fontSize: 14, fontWeight: '700' }}>
+              {snapBusy ? 'Ajustando a senderos…' : 'Pegar a senderos (OSM)'}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Acciones principales */}
@@ -410,8 +467,13 @@ export default function RoutePlannerScreen() {
 }
 
 /** Altura aproximada del panel para posicionar el botón "Añadir punto". */
-function panelHeight(hasSelection: boolean): number {
-  return hasSelection ? 168 : 110;
+function panelHeight(hasSelection: boolean, showSnap: boolean): number {
+  return (hasSelection ? 168 : 110) + (showSnap ? 60 : 0);
+}
+
+/** Igualdad exacta de dos listas de coordenadas (para validar el respaldo del snap). */
+function sameCoords(a: [number, number][], b: [number, number][]): boolean {
+  return a.length === b.length && a.every((p, i) => p[0] === b[i][0] && p[1] === b[i][1]);
 }
 
 const circleBtn = {

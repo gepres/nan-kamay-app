@@ -13,6 +13,7 @@ import ExportButtons from '@presentation/components/routes/ExportButtons';
 import ElevationChart from '@presentation/components/routes/ElevationChart';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { saveRouteUseCase } from '@application/tracking/SaveRouteUseCase';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { discardDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import { syncOfflineRoutesUseCase } from '@application/routes/SyncOfflineRoutesUseCase';
 import { formatDistance, formatDuration, formatSpeed, formatElevation } from '@shared/utils/formatters';
@@ -56,6 +57,7 @@ export default function SummaryScreen() {
 
       addRoute(route);
       setSavedRouteId(route.id);
+      trackEvent('route_saved', { activity: activityType || 'unknown', public: isPublic, km: Math.round(liveStats.distanceMeters / 1000) });
       showToast('¡Ruta guardada! Súbela a la nube o expórtala antes de salir.', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al guardar la ruta.';

@@ -12,7 +12,7 @@ import { Waypoint } from '@core/entities/Waypoint';
 import { getPublicRouteDetailUseCase } from '@application/routes/GetPublicRouteDetailUseCase';
 import { DifficultyLabel } from '@core/value-objects/Difficulty';
 import { formatDistance, formatDuration, formatSpeed, formatElevation, formatDate } from '@shared/utils/formatters';
-import ElevationChart from '@presentation/components/routes/ElevationChart';
+import InteractiveElevationChart from '@presentation/components/routes/InteractiveElevationChart';
 import WaypointDetailCard from '@presentation/components/routes/WaypointDetailCard';
 import RouteMap from '@presentation/components/map/RouteMap';
 import { useUiStore } from '@presentation/stores/uiStore';
@@ -28,6 +28,7 @@ export default function PublicRouteDetailScreen() {
   const [gpsPoints, setGpsPoints] = useState<GpsPoint[]>([]);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -143,7 +144,13 @@ export default function PublicRouteDetailScreen() {
               marginBottom: 16, borderWidth: 1, borderColor: '#2D6A4F',
             }}
           >
-            <RouteMap gpsPoints={gpsPoints} waypoints={waypoints} />
+            <RouteMap
+              gpsPoints={gpsPoints}
+              waypoints={waypoints}
+              highlight={scrubIndex != null && gpsPoints[scrubIndex]
+                ? [gpsPoints[scrubIndex].longitude, gpsPoints[scrubIndex].latitude]
+                : null}
+            />
             <View
               pointerEvents="none"
               style={{
@@ -212,7 +219,7 @@ export default function PublicRouteDetailScreen() {
             backgroundColor: colors.bgCard, borderRadius: 12, padding: 14,
             borderWidth: 1, borderColor: '#2D6A4F', marginBottom: 16,
           }}>
-            <ElevationChart gpsPoints={gpsPoints} height={80} />
+            <InteractiveElevationChart gpsPoints={gpsPoints} height={110} onScrub={setScrubIndex} />
           </View>
         )}
 

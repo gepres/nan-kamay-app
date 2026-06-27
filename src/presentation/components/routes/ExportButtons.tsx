@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { exportRouteUseCase } from '@application/export/ExportRouteUseCase';
 import { ExportFormat } from '@core/ports/services/IExportService';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { colors } from '@presentation/theme/colors';
 
@@ -33,6 +34,7 @@ export default function ExportButtons({ routeId }: Props) {
     setLoadingFormat(format);
     try {
       const uri = await exportRouteUseCase({ routeId, format });
+      trackEvent('route_exported', { format });
 
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {

@@ -2,14 +2,16 @@ import { fastDistanceMeters } from '@shared/utils/geometry';
 
 /**
  * Agrupación geográfica para la vista Lugares/Zonas — funciones PURAS.
- * Offline: no hay reverse-geocoding, así que las zonas se etiquetan con el
- * nombre de su ruta más larga (nombre dado por el usuario, significativo).
+ * La etiqueta base es el nombre de la ruta más larga del clúster (significativo y
+ * offline). La pantalla la enriquece online con un nombre de lugar real vía
+ * `ReverseGeocodeService` (con fallback a esta etiqueta si no hay red).
  */
 
 export interface RouteAnchor {
   routeId: string;
   name: string;
   distanceMeters: number;
+  elevationGainMeters: number;
   activityType?: string;
   lat: number;
   lon: number;
@@ -27,6 +29,8 @@ export interface Zone {
   label: string;
   count: number;
   distanceMeters: number;
+  /** Desnivel acumulado de subida de las rutas de la zona (m). DEM-preciso si se ajustó. */
+  elevationGainMeters: number;
   /** Fracción 0..1 respecto a la zona más frecuente (para la barra). */
   fraction: number;
   lat: number;
@@ -71,6 +75,7 @@ export function computeZones(anchors: RouteAnchor[], radiusM = 4000): Zone[] {
         label: longest.name,
         count: c.members.length,
         distanceMeters: c.members.reduce((s, m) => s + m.distanceMeters, 0),
+        elevationGainMeters: c.members.reduce((s, m) => s + m.elevationGainMeters, 0),
         fraction: c.members.length / maxCount,
         lat: c.lat,
         lon: c.lon,

@@ -19,6 +19,7 @@ import { useAuthStore } from '@presentation/stores/authStore';
 import { useUiStore } from '@presentation/stores/uiStore';
 import { Difficulty, DifficultyLabel } from '@core/value-objects/Difficulty';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { startDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import { loadRouteGuide } from '@application/tracking/FollowRouteUseCase';
 import { consumePlannedGuide } from '@shared/utils/plannedRoute';
@@ -158,6 +159,7 @@ export default function PreRecordingScreen() {
     }
 
     startRecording(name.trim(), difficulty, description.trim(), activityType, guide);
+    trackEvent('recording_started', { activity: activityType, following: !!guide });
 
     // Sembrar la posición ya calentada: el mapa se centra desde el inicio y el
     // filtro arranca anclado a un fix bueno (no al primer fix frío de la grabación).

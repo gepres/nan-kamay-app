@@ -387,3 +387,77 @@ CREATE POLICY "nk_media_storage_update" ON storage.objects FOR UPDATE
 DROP POLICY IF EXISTS "nk_media_storage_delete" ON storage.objects;
 CREATE POLICY "nk_media_storage_delete" ON storage.objects FOR DELETE
   USING (bucket_id = 'nk-waypoint-media' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ════════════════════════════════════════════════════════════
+-- Observabilidad — reporte de bug + analítica de uso (in-house)
+-- ════════════════════════════════════════════════════════════
+
+-- ── Reportes de bug desde la app ──────────────────────────────
+CREATE TABLE IF NOT EXISTS public.nk_bug_reports (
+  id          UUID PRIMARY KEY,
+  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  category    TEXT,
+  message     TEXT NOT NULL,
+  app_version TEXT,
+  platform    TEXT,
+  os_version  TEXT,
+  screen      TEXT,
+  image_path  TEXT,
+  status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','triaged','closed')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_nk_bug_reports_created ON public.nk_bug_reports(created_at);
+ALTER TABLE public.nk_bug_reports ENABLE ROW LEVEL SECURITY;
+
+-- El usuario solo INSERTA sus reportes. La app no los lee (el admin/Metabase los
+-- consulta con un rol de DB que salta RLS). Sin update/delete de usuario.
+DROP POLICY IF EXISTS "nk_bug_reports_insert" ON public.nk_bug_reports;
+CREATE POLICY "nk_bug_reports_insert" ON public.nk_bug_reports FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+-- ── Eventos de uso (analítica; SIN GPS ni PII) ────────────────
+CREATE TABLE IF NOT EXISTS public.nk_events (
+  id          UUID PRIMARY KEY,
+  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  session_id  TEXT,
+  name        TEXT NOT NULL,
+  props       JSONB,
+  screen      TEXT,
+  app_version TEXT,
+  platform    TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_nk_events_name_created ON public.nk_events(name, created_at);
+CREATE INDEX IF NOT EXISTS idx_nk_events_created      ON public.nk_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_nk_events_user         ON public.nk_events(user_id);
+ALTER TABLE public.nk_events ENABLE ROW LEVEL SECURITY;
+
+-- Solo INSERT del propio usuario. La lectura para el dashboard es vía un rol de DB
+-- de SOLO-LECTURA en Metabase (salta RLS); la app nunca lee eventos.
+DROP POLICY IF EXISTS "nk_events_insert" ON public.nk_events;
+CREATE POLICY "nk_events_insert" ON public.nk_events FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+-- Retención opcional (privacidad): con pg_cron habilitado, descomenta:
+-- SELECT cron.schedule('purge_nk_events', '0 4 * * *',
+--   $$DELETE FROM public.nk_events WHERE created_at < now() - INTERVAL '12 months'$$);
+
+-- ── Storage bucket PRIVADO para capturas de bug ───────────────
+-- Privado (public=false): las capturas pueden mostrar datos del usuario. El admin
+-- las ve por la consola de Supabase. Subida/lectura/borrado solo en la carpeta del
+-- propio uid (mismo patrón que nk-waypoint-media).
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('nk-bug-shots', 'nk-bug-shots', false)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "nk_bugshots_insert" ON storage.objects;
+CREATE POLICY "nk_bugshots_insert" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'nk-bug-shots' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "nk_bugshots_select" ON storage.objects;
+CREATE POLICY "nk_bugshots_select" ON storage.objects FOR SELECT
+  USING (bucket_id = 'nk-bug-shots' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+DROP POLICY IF EXISTS "nk_bugshots_delete" ON storage.objects;
+CREATE POLICY "nk_bugshots_delete" ON storage.objects FOR DELETE
+  USING (bucket_id = 'nk-bug-shots' AND (storage.foldername(name))[1] = auth.uid()::text);

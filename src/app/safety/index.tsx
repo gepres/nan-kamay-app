@@ -12,6 +12,7 @@ import {
 import { buildLocationShare, composeSafetyMessage } from '@application/safety/buildLocationShare';
 import ShareMessageSheet from '@presentation/components/ui/ShareMessageSheet';
 import { useUiStore } from '@presentation/stores/uiStore';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { colors } from '@presentation/theme/colors';
 
 export default function SafetyScreen() {
@@ -73,6 +74,7 @@ export default function SafetyScreen() {
         copyText: share.mapsUrl,
         title: kind === 'sos' ? 'S.O.S. — pedir ayuda' : 'Estoy bien — check-in',
       });
+      trackEvent('safety_share_prepared', { kind, contacts: phones.length });
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo obtener tu ubicación.', 'error');
     } finally {

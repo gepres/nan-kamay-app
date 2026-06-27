@@ -16,6 +16,7 @@ import { useAuthStore } from '@presentation/stores/authStore';
 import { useLiveShareStore } from '@presentation/stores/liveShareStore';
 import { useTracking } from '@presentation/hooks/useTracking';
 import { startLiveShare, endLiveShare } from '@application/live/liveShareUseCases';
+import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { composeFollowMessage } from '@application/safety/buildLocationShare';
 import { getTrustedContacts } from '@shared/utils/trustedContacts';
 import ShareMessageSheet from '@presentation/components/ui/ShareMessageSheet';
@@ -200,6 +201,7 @@ export default function ActiveTrackingScreen() {
         distanceMeters: liveStats.distanceMeters,
       });
       useLiveShareStore.getState().setSession(handle);
+      trackEvent('live_share_started');
       showToast('Compartir en vivo activado.', 'success');
       openLiveShareSheet(handle.token, ownerName);
     } catch (e) {

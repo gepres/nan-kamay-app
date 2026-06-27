@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { routeRepository } from '@infrastructure/repositories/RouteRepositoryImpl';
+import { getOptOut, setOptOut } from '@infrastructure/services/AnalyticsService';
 import { useAuthStore } from '@presentation/stores/authStore';
 import { useRoutesStore } from '@presentation/stores/routesStore';
 import { usePersonalMetrics } from '@presentation/hooks/usePersonalMetrics';
@@ -18,11 +19,21 @@ export default function ProfileScreen() {
   const { records, recap } = usePersonalMetrics('year');
   const [loggingOut, setLoggingOut] = useState(false);
   const [polylines, setPolylines] = useState<[number, number][][]>([]);
+  const [analyticsOn, setAnalyticsOn] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
     routeRepository.getAllTrackPolylines(user.id).then(setPolylines).catch(() => {});
   }, [user?.id, routes.length]);
+
+  useEffect(() => {
+    getOptOut().then((out) => setAnalyticsOn(!out)).catch(() => {});
+  }, []);
+
+  const toggleAnalytics = (value: boolean) => {
+    setAnalyticsOn(value);
+    setOptOut(!value).catch(() => {});
+  };
 
   const unsyncedCount = routes.filter((r) => !r.isSynced).length;
 
@@ -235,6 +246,42 @@ export default function ProfileScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
+
+        {/* Reportar un problema */}
+        <TouchableOpacity
+          onPress={() => router.push('/report-bug')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+            borderWidth: 1, borderColor: colors.border, marginBottom: 24,
+          }}
+        >
+          <Ionicons name="bug-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Reportar un problema</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Cuéntanos un bug; puedes adjuntar una captura</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        {/* Consentimiento de analítica de uso */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 12,
+          backgroundColor: colors.bgCard, borderRadius: 12, padding: 16,
+          borderWidth: 1, borderColor: colors.border, marginBottom: 24,
+        }}>
+          <Ionicons name="bar-chart-outline" size={22} color={colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }}>Compartir estadísticas de uso</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Anónimas, sin GPS ni datos personales. Nos ayuda a mejorar la app.</Text>
+          </View>
+          <Switch
+            value={analyticsOn}
+            onValueChange={toggleAnalytics}
+            trackColor={{ false: colors.border, true: colors.accent }}
+            thumbColor={colors.textPrimary}
+          />
+        </View>
 
         {/* Sincronización */}
         <View style={{

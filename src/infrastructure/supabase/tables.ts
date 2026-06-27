@@ -18,9 +18,15 @@ export const NK_TABLES = {
   waypointMedia: 'nk_waypoint_media',
   /** Sesiones de seguimiento en vivo (link "sígueme"). Última posición in-place. */
   liveSessions: 'nk_live_sessions',
+  /** Reportes de bug desde la app. */
+  bugReports: 'nk_bug_reports',
+  /** Eventos de uso (analítica in-house; sin GPS ni PII). */
+  events: 'nk_events',
 } as const;
 
 /** Bucket de Storage para imágenes de waypoints (prefijo para no colisionar). */
 export const NK_BUCKET = 'nk-waypoint-images';
 /** Bucket de Storage para media de waypoints (fotos, video, audio). */
 export const NK_MEDIA_BUCKET = 'nk-waypoint-media';
+/** Bucket PRIVADO para capturas de pantalla de reportes de bug. */
+export const NK_BUG_SHOTS_BUCKET = 'nk-bug-shots';
