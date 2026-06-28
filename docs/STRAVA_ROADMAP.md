@@ -174,8 +174,11 @@ no aplica al offline** (online se mantiene raster Thunderforest). `OfflineTilesS
 >   (`/seguir/[token]` + pantalla de pegar enlace `/seguir`), polling cada 10 s, mapa con punto vivo.
 >   Pasó `security-review` (H1/M1/L2/L3 corregidos; rate-limit y token CSPRNG documentados como
 >   endurecimiento futuro). Requiere **aplicar `supabase/schema.sql`**.
-> - **Pendiente (PR3, futuro):** **visor web** para contactos **sin** la app (GRANT a `anon` +
->   página https → enlace one-tap en SMS); historial/trail en el visor; rate-limit en Dashboard.
+> - **PR3 — visor web (✅ hecho + validado 2026-06-28):** para contactos **sin** la app, el mismo App
+>   Link `https://nankamay.trek-peru.com/seguir/<token>` cae al `404.astro` de la landing = visor en
+>   vivo (Leaflet/OSM, polling del RPC cada 10 s con la publishable key/`anon`; `GRANT EXECUTE … TO
+>   anon`). Marcador con `L.circleMarker` (SVG; un `divIcon`+clase CSS lo scopea Astro → invisible).
+>   Pendiente menor: iOS Universal Links (falta Apple Team ID); accuracy/speed en el emisor; rate-limit.
 
 **Alcance:**
 - Compartir ubicación en vivo con contactos de confianza (link).
@@ -250,7 +253,7 @@ Fase 0 ✅ ── Fase 1 ✅ ── Fase 2 ✅
 - _(vacío — los tres pendientes 🟡 se cerraron el 2026-06-27; ver "Cerrado recientemente")_
 
 ### 🟢 Fases grandes (necesitan backend Supabase)
-- [x] **Fase 5 — Seguridad / ubicación en vivo** — **cliente hecho (2026-06-26)**: PR1 (SMS check-in/S.O.S., offline) + PR2 (seguimiento en vivo in-app + Supabase: `nk_live_sessions`, RLS solo-dueño + RPC SECURITY DEFINER por token, TTL 12 h por trigger). Falta **PR3** (visor web para quien no tiene la app). Ver §Fase 5. Requiere aplicar `supabase/schema.sql`.
+- [x] **Fase 5 — Seguridad / ubicación en vivo** — **cliente hecho (2026-06-26)**: PR1 (SMS check-in/S.O.S., offline) + PR2 (seguimiento en vivo in-app + Supabase: `nk_live_sessions`, RLS solo-dueño + RPC SECURITY DEFINER por token, TTL 12 h por trigger). **PR3 (visor web) hecho + validado 2026-06-28** (`404.astro` de la landing: Leaflet/OSM + polling del RPC con `anon`). Ver §Fase 5. Requiere aplicar `supabase/schema.sql`.
 - [ ] **Fase 6 — Social ligero** — sin código aún (confirmado). Kudos + comentarios en rutas públicas; `nk_route_kudos`, `nk_route_comments` + RLS. Diseño Pencil listo.
 
 ### 🔴 Validación de campo (no es código)
