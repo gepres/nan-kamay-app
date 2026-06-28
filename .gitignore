@@ -50,3 +50,7 @@ yarn-error.*
 /build-preview.apk
 # APKs para compartir (se generan localmente, no se commitean)
 /nan-kamay-*.apk
+*.aab
+
+# Google Play: clave del service account para `eas submit` (SECRETO, nunca commitear)
+play-service-account*.json
