@@ -149,18 +149,17 @@ Para subir sin pasar por la consola en cada release:
 
 ---
 
-## 8. Pendiente de código recomendado: aviso prominente (prominent disclosure)
+## 8. Aviso prominente (prominent disclosure) — ✅ HECHO
 
-Play suele **rechazar** apps con ubicación en segundo plano si no muestran un **aviso in-app explícito
-ANTES** de solicitar ese permiso. Hoy la app solicita el permiso directamente (`requestPermissions` en
-`useTracking.ts` / pre-grabación).
+Play **rechaza** apps con ubicación en segundo plano si no muestran un **aviso in-app explícito ANTES**
+de solicitar ese permiso. **Implementado** (`LocationDisclosureModal.tsx` + `ensureBgLocationDisclosed()`):
+un modal global aparece antes de pedir el permiso de fondo en los dos caminos de grabación
+(`pre-recording` y `active`), solo si el permiso aún no está concedido, con botones **Continuar / Ahora
+no**. Solo tras "Continuar" se solicita el permiso del sistema.
 
-**Acción recomendada:** un diálogo previo, por ejemplo:
-> *"Ñan Kamay usa tu ubicación, incluso en segundo plano, para grabar tu ruta mientras la pantalla está
-> apagada. La ubicación solo se registra mientras grabas. ¿Continuar?"* — botones **Continuar / Ahora no**,
-> y solo tras "Continuar" se pide el permiso del sistema.
-
-Esto **debe aparecer en el video** del §6.2. Avísame y lo implemento (es un cambio acotado de UI).
+➡️ **Este aviso DEBE aparecer en el video** del §6.2 (grábalo mostrando: el modal → "Continuar" → el
+permiso del sistema "Permitir todo el tiempo" → la grabación siguiendo en segundo plano con la
+notificación).
 
 ---
 
@@ -169,7 +168,7 @@ Esto **debe aparecer en el video** del §6.2. Avísame y lo implemento (es un ca
 - [ ] App creada en Play Console (`com.gepres.nankamay`).
 - [ ] AAB de `eas build --profile production` subido a **Pruebas internas** y probado en tu teléfono.
 - [ ] **SHA-256 de Play App Signing** añadido a `assetlinks.json` (pásamelo) y App Link verificado.
-- [ ] **Aviso prominente** in-app implementado (§8) y grabado en el video.
+- [x] **Aviso prominente** in-app implementado (§8) — pendiente grabarlo en el video del §6.2.
 - [ ] Formulario de **ubicación en segundo plano** enviado (con video).
 - [ ] **Data safety** completado.
 - [ ] **Política de privacidad** enlazada en la ficha.
