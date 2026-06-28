@@ -25,6 +25,20 @@ eas whoami           # confirma
 ```
 El proyecto ya está vinculado (`app.json → extra.eas.projectId`).
 
+> ⚠️ **Variables de entorno en EAS (imprescindible).** Las builds en la nube **NO leen tu `.env`
+> local**. El perfil `production` usa el entorno EAS `production`; debes cargar ahí las 3 variables
+> `EXPO_PUBLIC_*` o el AAB saldrá **sin Supabase ni mapas** (app rota). Cárgalas una vez:
+> ```bash
+> # opción A: empuja tu .env al entorno production
+> eas env:push production --path .env
+> # opción B: una por una
+> eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_URL --value "https://xyemkrcqpbqpaujifjpp.supabase.co" --visibility plaintext
+> eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "sb_publishable_…" --visibility plaintext
+> eas env:create --environment production --name EXPO_PUBLIC_THUNDERFOREST_API_KEY --value "…" --visibility secret
+> ```
+> Verifica con `eas env:list --environment production`. (La anon/publishable key es pública por diseño;
+> la de Thunderforest márcala `secret` para no exponerla.)
+
 ---
 
 ## 1. Crear la app en Play Console
