@@ -14,7 +14,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.gepres.nankamay",
-      "associatedDomains": ["applinks:nankamay.trek-peru.com"],
+      "associatedDomains": [
+        "applinks:nankamay.trek-peru.com"
+      ],
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación para grabar tu ruta.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Ñan Kamay necesita acceso a tu ubicación en segundo plano para continuar grabando mientras la pantalla está apagada.",
@@ -29,15 +31,22 @@
     },
     "android": {
       "package": "com.gepres.nankamay",
-      "versionCode": 4,
+      "versionCode": 5,
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "nankamay.trek-peru.com", "pathPrefix": "/seguir" }
+            {
+              "scheme": "https",
+              "host": "nankamay.trek-peru.com",
+              "pathPrefix": "/seguir"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "adaptiveIcon": {
