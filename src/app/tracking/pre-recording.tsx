@@ -23,6 +23,7 @@ import { trackEvent } from '@infrastructure/services/AnalyticsService';
 import { startDraftRoute } from '@application/tracking/DraftRouteUseCase';
 import { loadRouteGuide } from '@application/tracking/FollowRouteUseCase';
 import { consumePlannedGuide } from '@shared/utils/plannedRoute';
+import { ensureBgLocationDisclosed } from '@presentation/components/ui/LocationDisclosureModal';
 import { colors } from '@presentation/theme/colors';
 
 const DIFF_ROW_1: Difficulty[] = ['easy', 'moderate', 'hard'];
@@ -146,6 +147,9 @@ export default function PreRecordingScreen() {
 
   const handleStart = async () => {
     if (!name.trim()) return;
+    // Aviso prominente de ubicación en segundo plano ANTES de pedir el permiso (Google Play).
+    const disclosed = await ensureBgLocationDisclosed();
+    if (!disclosed) return;
     setCheckingGps(true);
     const granted = await gpsService.requestPermissions();
     setCheckingGps(false);

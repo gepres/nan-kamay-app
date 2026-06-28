@@ -8,6 +8,7 @@ import { supabase } from '@infrastructure/supabase/supabaseClient';
 import { initDatabase } from '@infrastructure/database/sqliteDb';
 import { User } from '@core/entities/User';
 import ToastContainer from '@presentation/components/ui/ToastContainer';
+import { LocationDisclosureModal } from '@presentation/components/ui/LocationDisclosureModal';
 import { initAnalytics, setCurrentScreen, trackEvent } from '@infrastructure/services/AnalyticsService';
 
 /**
@@ -125,6 +126,7 @@ export default function RootLayout() {
         />
       </Stack>
       <ToastContainer />
+      <LocationDisclosureModal />
       <ScreenViewTracker />
     </View>
   );

@@ -21,6 +21,7 @@ import { composeFollowMessage } from '@application/safety/buildLocationShare';
 import { liveFollowUrl } from '@infrastructure/config/env';
 import { getTrustedContacts } from '@shared/utils/trustedContacts';
 import ShareMessageSheet from '@presentation/components/ui/ShareMessageSheet';
+import { ensureBgLocationDisclosed } from '@presentation/components/ui/LocationDisclosureModal';
 import { useElapsedTime } from '@presentation/hooks/useElapsedTime';
 import { gpsService } from '@infrastructure/services/GpsServiceImpl';
 import TrackingMap from '@presentation/components/map/TrackingMap';
@@ -103,7 +104,11 @@ export default function ActiveTrackingScreen() {
 
   // Solicitar permisos GPS al montar la pantalla
   useEffect(() => {
-    requestPermissions().then((granted) => {
+    (async () => {
+      // Aviso prominente de ubicación en segundo plano ANTES de pedir el permiso (Google Play).
+      const disclosed = await ensureBgLocationDisclosed();
+      if (!disclosed) { router.back(); return; }
+      const granted = await requestPermissions();
       if (!granted) {
         Alert.alert(
           'Permiso GPS requerido',
@@ -111,7 +116,7 @@ export default function ActiveTrackingScreen() {
           [{ text: 'OK', onPress: () => router.back() }]
         );
       }
-    });
+    })();
   }, []);
 
   const handlePauseResume = () => {
