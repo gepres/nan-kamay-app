@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import {
   Mountain, ImageIcon, Bike, Bus, Globe, Compass,
-  Building2, Smartphone, Contrast, CircleCheck, X,
+  Building2, Smartphone, Contrast, Satellite, CircleCheck, X,
 } from 'lucide-react-native';
 import type { LucideProps } from 'lucide-react-native';
 import { MAP_LAYERS, type MapLayerInfo } from '@shared/constants/mapLayers';
@@ -18,7 +18,7 @@ type IconComponent = React.ForwardRefExoticComponent<LucideProps & React.RefAttr
 
 const ICON_MAP: Record<string, IconComponent> = {
   Mountain, Image: ImageIcon, Bike, Bus, Globe, Compass,
-  Building2, Smartphone, Contrast,
+  Building2, Smartphone, Contrast, Satellite,
 };
 
 interface Props {

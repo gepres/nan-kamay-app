@@ -1,12 +1,15 @@
-import { useRef, useEffect, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useRef, useEffect, useImperativeHandle, forwardRef, useState, useCallback, useMemo } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 import {
   MapView,
   Camera,
   ShapeSource,
   LineLayer,
   CircleLayer,
+  SymbolLayer,
+  Images,
   setAccessToken,
   Logger,
   type CameraRef,
@@ -62,6 +65,8 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
   // incrementamos un tick que entra en el `key` de los ShapeSource → forzamos
   // remount con la geometría actual del store. Skip primer focus (mount).
   const [renderTick, setRenderTick] = useState(0);
+  // Rumbo de la brújula del dispositivo (para orientar la flecha de posición).
+  const [heading, setHeading] = useState(0);
   const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -115,16 +120,47 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
     },
   }));
 
+  // ── Brújula: orienta la flecha de posición. Throttle a ~3° (diferencia angular
+  // con wraparound) para no re-renderizar en exceso. Usa rumbo verdadero si está
+  // disponible; si no, el magnético.
+  useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+    let lastDeg = -999;
+    Location.watchHeadingAsync((h) => {
+      const deg = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+      if (deg == null || deg < 0) return;
+      const diff = Math.abs(((deg - lastDeg + 540) % 360) - 180);
+      if (lastDeg !== -999 && diff < 3) return;
+      lastDeg = deg;
+      setHeading(deg);
+    })
+      .then((s) => { if (cancelled) s.remove(); else sub = s; })
+      .catch(() => {});
+    return () => { cancelled = true; sub?.remove(); };
+  }, []);
+
+  // ── Fix bug "el punto desaparece al cambiar de capa": al remontar la base
+  // raster (key={layer}), MapLibre re-inserta su capa ENCIMA de las superpuestas
+  // (traza/punto/waypoints) y las tapa. Remontamos las superpuestas (renderTick)
+  // para que vuelvan por encima de la nueva base. Skip en el mount inicial.
+  const firstLayer = useRef(true);
+  useEffect(() => {
+    if (firstLayer.current) { firstLayer.current = false; return; }
+    setRenderTick((t) => t + 1);
+  }, [mapLayer]);
+
   // Traza en vivo simplificada (RDP): quita el serpenteo del GPS sin redondear
   // curvas. RDP conserva el último punto → la línea no se separa del dot actual.
-  const routeGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
+  // Memoizada por `gpsPoints`: los re-render por brújula no re-ejecutan el RDP.
+  const routeGeoJson: GeoJSON.Feature<GeoJSON.LineString> = useMemo(() => ({
     type: 'Feature',
     geometry: {
       type: 'LineString',
       coordinates: simplifyLngLat(gpsPoints.map((p) => [p.longitude, p.latitude] as [number, number])),
     },
     properties: {},
-  };
+  }), [gpsPoints]);
 
   const startPoint = gpsPoints[0];
   const startGeoJson: GeoJSON.Feature<GeoJSON.Point> | null = startPoint
@@ -226,6 +262,9 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
       >
         <Basemap layer={mapLayer} offlineVector={isOfflineVector} />
 
+        {/* Ícono de la flecha de posición (rota con la brújula). */}
+        <Images images={{ headingArrow: require('../../../../assets/map/heading-arrow.png') }} />
+
         <Camera
           ref={cameraRef}
           defaultSettings={{
@@ -290,11 +329,20 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
           <ShapeSource id={`current-position-${renderTick}`} key={`current-${renderTick}`} shape={currentGeoJson}>
             <CircleLayer
               id={`current-pulse-${renderTick}`}
-              style={{ circleRadius: 16, circleColor: '#F59E0B20', circleStrokeColor: '#F59E0B40', circleStrokeWidth: 1 }}
+              style={{ circleRadius: 18, circleColor: '#F59E0B20', circleStrokeColor: '#F59E0B40', circleStrokeWidth: 1 }}
             />
-            <CircleLayer
-              id={`current-dot-${renderTick}`}
-              style={{ circleRadius: 8, circleColor: colors.accent, circleStrokeColor: colors.textPrimary, circleStrokeWidth: 3 }}
+            {/* Flecha de dirección: rota con la brújula del dispositivo. */}
+            <SymbolLayer
+              id={`current-arrow-${renderTick}`}
+              style={{
+                iconImage: 'headingArrow',
+                iconRotate: heading,
+                iconRotationAlignment: 'map',
+                iconSize: 0.42,
+                iconAnchor: 'center',
+                iconAllowOverlap: true,
+                iconIgnorePlacement: true,
+              }}
             />
           </ShapeSource>
         )}
@@ -309,6 +357,23 @@ export default forwardRef<TrackingMapHandle, Props>(function TrackingMap(
         )}
       </MapView>
       <MissingTileKeyBanner />
+      {mapLayer === 'satellite' && (
+        <Text style={styles.attribution}>© Esri, Maxar, Earthstar Geographics</Text>
+      )}
     </View>
   );
+});
+
+const styles = StyleSheet.create({
+  attribution: {
+    position: 'absolute',
+    bottom: 4,
+    left: 6,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 10,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
 });

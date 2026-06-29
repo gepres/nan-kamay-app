@@ -16,6 +16,7 @@ export interface MapLayerInfo {
 
 export const MAP_LAYERS: MapLayerInfo[] = [
   { key: 'outdoors', name: 'Outdoors', description: 'Senderismo (actual)', icon: 'Mountain' },
+  { key: 'satellite', name: 'Satélite', description: 'Imágenes satelitales (Esri)', icon: 'Satellite' },
   { key: 'landscape', name: 'Landscape', description: 'Vista general del terreno', icon: 'Image' },
   { key: 'cycle', name: 'Cycle', description: 'Ciclismo, rutas de bici', icon: 'Bike' },
   { key: 'transport', name: 'Transport', description: 'Transporte público', icon: 'Bus' },
