@@ -41,7 +41,12 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
   const code = parsed.queryParams?.code;
   if (typeof code === 'string' && code.length > 0) {
     const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
-    if (exErr) throw exErr;
+    if (exErr) {
+      // Carrera con la ruta /auth-callback o el listener de _layout: si el code
+      // ya fue canjeado pero ya hay sesión, lo tratamos como éxito.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw exErr;
+    }
     return 'success';
   }
 
