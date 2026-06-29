@@ -259,10 +259,9 @@ export class GpsServiceImpl implements IGpsService {
       }
     );
 
-    // Mostrar notificación persistente con stats
-    await this.showTrackingNotification('Iniciando grabación...', '0 km · 00:00');
-
-    // Background location via TaskManager (sin foregroundService propio, usamos expo-notifications)
+    // La notificación persistente la gestiona ahora el foreground service de
+    // expo-location (ver startBackgroundTracking). No lanzamos una de
+    // expo-notifications para no mostrar DOS notificaciones.
     await this.startBackgroundTracking();
   }
 
@@ -288,8 +287,21 @@ export class GpsServiceImpl implements IGpsService {
         pausesUpdatesAutomatically: false,
         deferredUpdatesInterval: 3000,
         deferredUpdatesDistance: 5,
-        // Android: NO usamos foregroundService de expo-location (causa crash en Android 12+).
-        // En su lugar, la notificación persistente de expo-notifications mantiene la app viva.
+        // Foreground service de tipo "location": IMPRESCINDIBLE para grabar con la
+        // pantalla apagada en Android moderno. Sin él, el SO throttlea/mata la
+        // ubicación en background (Android 8+) y la prohíbe (Android 14+). Una
+        // notificación de expo-notifications NO es un servicio y no mantiene viva
+        // la ubicación. El permiso FOREGROUND_SERVICE_LOCATION está declarado y el
+        // servicio arranca desde PRIMER PLANO (al pulsar grabar), por lo que NO
+        // aplica la restricción de Android 12 de iniciar un FGS en background (la
+        // causa del crash que motivó quitarlo antes). killServiceOnDestroy:false →
+        // la grabación sobrevive si el usuario quita la app de recientes.
+        foregroundService: {
+          notificationTitle: 'Ñan Kamay · Grabando tu ruta',
+          notificationBody: 'Tu recorrido se registra aunque apagues la pantalla.',
+          notificationColor: '#22C55E',
+          killServiceOnDestroy: false,
+        },
       });
 
       this._backgroundStarted = true;
@@ -336,12 +348,14 @@ export class GpsServiceImpl implements IGpsService {
     }
   }
 
-  /** Actualiza el contenido de la notificación con stats actuales */
-  async updateTrackingNotification(statsText: string): Promise<void> {
-    await this.showTrackingNotification(
-      'Ñan Kamay — Grabando ruta',
-      statsText,
-    );
+  /**
+   * (Obsoleto) La notificación persistente la gestiona ahora el foreground
+   * service de expo-location, que no se puede actualizar dinámicamente con stats.
+   * Las stats en vivo se ven en la pantalla de grabación. No-op a propósito para
+   * no mostrar una segunda notificación; `_statsText` se ignora.
+   */
+  async updateTrackingNotification(_statsText: string): Promise<void> {
+    /* no-op — ver foregroundService en startBackgroundTracking */
   }
 
   /** Elimina la notificación persistente */
